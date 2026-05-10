@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sr-ME">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Marketplace Montenegro</title>
+    <title>Маркетплейс Черногории</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -12,19 +12,7 @@
         <!-- Loading state -->
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p>Učitavanje...</p>
-        </div>
-
-        <!-- Registration modal -->
-        <div id="registerModal" class="modal hidden">
-            <div class="modal-content">
-                <h2>Dobrodošli!</h2>
-                <p>Prijavite se da započnete</p>
-                <div class="form-group">
-                    <input type="text" id="phoneInput" placeholder="Unesite broj telefona" maxlength="20">
-                </div>
-                <button id="registerBtn" class="btn btn-primary">Nastaviti</button>
-            </div>
+            <p>Загрузка...</p>
         </div>
 
         <!-- Main app -->
@@ -32,7 +20,7 @@
             <!-- Top bar -->
             <header class="header">
                 <div class="header-content">
-                    <h1>Marketplace</h1>
+                    <h1>Маркетплейс</h1>
                     <div class="header-icons">
                         <button id="profileBtn" class="icon-btn">👤</button>
                     </div>
@@ -41,9 +29,9 @@
 
             <!-- Tab navigation -->
             <nav class="tabs">
-                <button class="tab active" data-tab="search">🔍 Pretraga</button>
-                <button class="tab" data-tab="listings">📝 Oglasite</button>
-                <button class="tab" data-tab="my-items">❤️ Moji oglasi</button>
+                <button class="tab active" data-tab="search">🔍 Поиск</button>
+                <button class="tab" data-tab="listings">📝 Разместить</button>
+                <button class="tab" data-tab="my-items">❤️ Мои объявления</button>
             </nav>
 
             <!-- Tab content -->
@@ -52,24 +40,24 @@
                 <div id="search" class="tab-pane active">
                     <div class="search-filters">
                         <div class="filter-group">
-                            <label for="citySelect">Grad:</label>
+                            <label for="citySelect">Город:</label>
                             <select id="citySelect" class="filter-input">
-                                <option value="">Svi gradovi</option>
+                                <option value="">Все города</option>
                             </select>
                         </div>
                         <div class="filter-group">
-                            <label for="categorySelect">Kategorija:</label>
+                            <label for="categorySelect">Категория:</label>
                             <select id="categorySelect" class="filter-input">
-                                <option value="">Sve kategorije</option>
+                                <option value="">Все категории</option>
                             </select>
                         </div>
-                        <button id="searchBtn" class="btn btn-secondary btn-block">Pretraži</button>
+                        <button id="searchBtn" class="btn btn-secondary btn-block">Найти</button>
                     </div>
 
                     <div id="searchResults" class="items-grid"></div>
 
                     <div class="section-divider">
-                        <h3>Preporučeni oglasi</h3>
+                        <h3>Рекомендуемые объявления</h3>
                     </div>
 
                     <div id="randomListings" class="items-grid"></div>
@@ -78,99 +66,99 @@
                 <!-- Listings Tab -->
                 <div id="listings" class="tab-pane hidden">
                     <div class="listings-tabs">
-                        <button class="listing-type active" data-type="product">📦 Proizvodi</button>
-                        <button class="listing-type" data-type="service">🔧 Usluge</button>
-                        <button class="listing-type" data-type="ad">📢 Reklama</button>
+                        <button class="listing-type active" data-type="product">📦 Товары</button>
+                        <button class="listing-type" data-type="service">🔧 Услуги</button>
+                        <button class="listing-type" data-type="ad">📢 Реклама</button>
                     </div>
 
                     <!-- Product form -->
                     <div id="productForm" class="form-section active">
-                        <h3>Objavite proizvod</h3>
+                        <h3>Разместить товар</h3>
                         <form class="listing-form">
                             <div class="form-group">
-                                <label>Naslov</label>
-                                <input type="text" placeholder="Unesite naslov oglasa" maxlength="100" required>
+                                <label>Название</label>
+                                <input type="text" placeholder="Введите название объявления" maxlength="100" required>
                             </div>
                             <div class="form-group">
-                                <label>Opis</label>
-                                <textarea placeholder="Detaljno opišite proizvod" maxlength="1000"></textarea>
+                                <label>Описание</label>
+                                <textarea placeholder="Подробно опишите товар" maxlength="1000"></textarea>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label>Kategorija</label>
+                                    <label>Категория</label>
                                     <select required></select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Grad</label>
+                                    <label>Город</label>
                                     <select required></select>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>Cijena (EUR)</label>
+                                <label>Цена (EUR)</label>
                                 <input type="number" placeholder="0.00" step="0.01" required>
                             </div>
-                            <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('imageInput').click()">+ Dodajte slike</button>
+                            <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('imageInput').click()">+ Добавить фотографии</button>
                             <input type="file" id="imageInput" accept="image/*" multiple style="display:none;">
                             <div id="imagePreview" class="image-preview"></div>
-                            <button type="submit" class="btn btn-primary btn-block">Objavite proizvod</button>
+                            <button type="submit" class="btn btn-primary btn-block">Опубликовать товар</button>
                         </form>
                     </div>
 
                     <!-- Service form -->
                     <div id="serviceForm" class="form-section hidden">
-                        <h3>Objavite uslugu</h3>
-                        <p class="info-text">✓ Prva usluga je besplatna | 💰 Ostale usluge su plaćene - Kontaktirajte @helionstudio</p>
+                        <h3>Разместить услугу</h3>
+                        <p class="info-text">✓ Первая услуга бесплатна | 💰 Остальные услуги платные — свяжитесь с @helionstudio</p>
                         <form class="listing-form">
                             <div class="form-group">
-                                <label>Naslov usluge</label>
-                                <input type="text" placeholder="Unesite naslov usluge" maxlength="100" required>
+                                <label>Название услуги</label>
+                                <input type="text" placeholder="Введите название услуги" maxlength="100" required>
                             </div>
                             <div class="form-group">
-                                <label>Opis</label>
-                                <textarea placeholder="Detaljno opišite svoju uslugu" maxlength="1000"></textarea>
+                                <label>Описание</label>
+                                <textarea placeholder="Подробно опишите вашу услугу" maxlength="1000"></textarea>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label>Kategorija</label>
+                                    <label>Категория</label>
                                     <select required></select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Grad</label>
+                                    <label>Город</label>
                                     <select required></select>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>Cijena po uslizi (EUR)</label>
+                                <label>Цена услуги (EUR)</label>
                                 <input type="number" placeholder="0.00" step="0.01" required>
                             </div>
-                            <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('serviceImageInput').click()">+ Dodajte slike</button>
+                            <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('serviceImageInput').click()">+ Добавить фотографии</button>
                             <input type="file" id="serviceImageInput" accept="image/*" multiple style="display:none;">
                             <div id="serviceImagePreview" class="image-preview"></div>
-                            <button type="submit" class="btn btn-primary btn-block">Objavite uslugu</button>
+                            <button type="submit" class="btn btn-primary btn-block">Опубликовать услугу</button>
                         </form>
                     </div>
 
                     <!-- Ad form -->
                     <div id="adForm" class="form-section hidden">
-                        <h3>Objavite oglasu (plaćeno)</h3>
-                        <p class="info-text">Cijena: 9.99 EUR na 30 dana | Kontaktirajte @helionstudio za plaćanje</p>
+                        <h3>Разместить рекламу (платно)</h3>
+                        <p class="info-text">Цена: 9.99 EUR на 30 дней | Для оплаты свяжитесь с @helionstudio</p>
                         <form class="listing-form">
                             <div class="form-group">
-                                <label>Naslov oglasa</label>
-                                <input type="text" placeholder="Naslov vaše reklame" maxlength="100" required>
+                                <label>Название рекламы</label>
+                                <input type="text" placeholder="Название вашей рекламы" maxlength="100" required>
                             </div>
                             <div class="form-group">
-                                <label>Opis</label>
-                                <textarea placeholder="Detaljno opišite ponudu" maxlength="500"></textarea>
+                                <label>Описание</label>
+                                <textarea placeholder="Подробно опишите предложение" maxlength="500"></textarea>
                             </div>
-                            <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('adImageInput').click()">+ Dodajte sliku</button>
+                            <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('adImageInput').click()">+ Добавить изображение</button>
                             <input type="file" id="adImageInput" accept="image/*" style="display:none;">
                             <div id="adImagePreview" class="image-preview"></div>
                             <div class="form-group">
-                                <label>Kontakt (@helionstudio)</label>
-                                <p class="contact-info">Za plaćanje i objavu reklame kontaktirajte: @helionstudio</p>
+                                <label>Контакт (@helionstudio)</label>
+                                <p class="contact-info">Для оплаты и публикации рекламы свяжитесь с: @helionstudio</p>
                             </div>
-                            <button type="submit" class="btn btn-primary btn-block">Zatraži objavu reklame</button>
+                            <button type="submit" class="btn btn-primary btn-block">Отправить заявку на рекламу</button>
                         </form>
                     </div>
                 </div>
@@ -178,8 +166,8 @@
                 <!-- My Items Tab -->
                 <div id="my-items" class="tab-pane hidden">
                     <div class="my-items-tabs">
-                        <button class="my-items-type active" data-type="products">📦 Proizvodi</button>
-                        <button class="my-items-type" data-type="services">🔧 Usluge</button>
+                        <button class="my-items-type active" data-type="products">📦 Товары</button>
+                        <button class="my-items-type" data-type="services">🔧 Услуги</button>
                     </div>
 
                     <div id="myProducts" class="items-grid"></div>
@@ -201,18 +189,69 @@
     <div id="profileModal" class="modal hidden">
         <div class="modal-content">
             <button class="modal-close" onclick="closeProfileModal()">✕</button>
-            <h2>Profil</h2>
-            <div id="profileInfo"></div>
+            <h2>Профиль</h2>
+            <div id="profileViewInfo"></div>
+            <div id="profileEditForm">
             <div class="form-group">
-                <label>Grad:</label>
+                <label>Имя:</label>
+                <input type="text" id="profileFirstName" placeholder="Введите имя" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label>Фамилия:</label>
+                <input type="text" id="profileLastName" placeholder="Введите фамилию" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label>Имя пользователя:</label>
+                <input type="text" id="profileUsername" placeholder="Введите имя пользователя" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label>Город:</label>
                 <select id="profileCitySelect"></select>
             </div>
             <div class="form-group">
-                <label>Telefon:</label>
-                <input type="tel" id="profilePhone" placeholder="Unesite broj telefona">
+                <label>Телефон:</label>
+                <input type="tel" id="profilePhone" placeholder="Введите номер телефона">
             </div>
-            <button class="btn btn-primary btn-block" onclick="updateProfile()">Spremi</button>
-            <button class="btn btn-danger btn-block" onclick="logout()">Odjava</button>
+            <div class="form-group">
+                <label>О себе:</label>
+                <textarea id="profileAbout" placeholder="Расскажите немного о себе" maxlength="500"></textarea>
+            </div>
+            </div>
+            <div class="profile-actions">
+                <button id="profileSaveBtn" class="btn btn-primary btn-block" onclick="updateProfile()">Сохранить</button>
+                <button id="profileLogoutBtn" class="btn btn-danger btn-block" onclick="logout()">Выйти</button>
+            </div>
+            <div class="profile-reviews">
+                <h3>Отзывы</h3>
+                <div id="profileReviews"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reviewModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeReviewModal()">✕</button>
+            <h2>Оставить отзыв</h2>
+            <div id="reviewTargetInfo" class="info-text"></div>
+            <div class="form-group">
+                <label>Тип отзыва:</label>
+                <select id="reviewType">
+                    <option value="seller">О продавце</option>
+                    <option value="product">О товаре</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Текст отзыва:</label>
+                <textarea id="reviewText" placeholder="Опишите ваш опыт" maxlength="1000"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Скриншот переписки:</label>
+                <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('reviewScreenshotInput').click()">+ Прикрепить скриншот</button>
+                <input type="file" id="reviewScreenshotInput" accept="image/*" style="display:none;">
+                <div id="reviewScreenshotPreview" class="image-preview"></div>
+                <p class="info-text">Скриншот виден только администраторам.</p>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="submitReview()">Отправить отзыв</button>
         </div>
     </div>
 

@@ -10,7 +10,8 @@ const SQLITE_SCHEMA = [
     first_name TEXT,
     last_name TEXT,
     phone TEXT,
-    city TEXT DEFAULT 'Podgorica',
+    city TEXT DEFAULT '',
+    about TEXT,
     balance REAL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -90,10 +91,25 @@ const SQLITE_SCHEMA = [
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id)
   )`,
+  `CREATE TABLE IF NOT EXISTS reviews (
+    id TEXT PRIMARY KEY,
+    target_user_id TEXT NOT NULL,
+    author_user_id TEXT NOT NULL,
+    listing_id TEXT,
+    review_type TEXT NOT NULL,
+    text TEXT NOT NULL,
+    screenshot_url TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(target_user_id) REFERENCES users(id),
+    FOREIGN KEY(author_user_id) REFERENCES users(id),
+    FOREIGN KEY(listing_id) REFERENCES listings(id)
+  )`,
   `CREATE INDEX IF NOT EXISTS idx_listings_user_id ON listings(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_status_city_category ON listings(status, city_id, category_id)`,
   `CREATE INDEX IF NOT EXISTS idx_services_user_id ON services(user_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_services_status_city_category ON services(status, city_id, category_id)`
+  `CREATE INDEX IF NOT EXISTS idx_services_status_city_category ON services(status, city_id, category_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_reviews_target_user_id ON reviews(target_user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_reviews_listing_id ON reviews(listing_id)`
 ];
 
 const POSTGRES_SCHEMA = [
@@ -104,7 +120,8 @@ const POSTGRES_SCHEMA = [
     first_name TEXT,
     last_name TEXT,
     phone TEXT,
-    city TEXT DEFAULT 'Podgorica',
+    city TEXT DEFAULT '',
+    about TEXT,
     balance REAL DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -176,10 +193,22 @@ const POSTGRES_SCHEMA = [
     status TEXT DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS reviews (
+    id TEXT PRIMARY KEY,
+    target_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    author_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    listing_id TEXT REFERENCES listings(id) ON DELETE SET NULL,
+    review_type TEXT NOT NULL,
+    text TEXT NOT NULL,
+    screenshot_url TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  )`,
   `CREATE INDEX IF NOT EXISTS idx_listings_user_id ON listings(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_status_city_category ON listings(status, city_id, category_id)`,
   `CREATE INDEX IF NOT EXISTS idx_services_user_id ON services(user_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_services_status_city_category ON services(status, city_id, category_id)`
+  `CREATE INDEX IF NOT EXISTS idx_services_status_city_category ON services(status, city_id, category_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_reviews_target_user_id ON reviews(target_user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_reviews_listing_id ON reviews(listing_id)`
 ];
 
 let dialect = null;
@@ -297,6 +326,26 @@ async function applySchema(statements) {
   }
 }
 
+async function ensureColumn(tableName, columnName, definition) {
+  if (dialect === 'postgres') {
+    await pgPool.query(
+      `ALTER TABLE ${tableName} ADD COLUMN IF NOT EXISTS ${columnName} ${definition}`
+    );
+    return;
+  }
+
+  const columns = await sqliteAll(`PRAGMA table_info(${tableName})`);
+  const hasColumn = columns.some((column) => column.name === columnName);
+
+  if (!hasColumn) {
+    await sqliteRun(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+  }
+}
+
+async function applyMigrations() {
+  await ensureColumn('users', 'about', 'TEXT');
+}
+
 async function initializeDatabase() {
   if (readyPromise) {
     return readyPromise;
@@ -327,6 +376,8 @@ async function initializeDatabase() {
       await sqliteRun('PRAGMA foreign_keys = ON');
       await applySchema(SQLITE_SCHEMA);
     }
+
+    await applyMigrations();
 
     console.log(`Database initialized using ${dialect}`);
   })().catch((error) => {

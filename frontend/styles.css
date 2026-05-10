@@ -565,19 +565,106 @@ html, body, #app {
 }
 
 /* Profile modal */
-#profileInfo {
+#profileViewInfo {
     margin-bottom: 20px;
     padding-bottom: 20px;
     border-bottom: 1px solid var(--border-color);
 }
 
-#profileInfo p {
+#profileViewInfo p {
     margin: 8px 0;
     font-size: 14px;
 }
 
-#profileInfo strong {
+#profileViewInfo strong {
     color: var(--primary-color);
+}
+
+.profile-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.profile-actions .btn {
+    margin-top: 0;
+}
+
+.profile-reviews {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.profile-reviews h3 {
+    margin-bottom: 15px;
+}
+
+.review-card {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.review-meta {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #666;
+}
+
+.review-text {
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.review-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.review-screenshot-link {
+    color: var(--primary-color);
+    font-size: 13px;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.review-screenshot-link:hover {
+    text-decoration: underline;
+}
+
+.review-delete-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: var(--danger-color);
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.review-delete-btn:hover {
+    background: #c0392b;
+}
+
+.item-details-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
 }
 
 /* Responsive */
@@ -602,6 +689,17 @@ html, body, #app {
     .tab {
         font-size: 12px;
         padding: 12px 8px;
+    }
+
+    .profile-actions,
+    .item-details-actions,
+    .review-header {
+        flex-direction: column;
+    }
+
+    .review-actions {
+        width: 100%;
+        justify-content: flex-start;
     }
 }
 

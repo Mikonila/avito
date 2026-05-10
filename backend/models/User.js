@@ -4,16 +4,15 @@ const { v4: uuidv4 } = require('uuid');
 class User {
   static async create(telegram_id, userData) {
     const id = uuidv4();
-    const { first_name, last_name, username } = userData;
-    const city = 'Podgorica';
+    const { first_name = '', last_name = '', username = '', phone = '', city = '', about = '' } = userData;
 
     await db.run(
-      `INSERT INTO users (id, telegram_id, first_name, last_name, username, city)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [id, telegram_id, first_name, last_name, username, city]
+      `INSERT INTO users (id, telegram_id, first_name, last_name, username, phone, city, about)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [id, telegram_id, first_name, last_name, username, phone, city, about]
     );
 
-    return { id, telegram_id, first_name, last_name, username, city };
+    return { id, telegram_id, first_name, last_name, username, phone, city, about };
   }
 
   static findByTelegramId(telegram_id) {
@@ -24,19 +23,55 @@ class User {
     return db.get(`SELECT * FROM users WHERE id = $1`, [id]);
   }
 
-  static async updateCity(user_id, city) {
-    const result = await db.run(
-      `UPDATE users SET city = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-      [city, user_id]
+  static async fillMissingFromTelegram(user_id, userData) {
+    const currentUser = await User.findById(user_id);
+    if (!currentUser) {
+      return null;
+    }
+
+    const nextUser = {
+      first_name: currentUser.first_name || userData.first_name || '',
+      last_name: currentUser.last_name || userData.last_name || '',
+      username: currentUser.username || userData.username || '',
+      phone: currentUser.phone || '',
+      city: currentUser.city || '',
+      about: currentUser.about || ''
+    };
+
+    await db.run(
+      `UPDATE users
+       SET first_name = $1,
+           last_name = $2,
+           username = $3,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4`,
+      [nextUser.first_name, nextUser.last_name, nextUser.username, user_id]
     );
 
-    return result.changes > 0;
+    return User.findById(user_id);
   }
 
-  static async updatePhone(user_id, phone) {
+  static async updateProfile(user_id, profileData) {
+    const {
+      first_name = '',
+      last_name = '',
+      username = '',
+      phone = '',
+      city = '',
+      about = ''
+    } = profileData;
+
     const result = await db.run(
-      `UPDATE users SET phone = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-      [phone, user_id]
+      `UPDATE users
+       SET first_name = $1,
+           last_name = $2,
+           username = $3,
+           phone = $4,
+           city = $5,
+           about = $6,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7`,
+      [first_name, last_name, username, phone, city, about, user_id]
     );
 
     return result.changes > 0;

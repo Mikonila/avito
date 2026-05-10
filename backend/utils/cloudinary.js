@@ -2,7 +2,8 @@ const { v2: cloudinary } = require('cloudinary');
 
 const CLOUDINARY_FOLDERS = {
   listing: 'montenegro-marketplace/listings',
-  service: 'montenegro-marketplace/services'
+  service: 'montenegro-marketplace/services',
+  review: 'montenegro-marketplace/reviews'
 };
 
 let configured = false;

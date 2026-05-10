@@ -1,39 +1,39 @@
 const db = require('./database');
 
 const CATEGORIES = [
-  { id: 'cat-1', name: 'Elektronika' },
-  { id: 'cat-2', name: 'Automobili' },
-  { id: 'cat-3', name: 'Kuće i Stanovi' },
-  { id: 'cat-4', name: 'Namještaj' },
-  { id: 'cat-5', name: 'Odjeća i Obuća' },
-  { id: 'cat-6', name: 'Knjige' },
-  { id: 'cat-7', name: 'Igračke' },
-  { id: 'cat-8', name: 'Sport i Rekreacija' },
-  { id: 'cat-9', name: 'Domaci Ljubimci' },
-  { id: 'cat-10', name: 'Usluge' },
-  { id: 'cat-11', name: 'Poslovanje' },
-  { id: 'cat-12', name: 'Razni' }
+  { id: 'cat-1', name: 'Электроника' },
+  { id: 'cat-2', name: 'Автомобили' },
+  { id: 'cat-3', name: 'Жилье' },
+  { id: 'cat-4', name: 'Мебель' },
+  { id: 'cat-5', name: 'Одежда и обувь' },
+  { id: 'cat-6', name: 'Книги' },
+  { id: 'cat-7', name: 'Игрушки' },
+  { id: 'cat-8', name: 'Спорт и отдых' },
+  { id: 'cat-9', name: 'Домашние животные' },
+  { id: 'cat-10', name: 'Услуги' },
+  { id: 'cat-11', name: 'Бизнес' },
+  { id: 'cat-12', name: 'Разное' }
 ];
 
 const CITIES = [
-  { id: 'city-1', name: 'Podgorica' },
-  { id: 'city-2', name: 'Bar' },
-  { id: 'city-3', name: 'Kotor' },
-  { id: 'city-4', name: 'Budva' },
-  { id: 'city-5', name: 'Tivat' },
-  { id: 'city-6', name: 'Herceg Novi' },
-  { id: 'city-7', name: 'Cetinje' },
-  { id: 'city-8', name: 'Nikšić' },
-  { id: 'city-9', name: 'Pljevlja' },
-  { id: 'city-10', name: 'Ulcinj' }
+  { id: 'city-1', name: 'Подгорица' },
+  { id: 'city-2', name: 'Бар' },
+  { id: 'city-3', name: 'Котор' },
+  { id: 'city-4', name: 'Будва' },
+  { id: 'city-5', name: 'Тиват' },
+  { id: 'city-6', name: 'Херцег-Нови' },
+  { id: 'city-7', name: 'Цетине' },
+  { id: 'city-8', name: 'Никшич' },
+  { id: 'city-9', name: 'Плевля' },
+  { id: 'city-10', name: 'Улцинь' }
 ];
 
 function getInsertOrIgnoreQuery(tableName) {
-  if (db.getDialect() === 'postgres') {
-    return `INSERT INTO ${tableName} (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`;
-  }
-
-  return `INSERT OR IGNORE INTO ${tableName} (id, name) VALUES ($1, $2)`;
+  return `
+    INSERT INTO ${tableName} (id, name)
+    VALUES ($1, $2)
+    ON CONFLICT (id) DO UPDATE SET name = excluded.name
+  `;
 }
 
 async function initializeData() {

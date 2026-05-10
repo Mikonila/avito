@@ -1,9 +1,8 @@
-// Telegram Web App API
 const tg = window.Telegram?.WebApp;
 const MAX_IMAGE_COUNT = 4;
 const MAX_IMAGE_SIZE_BYTES = 1572864;
+const FALLBACK_TELEGRAM_ID_KEY = 'fallback_telegram_id';
 
-// Global state
 let state = {
     user: null,
     categories: [],
@@ -12,76 +11,119 @@ let state = {
     currentServices: [],
     images: [],
     serviceImages: [],
-    adImages: []
+    adImages: [],
+    reviewScreenshot: null,
+    selectedItem: null,
+    viewedProfileId: null
 };
 
-// API Base URL
 const API_BASE = '/api';
 
-// Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Initialize Telegram Web App
         if (tg) {
             tg.ready();
             tg.expand();
         }
 
-        // Hide loading, show register modal
         document.getElementById('loading').style.display = 'none';
 
-        // Load references (categories and cities)
         await loadReferences();
-
-        // Register or login user
         const user = await registerUser();
-        if (user) {
-            state.user = user;
-            showMainApp();
-            attachEventListeners();
+
+        if (!user) {
+            alert('Не удалось загрузить профиль пользователя');
+            return;
         }
+
+        state.user = user;
+        showMainApp();
+        attachEventListeners();
     } catch (error) {
         console.error('Initialization error:', error);
-        alert('Greška pri inicijalizaciji');
+        alert('Ошибка при инициализации');
     }
 });
 
-// Register user
-async function registerUser() {
-    return new Promise((resolve) => {
-        document.getElementById('registerModal').classList.remove('hidden');
-        document.getElementById('registerBtn').onclick = async () => {
-            const phone = document.getElementById('phoneInput').value;
-            if (!phone) {
-                alert('Molim unesite broj telefona');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/users/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        telegram_id: tg?.initDataUnsafe?.user?.id || 'web-user-' + Date.now(),
-                        first_name: tg?.initDataUnsafe?.user?.first_name || 'User',
-                        last_name: tg?.initDataUnsafe?.user?.last_name || '',
-                        username: tg?.initDataUnsafe?.user?.username || 'user'
-                    })
-                });
-
-                const user = await response.json();
-                localStorage.setItem('user_id', user.id);
-                resolve(user);
-            } catch (error) {
-                console.error('Registration error:', error);
-                alert('Greška pri registraciji');
-                resolve(null);
-            }
-        };
-    });
+function getTelegramUser() {
+    return tg?.initDataUnsafe?.user || null;
 }
 
-// Load categories and cities
+function getFallbackTelegramId() {
+    let fallbackId = localStorage.getItem(FALLBACK_TELEGRAM_ID_KEY);
+
+    if (!fallbackId) {
+        fallbackId = `web-user-${Date.now()}`;
+        localStorage.setItem(FALLBACK_TELEGRAM_ID_KEY, fallbackId);
+    }
+
+    return fallbackId;
+}
+
+function getTelegramId() {
+    return String(getTelegramUser()?.id || getFallbackTelegramId());
+}
+
+function getAuthHeaders(includeJson = true) {
+    const headers = {};
+
+    if (includeJson) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    if (state.user?.id) {
+        headers['x-user-id'] = state.user.id;
+    }
+
+    const telegramId = getTelegramId();
+    if (telegramId) {
+        headers['x-telegram-id'] = telegramId;
+    }
+
+    return headers;
+}
+
+function getTelegramPayload() {
+    const telegramUser = getTelegramUser();
+
+    return {
+        telegram_id: getTelegramId(),
+        first_name: telegramUser?.first_name || '',
+        last_name: telegramUser?.last_name || '',
+        username: telegramUser?.username || ''
+    };
+}
+
+function getCityName(value) {
+    const city = state.cities.find((item) => item.id === value || item.name === value);
+    return city?.name || value || 'Не указан';
+}
+
+function getProfileDisplayName(user) {
+    return [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username || 'Пользователь';
+}
+
+async function registerUser() {
+    try {
+        const response = await fetch(`${API_BASE}/users/register`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(getTelegramPayload())
+        });
+
+        if (!response.ok) {
+            throw new Error('Не удалось создать профиль');
+        }
+
+        const user = await response.json();
+        localStorage.setItem('user_id', user.id);
+        return user;
+    } catch (error) {
+        console.error('Registration error:', error);
+        return null;
+    }
+}
+
 async function loadReferences() {
     try {
         const [categoriesRes, citiesRes] = await Promise.all([
@@ -91,140 +133,120 @@ async function loadReferences() {
 
         state.categories = await categoriesRes.json();
         state.cities = await citiesRes.json();
-
-        // Populate select elements
         populateSelects();
     } catch (error) {
         console.error('Error loading references:', error);
     }
 }
 
-// Populate select elements
-function populateSelects() {
-    const categorySelects = document.querySelectorAll('.listing-form select:nth-of-type(1)');
-    const citySelects = document.querySelectorAll('.listing-form select:nth-of-type(2)');
-    const profileCitySelect = document.getElementById('profileCitySelect');
-    const cityFilter = document.getElementById('citySelect');
-    const categoryFilter = document.getElementById('categorySelect');
+function populateSelectElement(select, options, placeholder) {
+    if (!select) {
+        return;
+    }
 
-    [categorySelects, [profileCitySelect, cityFilter]].forEach((elements, type) => {
-        elements.forEach(el => {
-            if (el) {
-                const options = type === 0 ? state.categories : state.cities;
-                options.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.id;
-                    option.textContent = item.name;
-                    el.appendChild(option);
-                });
-            }
-        });
-    });
+    select.innerHTML = '';
 
-    [citySelects, [profileCitySelect, cityFilter]].forEach((elements, type) => {
-        elements.forEach(el => {
-            if (el) {
-                const options = state.cities;
-                options.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.id;
-                    option.textContent = item.name;
-                    el.appendChild(option);
-                });
-            }
-        });
+    if (placeholder !== null) {
+        const placeholderOption = document.createElement('option');
+        placeholderOption.value = '';
+        placeholderOption.textContent = placeholder;
+        select.appendChild(placeholderOption);
+    }
+
+    options.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.name;
+        select.appendChild(option);
     });
 }
 
-// Show main app
+function populateSelects() {
+    const productFormSelects = document.querySelectorAll('#productForm select');
+    const serviceFormSelects = document.querySelectorAll('#serviceForm select');
+
+    populateSelectElement(document.getElementById('citySelect'), state.cities, 'Все города');
+    populateSelectElement(document.getElementById('categorySelect'), state.categories, 'Все категории');
+    populateSelectElement(document.getElementById('profileCitySelect'), state.cities, 'Не указан');
+
+    populateSelectElement(productFormSelects[0], state.categories, null);
+    populateSelectElement(productFormSelects[1], state.cities, null);
+    populateSelectElement(serviceFormSelects[0], state.categories, null);
+    populateSelectElement(serviceFormSelects[1], state.cities, null);
+}
+
 function showMainApp() {
-    document.getElementById('registerModal').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     loadRandomListings();
 }
 
-// Attach event listeners
 function attachEventListeners() {
-    // Tab navigation
-    document.querySelectorAll('.tab').forEach(tab => {
+    document.querySelectorAll('.tab').forEach((tab) => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
-    // Search
     document.getElementById('searchBtn').addEventListener('click', performSearch);
-
-    // Profile
     document.getElementById('profileBtn').addEventListener('click', showProfileModal);
 
-    // Listing type tabs
-    document.querySelectorAll('.listing-type').forEach(btn => {
+    document.querySelectorAll('.listing-type').forEach((btn) => {
         btn.addEventListener('click', () => switchListingType(btn.dataset.type));
     });
 
-    // My items type tabs
-    document.querySelectorAll('.my-items-type').forEach(btn => {
+    document.querySelectorAll('.my-items-type').forEach((btn) => {
         btn.addEventListener('click', () => switchMyItemsType(btn.dataset.type));
     });
 
-    // Forms
     document.querySelectorAll('.listing-form').forEach((form, index) => {
         form.addEventListener('submit', (e) => handleListingSubmit(e, index));
     });
 
-    // Image inputs
     document.getElementById('imageInput').addEventListener('change', (e) => handleImageSelect(e, 'images'));
     document.getElementById('serviceImageInput').addEventListener('change', (e) => handleImageSelect(e, 'serviceImages'));
     document.getElementById('adImageInput').addEventListener('change', (e) => handleImageSelect(e, 'adImages'));
+    document.getElementById('reviewScreenshotInput').addEventListener('change', handleReviewScreenshotSelect);
 }
 
-// Switch tab
 function switchTab(tabName) {
-    // Update active tab
-    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach((tab) => tab.classList.remove('active'));
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
 
-    // Update active pane
-    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
+    document.querySelectorAll('.tab-pane').forEach((pane) => pane.classList.add('hidden'));
     document.getElementById(tabName).classList.remove('hidden');
 
-    // Load my items if switching to that tab
     if (tabName === 'my-items') {
         loadMyItems();
     }
 }
 
-// Switch listing type
 function switchListingType(type) {
-    document.querySelectorAll('.listing-type').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.listing-type').forEach((btn) => btn.classList.remove('active'));
     document.querySelector(`[data-type="${type}"]`).classList.add('active');
 
-    document.querySelectorAll('.form-section').forEach(section => section.classList.add('hidden'));
+    document.querySelectorAll('.form-section').forEach((section) => section.classList.add('hidden'));
     document.getElementById(`${type}Form`).classList.remove('hidden');
 }
 
-// Switch my items type
 function switchMyItemsType(type) {
-    document.querySelectorAll('.my-items-type').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.my-items-type').forEach((btn) => btn.classList.remove('active'));
     document.querySelector(`[data-type="${type}"]`).classList.add('active');
 
     document.getElementById('myProducts').classList.toggle('hidden', type !== 'products');
     document.getElementById('myServices').classList.toggle('hidden', type !== 'services');
 }
 
-// Handle image selection
 function handleImageSelect(e, type) {
     const files = Array.from(e.target.files);
     state[type] = state[type] || [];
 
     if (state[type].length + files.length > MAX_IMAGE_COUNT) {
-        alert(`Možete dodati najviše ${MAX_IMAGE_COUNT} slike`);
+        alert(`Можно добавить не более ${MAX_IMAGE_COUNT} фотографий`);
         e.target.value = '';
         return;
     }
 
-    files.forEach(file => {
+    files.forEach((file) => {
         if (file.size > MAX_IMAGE_SIZE_BYTES) {
-            alert('Svaka slika mora biti manja od 1.5 MB');
+            alert('Каждая фотография должна быть меньше 1.5 МБ');
             return;
         }
 
@@ -239,13 +261,46 @@ function handleImageSelect(e, type) {
     e.target.value = '';
 }
 
-// Render image preview
+function handleReviewScreenshotSelect(e) {
+    const file = e.target.files[0];
+
+    if (!file) {
+        return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        alert('Скриншот должен быть меньше 1.5 МБ');
+        e.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        state.reviewScreenshot = event.target.result;
+        renderImagePreview('reviewScreenshot');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+}
+
 function renderImagePreview(type) {
-    const previewId = type === 'images' ? 'imagePreview' : type === 'serviceImages' ? 'serviceImagePreview' : 'adImagePreview';
-    const preview = document.getElementById(previewId);
+    const previewIdMap = {
+        images: 'imagePreview',
+        serviceImages: 'serviceImagePreview',
+        adImages: 'adImagePreview',
+        reviewScreenshot: 'reviewScreenshotPreview'
+    };
+
+    const preview = document.getElementById(previewIdMap[type]);
+    if (!preview) {
+        return;
+    }
+
     preview.innerHTML = '';
 
-    state[type].forEach((image, index) => {
+    const images = type === 'reviewScreenshot' ? (state.reviewScreenshot ? [state.reviewScreenshot] : []) : state[type];
+
+    images.forEach((image, index) => {
         const div = document.createElement('div');
         div.className = 'image-preview-item';
         div.innerHTML = `
@@ -256,21 +311,30 @@ function renderImagePreview(type) {
     });
 }
 
-// Remove image
 window.removeImage = function(type, index) {
-    state[type].splice(index, 1);
+    if (type === 'reviewScreenshot') {
+        state.reviewScreenshot = null;
+    } else {
+        state[type].splice(index, 1);
+    }
+
     renderImagePreview(type);
 };
 
-// Handle listing submit
 async function handleListingSubmit(e, formIndex) {
     e.preventDefault();
     const form = e.target;
     const inputs = form.querySelectorAll('input, textarea, select');
-    const [title, description, categoryId, cityId, price] = [inputs[0].value, inputs[1].value, inputs[2].value, inputs[3].value, inputs[4].value];
+    const [title, description, categoryId, cityId, price] = [
+        inputs[0].value,
+        inputs[1].value,
+        inputs[2].value,
+        inputs[3].value,
+        inputs[4].value
+    ];
 
     if (!title || !categoryId || !cityId || !price) {
-        alert('Molim popunite obavezna polja');
+        alert('Пожалуйста, заполните обязательные поля');
         return;
     }
 
@@ -286,48 +350,45 @@ async function handleListingSubmit(e, formIndex) {
             images: state.images
         };
 
-        // Determine type based on form index
         if (formIndex === 1) {
             endpoint = '/services/create';
             body.images = state.serviceImages;
         } else if (formIndex === 2) {
-            // For ads, just show message
-            alert('Reklama je plaćena. Kontaktirajte @helionstudio');
+            alert('Реклама размещается платно. Свяжитесь с @helionstudio');
             return;
         }
 
         const response = await fetch(`${API_BASE}${endpoint}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify(body)
         });
 
         const result = await response.json();
         if (result.success || result.listing_id || result.service_id) {
-            alert('Oglas je objavljen!');
+            alert('Объявление опубликовано');
             form.reset();
             state.images = [];
             state.serviceImages = [];
             state.adImages = [];
-            document.getElementById('imagePreview').innerHTML = '';
-            document.getElementById('serviceImagePreview').innerHTML = '';
-            document.getElementById('adImagePreview').innerHTML = '';
+            renderImagePreview('images');
+            renderImagePreview('serviceImages');
+            renderImagePreview('adImages');
         } else {
-            alert(result.error || 'Greška pri objavi');
+            alert(result.error || 'Ошибка при публикации');
         }
     } catch (error) {
         console.error('Error submitting listing:', error);
-        alert('Greška pri objavi oglasa');
+        alert('Ошибка при публикации объявления');
     }
 }
 
-// Perform search
 async function performSearch() {
     const cityId = document.getElementById('citySelect').value;
     const categoryId = document.getElementById('categorySelect').value;
 
     try {
-        const endpoint = `/listings/search?${cityId ? 'city_id=' + cityId : ''}${categoryId ? '&category_id=' + categoryId : ''}`;
+        const endpoint = `/listings/search?${cityId ? `city_id=${cityId}` : ''}${categoryId ? `${cityId ? '&' : ''}category_id=${categoryId}` : ''}`;
         const response = await fetch(`${API_BASE}${endpoint}`);
         const listings = await response.json();
         state.currentListings = listings;
@@ -337,7 +398,6 @@ async function performSearch() {
     }
 }
 
-// Load random listings
 async function loadRandomListings() {
     try {
         const response = await fetch(`${API_BASE}/listings/random?limit=20`);
@@ -348,7 +408,6 @@ async function loadRandomListings() {
     }
 }
 
-// Load my items
 async function loadMyItems() {
     try {
         const [listingsRes, servicesRes] = await Promise.all([
@@ -366,17 +425,16 @@ async function loadMyItems() {
     }
 }
 
-// Render listings
 function renderListings(listings, containerId) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
 
     if (listings.length === 0) {
-        container.innerHTML = '<p style="grid-column: 1/-1; padding: 20px; text-align: center;">Nema dostupnih oglasa</p>';
+        container.innerHTML = '<p style="grid-column: 1/-1; padding: 20px; text-align: center;">Нет доступных объявлений</p>';
         return;
     }
 
-    listings.forEach(item => {
+    listings.forEach((item) => {
         const card = document.createElement('div');
         card.className = 'item-card';
         const image = item.images && item.images[0] ? item.images[0] : '📦';
@@ -389,16 +447,15 @@ function renderListings(listings, containerId) {
             <div class="item-info">
                 <div class="item-title">${item.title}</div>
                 <div class="item-price">${item.price} EUR</div>
-                <div class="item-meta">${item.city_id || item.city || 'Različiti gradovi'}</div>
+                <div class="item-meta">${getCityName(item.city_id || item.city)}</div>
             </div>
         `;
 
-        // Add action buttons if in my items
         if (containerId.includes('my')) {
             content += `
                 <div class="item-actions">
-                    <button onclick="editItem('${item.id}')">Uredi</button>
-                    <button class="delete" onclick="deleteItem('${item.id}', '${containerId}')">Obriši</button>
+                    <button onclick="editItem('${item.id}')">Редактировать</button>
+                    <button class="delete" onclick="deleteItem('${item.id}', '${containerId}')">Удалить</button>
                 </div>
             `;
         } else {
@@ -410,123 +467,295 @@ function renderListings(listings, containerId) {
     });
 }
 
-// Show item details
 function showItemDetails(item) {
+    state.selectedItem = item;
     const modal = document.getElementById('itemModal');
     const content = document.getElementById('itemContent');
 
     const gallery = item.images && item.images.length > 0 ? `
         <div class="item-details-gallery">
-            ${item.images.map(img => `<img src="${img}" alt="${item.title}">`).join('')}
+            ${item.images.map((img) => `<img src="${img}" alt="${item.title}">`).join('')}
         </div>
     ` : '';
 
     content.innerHTML = `
         <h2>${item.title}</h2>
         <div class="item-details-meta">
-            <span>📍 ${item.city_id || 'Nepoznat grad'}</span>
-            <span>👁️ ${item.views || 0} pregleda</span>
-            <span>📅 ${new Date(item.created_at).toLocaleDateString('sr-ME')}</span>
+            <span>📍 ${getCityName(item.city_id || item.city)}</span>
+            <span>👁️ ${item.views || 0} просмотров</span>
+            <span>📅 ${new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
         </div>
         ${gallery}
         <div class="item-details-price">${item.price} EUR</div>
-        <div class="item-details-description">${item.description || 'Nema dostupnog opisa'}</div>
+        <div class="item-details-description">${item.description || 'Описание отсутствует'}</div>
         <div class="item-details-contact">
-            <strong>Kontaktiranje prodavca</strong>
-            <p>Za više informacija kontaktirajte prodavca</p>
+            <strong>Продавец</strong>
+            <p>Вы можете открыть профиль продавца или оставить отзыв.</p>
+        </div>
+        <div class="item-details-actions">
+            <button class="btn btn-secondary btn-block" onclick="showSellerProfile()">Профиль продавца</button>
+            <button class="btn btn-primary btn-block" onclick="openReviewModal()">Оставить отзыв</button>
         </div>
     `;
 
     modal.classList.remove('hidden');
 }
 
-// Close item modal
 window.closeItemModal = function() {
     document.getElementById('itemModal').classList.add('hidden');
 };
 
-// Show profile modal
-async function showProfileModal() {
+window.showSellerProfile = async function() {
+    if (!state.selectedItem?.user_id) {
+        return;
+    }
+
+    closeItemModal();
+    await showUserProfile(state.selectedItem.user_id);
+};
+
+async function showUserProfile(userId) {
     try {
-        const response = await fetch(`${API_BASE}/users/profile/${state.user.id}`);
+        const response = await fetch(`${API_BASE}/users/profile/${userId}`, {
+            headers: getAuthHeaders(false)
+        });
         const user = await response.json();
 
-        document.getElementById('profileInfo').innerHTML = `
-            <p><strong>Korisničko ime:</strong> ${user.username || 'N/A'}</p>
-            <p><strong>Ime:</strong> ${user.first_name} ${user.last_name || ''}</p>
-            <p><strong>Telefon:</strong> ${user.phone || 'Nije postavljeno'}</p>
-            <p><strong>Grad:</strong> ${user.city}</p>
+        if (!response.ok) {
+            throw new Error(user.error || 'Не удалось загрузить профиль');
+        }
+
+        state.viewedProfileId = userId;
+
+        const isOwnProfile = state.user?.id === userId;
+        const canModerate = state.user?.is_admin === true;
+
+        document.getElementById('profileViewInfo').innerHTML = `
+            <p><strong>Имя пользователя:</strong> ${user.username || 'Не указано'}</p>
+            <p><strong>Имя:</strong> ${getProfileDisplayName(user)}</p>
+            <p><strong>Телефон:</strong> ${user.phone || 'Не указан'}</p>
+            <p><strong>Город:</strong> ${getCityName(user.city)}</p>
+            <p><strong>О себе:</strong> ${user.about || 'Пользователь пока ничего не рассказал о себе'}</p>
         `;
 
-        document.getElementById('profileCitySelect').value = user.city;
-        document.getElementById('profilePhone').value = user.phone || '';
+        document.getElementById('profileEditForm').classList.toggle('hidden', !isOwnProfile);
+        document.getElementById('profileSaveBtn').classList.toggle('hidden', !isOwnProfile);
+        document.getElementById('profileLogoutBtn').classList.toggle('hidden', !isOwnProfile);
 
+        document.getElementById('profileFirstName').value = user.first_name || '';
+        document.getElementById('profileLastName').value = user.last_name || '';
+        document.getElementById('profileUsername').value = user.username || '';
+        document.getElementById('profilePhone').value = user.phone || '';
+        document.getElementById('profileCitySelect').value = user.city ? (state.cities.find((city) => city.name === user.city || city.id === user.city)?.id || '') : '';
+        document.getElementById('profileAbout').value = user.about || '';
+
+        renderReviews(user.reviews || [], canModerate);
         document.getElementById('profileModal').classList.remove('hidden');
     } catch (error) {
         console.error('Error loading profile:', error);
+        alert('Ошибка при загрузке профиля');
     }
 }
 
-// Close profile modal
+function renderReviews(reviews, canModerate) {
+    const container = document.getElementById('profileReviews');
+
+    if (!reviews.length) {
+        container.innerHTML = '<p class="info-text">Пока нет отзывов.</p>';
+        return;
+    }
+
+    container.innerHTML = reviews.map((review) => {
+        const typeLabel = review.review_type === 'product' ? 'Отзыв о товаре' : 'Отзыв о продавце';
+        const screenshotLink = canModerate && review.screenshot_url
+            ? `<a class="review-screenshot-link" href="${review.screenshot_url}" target="_blank" rel="noreferrer">Скриншот</a>`
+            : '';
+        const deleteButton = canModerate
+            ? `<button class="review-delete-btn" onclick="deleteReview('${review.id}')">✕</button>`
+            : '';
+
+        return `
+            <div class="review-card">
+                <div class="review-header">
+                    <div>
+                        <strong>${review.author_name}</strong>
+                        <div class="review-meta">${typeLabel}${review.listing_title ? ` • ${review.listing_title}` : ''} • ${new Date(review.created_at).toLocaleDateString('ru-RU')}</div>
+                    </div>
+                    <div class="review-actions">
+                        ${screenshotLink}
+                        ${deleteButton}
+                    </div>
+                </div>
+                <p class="review-text">${review.text}</p>
+            </div>
+        `;
+    }).join('');
+}
+
+window.showProfileModal = async function() {
+    await showUserProfile(state.user.id);
+};
+
 window.closeProfileModal = function() {
     document.getElementById('profileModal').classList.add('hidden');
 };
 
-// Update profile
 window.updateProfile = async function() {
     try {
-        const phone = document.getElementById('profilePhone').value;
-        const city = document.getElementById('profileCitySelect').value;
+        const cityId = document.getElementById('profileCitySelect').value;
+        const cityName = cityId ? getCityName(cityId) : '';
+        const payload = {
+            first_name: document.getElementById('profileFirstName').value.trim(),
+            last_name: document.getElementById('profileLastName').value.trim(),
+            username: document.getElementById('profileUsername').value.trim(),
+            phone: document.getElementById('profilePhone').value.trim(),
+            city: cityName,
+            about: document.getElementById('profileAbout').value.trim()
+        };
 
-        if (phone) {
-            await fetch(`${API_BASE}/users/profile/${state.user.id}/phone`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone })
-            });
+        const response = await fetch(`${API_BASE}/users/profile/${state.user.id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Не удалось обновить профиль');
         }
 
-        if (city) {
-            await fetch(`${API_BASE}/users/profile/${state.user.id}/city`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ city })
-            });
-        }
-
-        alert('Profil je ažuriran');
-        closeProfileModal();
+        state.user = result.user;
+        alert('Профиль обновлен');
+        await showUserProfile(state.user.id);
     } catch (error) {
         console.error('Error updating profile:', error);
-        alert('Greška pri ažuriranju profila');
+        alert('Ошибка при обновлении профиля');
     }
 };
 
-// Delete item
+window.openReviewModal = function() {
+    if (!state.selectedItem) {
+        return;
+    }
+
+    if (state.selectedItem.user_id === state.user.id) {
+        alert('Нельзя оставить отзыв самому себе');
+        return;
+    }
+
+    document.getElementById('reviewTargetInfo').textContent = `Отзыв будет привязан к продавцу и товару: ${state.selectedItem.title}`;
+    document.getElementById('reviewType').value = 'seller';
+    document.getElementById('reviewText').value = '';
+    state.reviewScreenshot = null;
+    renderImagePreview('reviewScreenshot');
+    closeItemModal();
+    document.getElementById('reviewModal').classList.remove('hidden');
+};
+
+window.closeReviewModal = function() {
+    document.getElementById('reviewModal').classList.add('hidden');
+};
+
+window.submitReview = async function() {
+    const reviewType = document.getElementById('reviewType').value;
+    const reviewText = document.getElementById('reviewText').value.trim();
+
+    if (!state.selectedItem) {
+        alert('Сначала выберите товар');
+        return;
+    }
+
+    if (!reviewText) {
+        alert('Введите текст отзыва');
+        return;
+    }
+
+    if (!state.reviewScreenshot) {
+        alert('Обязательно приложите скриншот переписки');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/reviews`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                user_id: state.user.id,
+                telegram_id: getTelegramId(),
+                target_user_id: state.selectedItem.user_id,
+                listing_id: state.selectedItem.id,
+                review_type: reviewType,
+                text: reviewText,
+                screenshot: state.reviewScreenshot
+            })
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Не удалось отправить отзыв');
+        }
+
+        alert('Отзыв отправлен');
+        closeReviewModal();
+
+        if (state.viewedProfileId === state.selectedItem.user_id) {
+            await showUserProfile(state.viewedProfileId);
+        }
+    } catch (error) {
+        console.error('Error creating review:', error);
+        alert(error.message || 'Ошибка при отправке отзыва');
+    }
+};
+
+window.deleteReview = async function(reviewId) {
+    if (!confirm('Удалить этот отзыв?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/reviews/${reviewId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Не удалось удалить отзыв');
+        }
+
+        if (state.viewedProfileId) {
+            await showUserProfile(state.viewedProfileId);
+        }
+    } catch (error) {
+        console.error('Error deleting review:', error);
+        alert(error.message || 'Ошибка при удалении отзыва');
+    }
+};
+
 window.deleteItem = async function(itemId, containerId) {
-    if (!confirm('Sigurno želite obrisati?')) return;
+    if (!confirm('Вы уверены, что хотите удалить?')) {
+        return;
+    }
 
     try {
         const endpoint = containerId.includes('Products') ? `/listings/${itemId}` : `/services/${itemId}`;
         await fetch(`${API_BASE}${endpoint}`, {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ user_id: state.user.id })
         });
 
-        alert('Oglas je obrisan');
+        alert('Объявление удалено');
         loadMyItems();
     } catch (error) {
         console.error('Error deleting item:', error);
     }
 };
 
-// Edit item
-window.editItem = function(itemId) {
-    alert('Uređivanje je u razvoju');
+window.editItem = function() {
+    alert('Редактирование пока в разработке');
 };
 
-// Logout
 window.logout = function() {
     localStorage.removeItem('user_id');
     location.reload();

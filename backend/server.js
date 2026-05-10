@@ -6,6 +6,7 @@ const path = require('path');
 
 const userRoutes = require('./routes/userRoutes');
 const listingRoutes = require('./routes/listingRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const referenceRoutes = require('./routes/referenceRoutes');
 const { initializeData } = require('./models/Reference');
@@ -24,6 +25,7 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 
 app.use('/api/users', userRoutes);
 app.use('/api/listings', listingRoutes);
+app.use('/api/reviews', reviewRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/reference', referenceRoutes);
 
