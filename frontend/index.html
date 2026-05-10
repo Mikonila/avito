@@ -60,17 +60,7 @@
                             <button id="openFiltersBtn" class="filter-trigger" type="button" aria-label="Открыть фильтры">⚙️</button>
                         </div>
 
-                        <section class="categories-showcase">
-                            <div class="section-divider compact">
-                                <div>
-                                    <p class="section-kicker">Категории</p>
-                                    <h3>Все категории</h3>
-                                </div>
-                            </div>
-                            <div id="categoryShowcase" class="category-showcase-grid"></div>
-                        </section>
-
-                        <section class="promo-banner">
+                        <section id="promoBannerSection" class="promo-banner">
                             <div class="promo-copy">
                                 <p class="promo-label">Marketplace</p>
                                 <h2>Покупайте и продавайте по всей Черногории</h2>
@@ -81,6 +71,35 @@
                                 <span class="promo-shape promo-shape-green"></span>
                                 <span class="promo-shape promo-shape-orange"></span>
                             </div>
+                        </section>
+
+                        <section id="categoriesShowcaseSection" class="categories-showcase">
+                            <div class="section-divider compact">
+                                <div>
+                                    <p class="section-kicker">Категории</p>
+                                    <h3>Категории</h3>
+                                </div>
+                            </div>
+                            <div id="categoryShowcase" class="category-showcase-grid"></div>
+                        </section>
+
+                        <section id="categoryLandingSection" class="category-landing hidden">
+                            <div class="category-landing-header">
+                                <button type="button" class="category-back-btn" onclick="closeCategoryLanding()">←</button>
+                                <div>
+                                    <p class="section-kicker">Категория</p>
+                                    <h2 id="categoryLandingTitle">Категория</h2>
+                                </div>
+                            </div>
+                            <div id="categorySubcategoryGrid" class="category-landing-grid"></div>
+
+                            <div class="section-divider compact">
+                                <div>
+                                    <p class="section-kicker">Подборка</p>
+                                    <h3 id="categoryRecommendationsTitle">Рекомендации</h3>
+                                </div>
+                            </div>
+                            <div id="categoryRecommendations" class="items-grid"></div>
                         </section>
 
                         <section id="searchResultsSection" class="results-section hidden">
@@ -94,14 +113,16 @@
                         </section>
                     </section>
 
-                    <section class="section-divider">
-                        <div>
-                            <p class="section-kicker">Подборка</p>
-                            <h3>Рекомендуемые объявления</h3>
-                        </div>
-                    </section>
+                    <section id="homeRecommendationsBlock">
+                        <section class="section-divider">
+                            <div>
+                                <p class="section-kicker">Подборка</p>
+                                <h3>Рекомендуемые объявления</h3>
+                            </div>
+                        </section>
 
-                    <div id="randomListings" class="items-grid"></div>
+                        <div id="randomListings" class="items-grid"></div>
+                    </section>
                 </div>
 
                 <div id="listings" class="tab-pane hidden">
@@ -369,6 +390,34 @@
 
                 <button id="searchBtn" class="btn btn-primary btn-block">Показать объявления</button>
             </div>
+        </div>
+    </div>
+
+    <div id="searchModal" class="modal hidden">
+        <div class="modal-content search-modal-content">
+            <button class="modal-close" onclick="closeSearchModal()">✕</button>
+            <div class="filter-modal-header">
+                <h2>Поиск</h2>
+                <button type="button" class="link-btn" onclick="clearSearchQuery()">Очистить</button>
+            </div>
+            <div class="filter-sheet">
+                <div class="filter-block">
+                    <label for="searchQueryInput">Что ищете</label>
+                    <input type="text" id="searchQueryInput" class="filter-input" placeholder="Например: iPhone, квартира, клининг">
+                </div>
+                <button id="searchSubmitBtn" class="btn btn-primary btn-block">Найти объявления</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="categoryExplorerModal" class="modal hidden">
+        <div class="modal-content modal-large category-explorer-modal">
+            <button class="modal-close" onclick="closeCategoryExplorerModal()">✕</button>
+            <div class="category-explorer-header">
+                <p class="section-kicker">Категории</p>
+                <h2>Все категории</h2>
+            </div>
+            <div id="categoryExplorerContent" class="category-explorer-content"></div>
         </div>
     </div>
 

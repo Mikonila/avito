@@ -17,6 +17,8 @@ let state = {
     currentListings: [],
     homeListings: [],
     currentServices: [],
+    activeSearchView: 'home',
+    activeCategoryId: '',
     images: [],
     serviceImages: [],
     adImages: [],
@@ -26,6 +28,8 @@ let state = {
     promotionListingId: null,
     filters: {
         categoryId: '',
+        subcategoryId: '',
+        query: '',
         cityId: '',
         minPrice: '',
         maxPrice: '',
@@ -147,13 +151,26 @@ function getAvatarMarkup(avatarUrl, fallbackText = '👤') {
 
 function updateSearchTriggerLabel() {
     const cityName = state.filters.cityId ? getCityName(state.filters.cityId) : 'по всей Черногории';
+    const query = state.filters.query?.trim();
     const categoryName = state.filters.categoryId ? getCategoryName(state.filters.categoryId) : 'во всех категориях';
-    const label = `Поиск ${categoryName.toLowerCase()} ${cityName}`;
+    const subcategoryName = getSubcategoryName(state.filters.categoryId, state.filters.subcategoryId);
+    const subject = query || subcategoryName || categoryName.toLowerCase();
+    const label = query ? `${subject} ${cityName}` : `Поиск ${subject} ${cityName}`;
     const target = document.getElementById('searchTriggerLabel');
 
     if (target) {
         target.textContent = label;
     }
+}
+
+function setSearchViewMode(mode) {
+    state.activeSearchView = mode;
+
+    document.getElementById('promoBannerSection')?.classList.toggle('hidden', mode !== 'home');
+    document.getElementById('categoriesShowcaseSection')?.classList.toggle('hidden', mode !== 'home');
+    document.getElementById('homeRecommendationsBlock')?.classList.toggle('hidden', mode !== 'home');
+    document.getElementById('categoryLandingSection')?.classList.toggle('hidden', mode !== 'category');
+    document.getElementById('searchResultsSection')?.classList.toggle('hidden', mode !== 'results');
 }
 
 async function registerUser() {
@@ -237,6 +254,7 @@ function populateSelects() {
 
 function showMainApp() {
     document.getElementById('mainApp').classList.remove('hidden');
+    setSearchViewMode('home');
     loadRandomListings();
 }
 
@@ -256,7 +274,21 @@ function renderCategoryShowcase() {
         return;
     }
 
-    container.innerHTML = state.categories.map((category, index) => `
+    const allTile = `
+        <button
+            type="button"
+            class="category-tile category-tile-all ${!state.filters.categoryId ? 'active' : ''}"
+            data-category-tile="all"
+        >
+            <div class="category-tile-copy">
+                <strong>Все</strong>
+                <span>Открыть все категории и подкатегории</span>
+            </div>
+            <div class="category-tile-icon">✨</div>
+        </button>
+    `;
+
+    const categoryTiles = state.categories.map((category, index) => `
         <button
             type="button"
             class="category-tile category-tile-${(index % 6) + 1} ${state.filters.categoryId === category.id ? 'active' : ''}"
@@ -270,15 +302,88 @@ function renderCategoryShowcase() {
         </button>
     `).join('');
 
+    container.innerHTML = allTile + categoryTiles;
+
     container.querySelectorAll('[data-category-tile]').forEach((button) => {
         button.addEventListener('click', () => {
-            state.filters.categoryId = button.dataset.categoryTile;
-            syncFilterUi();
-            closeFiltersModal();
-            performSearch();
+            if (button.dataset.categoryTile === 'all') {
+                openCategoryExplorerModal();
+                return;
+            }
+
+            openCategoryLanding(button.dataset.categoryTile);
         });
     });
 }
+
+function renderCategoryExplorer() {
+    const container = document.getElementById('categoryExplorerContent');
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = state.categories.map((category) => {
+        const subcategories = category.subcategories || [];
+        const cards = subcategories.length
+            ? subcategories.map((subcategory) => `
+                <button
+                    type="button"
+                    class="category-explorer-card ${state.filters.categoryId === category.id && state.filters.subcategoryId === subcategory.id ? 'active' : ''}"
+                    onclick="applyCategorySelection('${category.id}', '${subcategory.id}')"
+                >
+                    <span>${subcategory.name}</span>
+                    <small>${category.name}</small>
+                </button>
+            `).join('')
+            : `
+                <button
+                    type="button"
+                    class="category-explorer-card ${state.filters.categoryId === category.id && !state.filters.subcategoryId ? 'active' : ''}"
+                    onclick="applyCategorySelection('${category.id}', '')"
+                >
+                    <span>Открыть объявления</span>
+                    <small>${category.name}</small>
+                </button>
+            `;
+
+        return `
+            <section class="category-explorer-group">
+                <div class="category-explorer-group-header">
+                    <div>
+                        <h3>${category.name}</h3>
+                        <p>${subcategories.length ? `${subcategories.length} подкатегории` : 'Без подкатегорий'}</p>
+                    </div>
+                    <button
+                        type="button"
+                        class="category-explorer-open"
+                        onclick="applyCategorySelection('${category.id}', '')"
+                    >
+                        Открыть
+                    </button>
+                </div>
+                <div class="category-explorer-grid">
+                    ${cards}
+                </div>
+            </section>
+        `;
+    }).join('');
+}
+
+function openCategoryExplorerModal() {
+    renderCategoryExplorer();
+    document.getElementById('categoryExplorerModal').classList.remove('hidden');
+}
+
+window.closeCategoryExplorerModal = function() {
+    document.getElementById('categoryExplorerModal').classList.add('hidden');
+};
+
+window.applyCategorySelection = function(categoryId, subcategoryId = '') {
+    closeCategoryExplorerModal();
+    closeFiltersModal();
+    openCategoryLanding(categoryId, subcategoryId);
+};
 
 function renderFilterCategoryChips() {
     const container = document.getElementById('filterCategoryChips');
@@ -308,6 +413,7 @@ function renderFilterCategoryChips() {
     container.querySelectorAll('[data-filter-category]').forEach((button) => {
         button.addEventListener('click', () => {
             state.filters.categoryId = button.dataset.filterCategory;
+            state.filters.subcategoryId = '';
             syncFilterUi();
         });
     });
@@ -315,12 +421,17 @@ function renderFilterCategoryChips() {
 
 function syncFilterUi() {
     const citySelect = document.getElementById('citySelect');
+    const searchQueryInput = document.getElementById('searchQueryInput');
     const minPriceInput = document.getElementById('minPriceInput');
     const maxPriceInput = document.getElementById('maxPriceInput');
     const sortInput = document.querySelector(`input[name="sortOption"][value="${state.filters.sort}"]`);
 
     if (citySelect) {
         citySelect.value = state.filters.cityId;
+    }
+
+    if (searchQueryInput) {
+        searchQueryInput.value = state.filters.query;
     }
 
     if (minPriceInput) {
@@ -352,14 +463,129 @@ window.closeFiltersModal = function() {
 window.resetFilters = function() {
     state.filters = {
         categoryId: '',
+        subcategoryId: '',
+        query: '',
         cityId: '',
         minPrice: '',
         maxPrice: '',
         sort: 'default'
     };
+    state.activeCategoryId = '';
     syncFilterUi();
-    document.getElementById('searchResultsSection').classList.add('hidden');
+    setSearchViewMode('home');
+    closeSearchModal();
     renderListings(state.homeListings, 'randomListings');
+};
+
+function renderCategoryLandingTiles(category) {
+    const container = document.getElementById('categorySubcategoryGrid');
+
+    if (!container || !category) {
+        return;
+    }
+
+    const subcategories = category.subcategories || [];
+    const tiles = [
+        `
+            <button
+                type="button"
+                class="category-landing-tile ${!state.filters.subcategoryId ? 'active' : ''}"
+                onclick="selectCategoryLandingSubcategory('')"
+            >
+                <strong>Все объявления</strong>
+                <span>${category.name}</span>
+            </button>
+        `,
+        ...subcategories.map((subcategory) => `
+            <button
+                type="button"
+                class="category-landing-tile ${state.filters.subcategoryId === subcategory.id ? 'active' : ''}"
+                onclick="selectCategoryLandingSubcategory('${subcategory.id}')"
+            >
+                <strong>${subcategory.name}</strong>
+                <span>${category.name}</span>
+            </button>
+        `),
+        `
+            <button
+                type="button"
+                class="category-landing-tile category-landing-tile-all"
+                onclick="openCategoryExplorerModal()"
+            >
+                <strong>Все категории →</strong>
+                <span>Открыть полный список</span>
+            </button>
+        `
+    ];
+
+    container.innerHTML = tiles.join('');
+}
+
+async function openCategoryLanding(categoryId, subcategoryId = '') {
+    const category = getCategoryById(categoryId);
+
+    if (!category) {
+        return;
+    }
+
+    state.activeCategoryId = categoryId;
+    state.filters.categoryId = categoryId;
+    state.filters.subcategoryId = subcategoryId;
+    syncFilterUi();
+    renderCategoryLandingTiles(category);
+
+    document.getElementById('categoryLandingTitle').textContent = category.name;
+    document.getElementById('categoryRecommendationsTitle').textContent = subcategoryId
+        ? `Рекомендации: ${getSubcategoryName(categoryId, subcategoryId)}`
+        : `Рекомендации: ${category.name}`;
+
+    setSearchViewMode('category');
+    switchTab('search');
+
+    try {
+        const cityId = state.filters.cityId;
+        const endpoint = `/listings/search?${cityId ? `city_id=${cityId}&` : ''}category_id=${categoryId}`;
+        const response = await fetch(`${API_BASE}${endpoint}`);
+        const listings = applyListingFilters(await response.json());
+        state.currentListings = listings;
+        renderListings(listings, 'categoryRecommendations');
+    } catch (error) {
+        console.error('Category landing error:', error);
+    }
+}
+
+window.selectCategoryLandingSubcategory = function(subcategoryId = '') {
+    openCategoryLanding(state.activeCategoryId, subcategoryId);
+};
+
+window.closeCategoryLanding = function() {
+    state.activeCategoryId = '';
+    state.filters.categoryId = '';
+    state.filters.subcategoryId = '';
+    syncFilterUi();
+    setSearchViewMode('home');
+};
+
+function openSearchModal() {
+    const input = document.getElementById('searchQueryInput');
+    if (input) {
+        input.value = state.filters.query;
+    }
+    document.getElementById('searchModal').classList.remove('hidden');
+}
+
+window.closeSearchModal = function() {
+    document.getElementById('searchModal').classList.add('hidden');
+};
+
+window.clearSearchQuery = function() {
+    state.filters.query = '';
+    const input = document.getElementById('searchQueryInput');
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+    updateSearchTriggerLabel();
 };
 
 function getCategorySelect(formType) {
@@ -404,9 +630,10 @@ function attachEventListeners() {
     });
 
     document.getElementById('searchBtn').addEventListener('click', performSearch);
+    document.getElementById('searchSubmitBtn').addEventListener('click', performSearch);
     document.getElementById('profileBtn').addEventListener('click', showProfileModal);
     document.getElementById('openFiltersBtn').addEventListener('click', openFiltersModal);
-    document.getElementById('searchOpenBtn').addEventListener('click', openFiltersModal);
+    document.getElementById('searchOpenBtn').addEventListener('click', openSearchModal);
     document.querySelector('[data-tab-jump="listings"]').addEventListener('click', () => switchTab('listings'));
 
     document.querySelectorAll('.listing-type').forEach((btn) => {
@@ -431,6 +658,16 @@ function attachEventListeners() {
     document.getElementById('citySelect').addEventListener('change', (event) => {
         state.filters.cityId = event.target.value;
         updateSearchTriggerLabel();
+    });
+    document.getElementById('searchQueryInput').addEventListener('input', (event) => {
+        state.filters.query = event.target.value;
+        updateSearchTriggerLabel();
+    });
+    document.getElementById('searchQueryInput').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            performSearch();
+        }
     });
     document.getElementById('minPriceInput').addEventListener('input', (event) => {
         state.filters.minPrice = event.target.value;
@@ -654,7 +891,9 @@ async function handleListingSubmit(e, formIndex) {
 }
 
 async function performSearch() {
+    const queryInput = document.getElementById('searchQueryInput');
     state.filters.cityId = document.getElementById('citySelect').value;
+    state.filters.query = queryInput ? queryInput.value.trim() : state.filters.query;
 
     try {
         const cityId = state.filters.cityId;
@@ -662,10 +901,19 @@ async function performSearch() {
         const endpoint = `/listings/search?${cityId ? `city_id=${cityId}` : ''}${categoryId ? `${cityId ? '&' : ''}category_id=${categoryId}` : ''}`;
         const response = await fetch(`${API_BASE}${endpoint}`);
         const listings = applyListingFilters(await response.json());
+        const subcategoryName = getSubcategoryName(categoryId, state.filters.subcategoryId);
         state.currentListings = listings;
         document.getElementById('searchResultsSection').classList.remove('hidden');
-        document.getElementById('searchResultsTitle').textContent = categoryId ? `Объявления: ${getCategoryName(categoryId)}` : 'Найденные объявления';
+        document.getElementById('searchResultsTitle').textContent = subcategoryName
+            ? `Объявления: ${subcategoryName}`
+            : categoryId
+                ? `Объявления: ${getCategoryName(categoryId)}`
+                : state.filters.query
+                    ? `Результаты: ${state.filters.query}`
+                    : 'Найденные объявления';
         renderListings(listings, 'searchResults');
+        setSearchViewMode('results');
+        closeSearchModal();
         closeFiltersModal();
         switchTab('search');
     } catch (error) {
@@ -686,6 +934,18 @@ async function loadRandomListings() {
 
 function applyListingFilters(listings) {
     let filtered = [...listings];
+
+    if (state.filters.query) {
+        const normalizedQuery = state.filters.query.toLowerCase();
+        filtered = filtered.filter((item) =>
+            String(item.title || '').toLowerCase().includes(normalizedQuery)
+            || String(item.description || '').toLowerCase().includes(normalizedQuery)
+        );
+    }
+
+    if (state.filters.subcategoryId) {
+        filtered = filtered.filter((item) => item.subcategory === state.filters.subcategoryId);
+    }
 
     if (state.filters.minPrice) {
         filtered = filtered.filter((item) => Number(item.price) >= Number(state.filters.minPrice));
