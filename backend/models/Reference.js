@@ -2,9 +2,26 @@ const db = require('./database');
 
 const CATEGORIES = [
   { id: 'cat-1', name: 'Электроника', icon: '💻' },
-  { id: 'cat-2', name: 'Автомобили', icon: '🚗' },
-  { id: 'cat-3', name: 'Недвижимость', icon: '🏠' },
-  { id: 'cat-4', name: 'Мебель', icon: '🛋️' },
+  {
+    id: 'cat-2',
+    name: 'Авто',
+    icon: '🚗',
+    subcategories: [
+      { id: 'cars', name: 'Автомобили' },
+      { id: 'moto', name: 'Мотоциклы' },
+      { id: 'rent', name: 'Аренда' }
+    ]
+  },
+  {
+    id: 'cat-3',
+    name: 'Недвижимость',
+    icon: '🏠',
+    subcategories: [
+      { id: 'rent', name: 'Аренда' },
+      { id: 'sale', name: 'Продажа' }
+    ]
+  },
+  { id: 'cat-4', name: 'Для дома и дачи', icon: '🪑' },
   {
     id: 'cat-5',
     name: 'Одежда и обувь',
@@ -14,13 +31,42 @@ const CATEGORIES = [
       { id: 'women', name: 'Женская' }
     ]
   },
-  { id: 'cat-6', name: 'Книги', icon: '📚' },
+  { id: 'cat-6', name: 'Хобби и отдых', icon: '🎣' },
   { id: 'cat-7', name: 'Для детей', icon: '🧸' },
-  { id: 'cat-8', name: 'Спорт и отдых', icon: '⚽' },
-  { id: 'cat-9', name: 'Домашние животные', icon: '🐾' },
-  { id: 'cat-10', name: 'Услуги', icon: '🛠️' },
-  { id: 'cat-11', name: 'Бизнес', icon: '💼' },
-  { id: 'cat-12', name: 'Разное', icon: '📦' }
+  {
+    id: 'cat-8',
+    name: 'Услуги',
+    icon: '🛠️',
+    subcategories: [
+      { id: 'visaran', name: 'Визаран' },
+      { id: 'building', name: 'Строительные работы' },
+      { id: 'cleaning', name: 'Клининг' },
+      { id: 'exchange', name: 'Обмен валюты' }
+    ]
+  },
+  { id: 'cat-9', name: 'Животные', icon: '🐾' },
+  {
+    id: 'cat-10',
+    name: 'Бизнес',
+    icon: '💼',
+    subcategories: [
+      { id: 'services', name: 'Услуги' },
+      { id: 'accounting', name: 'Бухгалтерия' },
+      { id: 'it', name: 'IT' }
+    ]
+  },
+  {
+    id: 'cat-11',
+    name: 'Работа и подработка',
+    icon: '🧑‍💼',
+    subcategories: [
+      { id: 'no-experience', name: 'Вакансии без опыта' },
+      { id: 'specialist-search', name: 'Поиск специалиста' },
+      { id: 'restaurants', name: 'Рестораны и заведения' }
+    ]
+  },
+  { id: 'cat-12', name: 'Запчасти и аксессуары', icon: '⚙️' },
+  { id: 'cat-13', name: 'Авиша', icon: '🎭' }
 ];
 
 const CITIES = [
@@ -60,15 +106,16 @@ async function initializeData() {
 }
 
 async function getCategories() {
-  const rows = await db.all(`SELECT * FROM categories ORDER BY name`);
-  const source = rows.length > 0 ? rows : CATEGORIES;
+  const rows = await db.all(`SELECT * FROM categories`);
+  const rowMap = new Map(rows.map((row) => [row.id, row]));
 
-  return source.map((row) => {
-    const meta = CATEGORIES.find((category) => category.id === row.id) || {};
+  return CATEGORIES.map((category) => {
+    const row = rowMap.get(category.id) || category;
     return {
       ...row,
-      icon: meta.icon || row.icon || '📦',
-      subcategories: meta.subcategories || []
+      name: category.name || row.name,
+      icon: category.icon || row.icon || '📦',
+      subcategories: category.subcategories || []
     };
   });
 }

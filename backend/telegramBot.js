@@ -1,4 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
+const Listing = require('./models/Listing');
 
 const WEBHOOK_PATH = '/api/telegram/webhook';
 
@@ -6,9 +7,49 @@ let botInstance = null;
 let botMode = 'disabled';
 let startupPromise = null;
 let webhookRouteRegistered = false;
+const PROMOTION_PLANS = {
+  day: { days: 1, stars: 100, label: '1 день' },
+  three_days: { days: 3, stars: 150, label: '3 дня' },
+  week: { days: 7, stars: 250, label: '7 дней' }
+};
 
 function getWebAppUrl() {
   return process.env.WEBAPP_URL || 'https://your-domain.com';
+}
+
+function getSupportUsername() {
+  return process.env.SUPPORT_USERNAME || 'helionstudio';
+}
+
+function getSupportTelegramLink() {
+  return `https://t.me/${getSupportUsername()}`;
+}
+
+function parsePromotionPayload(payload) {
+  if (typeof payload !== 'string' || !payload.startsWith('promotion:')) {
+    return null;
+  }
+
+  const parts = payload.split(':');
+  if (parts.length !== 6) {
+    return null;
+  }
+
+  const [, listingId, userId, planKey, stars, nonce] = parts;
+  const plan = PROMOTION_PLANS[planKey];
+
+  if (!listingId || !userId || !plan || String(plan.stars) !== String(stars) || !nonce) {
+    return null;
+  }
+
+  return {
+    listingId,
+    userId,
+    planKey,
+    stars: Number(stars),
+    days: plan.days,
+    label: plan.label
+  };
 }
 
 function buildWelcomeKeyboard() {
@@ -63,19 +104,23 @@ function registerHandlers(bot) {
       msg.chat.id,
       '📞 Служба поддержки\n\n' +
         'Если у вас есть вопросы или проблемы, свяжитесь с нами:\n\n' +
-        '👤 Администратор: @helionstudio\n' +
-        '💼 Бизнес: @helionstudio\n\n' +
+        `👤 Поддержка: @${getSupportUsername()}\n\n` +
         'Мы поможем вам с:\n' +
         '• Платежами за услуги\n' +
         '• Размещением рекламы\n' +
-        '• Технической поддержкой'
+        '• Технической поддержкой',
+      {
+        reply_markup: {
+          inline_keyboard: [[{ text: 'Написать в поддержку', url: getSupportTelegramLink() }]]
+        }
+      }
     );
   });
 
   bot.on('message', (msg) => {
     const text = msg.text || '';
 
-    if (text.startsWith('/')) {
+    if (!text || text.startsWith('/') || msg.successful_payment) {
       return;
     }
 
@@ -89,6 +134,50 @@ function registerHandlers(bot) {
 
   bot.on('polling_error', (error) => {
     console.error('Telegram polling error:', error.message);
+  });
+
+  bot.on('pre_checkout_query', async (query) => {
+    const promotion = parsePromotionPayload(query.invoice_payload);
+
+    if (!promotion) {
+      await bot.answerPreCheckoutQuery(query.id, false, {
+        error_message: 'Не удалось проверить данные платежа'
+      });
+      return;
+    }
+
+    await bot.answerPreCheckoutQuery(query.id, true);
+  });
+
+  bot.on('successful_payment', async (msg) => {
+    try {
+      const payment = msg.successful_payment;
+      const promotion = parsePromotionPayload(payment?.invoice_payload);
+
+      if (!promotion) {
+        return;
+      }
+
+      const expiresAt = await Listing.activatePromotion(promotion.listingId, promotion.days);
+
+      if (!expiresAt) {
+        await bot.sendMessage(
+          msg.chat.id,
+          'Оплата прошла, но объявление не найдено. Напишите в поддержку, мы поможем.'
+        );
+        return;
+      }
+
+      await bot.sendMessage(
+        msg.chat.id,
+        `Продвижение включено.\n\n` +
+          `Срок: ${promotion.label}\n` +
+          `Стоимость: ${promotion.stars} ⭐\n` +
+          `Активно до: ${new Date(expiresAt).toLocaleDateString('ru-RU')}`
+      );
+    } catch (error) {
+      console.error('Error processing successful payment:', error);
+    }
   });
 }
 
@@ -223,8 +312,16 @@ function getTelegramBotStatus() {
   };
 }
 
+function getTelegramBot() {
+  return botInstance;
+}
+
 module.exports = {
+  PROMOTION_PLANS,
+  getSupportTelegramLink,
   getTelegramBotStatus,
+  getTelegramBot,
+  parsePromotionPayload,
   startTelegramBot,
   stopTelegramBot
 };

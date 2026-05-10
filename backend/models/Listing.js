@@ -66,7 +66,13 @@ class Listing {
       query += ` AND category_id = $${params.length}`;
     }
 
-    query += ` ORDER BY created_at DESC LIMIT 50`;
+    query += ` ORDER BY
+      CASE
+        WHEN is_premium = TRUE AND (premium_expires_at IS NULL OR premium_expires_at > CURRENT_TIMESTAMP) THEN 0
+        ELSE 1
+      END,
+      created_at DESC
+      LIMIT 50`;
 
     const rows = await db.all(query, params);
     return rows.map(withParsedImages);
@@ -74,7 +80,15 @@ class Listing {
 
   static async getRandomListings(limit = 20) {
     const rows = await db.all(
-      `SELECT * FROM listings WHERE status = 'active' ORDER BY RANDOM() LIMIT $1`,
+      `SELECT * FROM listings
+       WHERE status = 'active'
+       ORDER BY
+         CASE
+           WHEN is_premium = TRUE AND (premium_expires_at IS NULL OR premium_expires_at > CURRENT_TIMESTAMP) THEN 0
+           ELSE 1
+         END,
+         created_at DESC
+       LIMIT $1`,
       [limit]
     );
 
@@ -116,6 +130,30 @@ class Listing {
     );
 
     return result.changes > 0;
+  }
+
+  static async activatePromotion(id, days) {
+    const listing = await Listing.findById(id);
+
+    if (!listing) {
+      return null;
+    }
+
+    const now = new Date();
+    const currentExpiry = listing.premium_expires_at ? new Date(listing.premium_expires_at) : null;
+    const startDate = currentExpiry && currentExpiry > now ? currentExpiry : now;
+    const nextExpiry = new Date(startDate.getTime() + (days * 24 * 60 * 60 * 1000));
+
+    const result = await db.run(
+      `UPDATE listings
+       SET is_premium = $1,
+           premium_expires_at = $2,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [true, nextExpiry.toISOString(), id]
+    );
+
+    return result.changes > 0 ? nextExpiry.toISOString() : null;
   }
 }
 

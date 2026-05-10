@@ -32,7 +32,7 @@
                         </div>
                     </div>
                     <div class="header-icons">
-                        <button class="header-post-btn" data-tab-jump="listings">Разместить</button>
+                        <button class="header-post-btn" data-tab-jump="listings">Разместить объявление</button>
                         <button id="profileBtn" class="icon-btn">👤</button>
                     </div>
                 </div>
@@ -40,57 +40,59 @@
 
             <nav class="tabs">
                 <button class="tab active" data-tab="search">Лента</button>
-                <button class="tab" data-tab="listings">Подать объявление</button>
+                <button class="tab" data-tab="listings">Разместить объявление</button>
                 <button class="tab" data-tab="my-items">Мои объявления</button>
             </nav>
 
             <div class="tab-content">
                 <div id="search" class="tab-pane active">
-                    <section class="hero">
-                        <div class="hero-copy">
-                            <p class="hero-badge">Покупайте и продавайте рядом</p>
-                            <h1>Объявления по всей Черногории</h1>
-                            <p class="hero-text">Товары, услуги и предложения в одном месте. Фильтруйте по городу и категории и быстро связывайтесь с продавцом.</p>
+                    <section class="market-shell">
+                        <div class="search-toolbar">
+                            <button id="searchOpenBtn" class="search-trigger" type="button">
+                                <span class="search-trigger-badge">
+                                    <span class="brand-dot brand-dot-blue"></span>
+                                    <span class="brand-dot brand-dot-green"></span>
+                                    <span class="brand-dot brand-dot-red"></span>
+                                    <span class="brand-dot brand-dot-purple"></span>
+                                </span>
+                                <span id="searchTriggerLabel">Поиск объявлений</span>
+                            </button>
+                            <button id="openFiltersBtn" class="filter-trigger" type="button" aria-label="Открыть фильтры">⚙️</button>
                         </div>
-                        <div class="hero-stats">
-                            <div class="hero-stat">
-                                <strong>10</strong>
-                                <span>городов</span>
-                            </div>
-                            <div class="hero-stat">
-                                <strong>12</strong>
-                                <span>категорий</span>
-                            </div>
-                            <div class="hero-stat">
-                                <strong>24/7</strong>
-                                <span>доступ</span>
-                            </div>
-                        </div>
-                    </section>
 
-                    <section class="search-panel">
-                        <div class="search-panel-header">
-                            <h2>Найти объявление</h2>
-                            <p>Выберите город и категорию, чтобы отфильтровать предложения.</p>
-                        </div>
-                        <div class="search-filters">
-                            <div class="filter-group">
-                                <label for="citySelect">Город</label>
-                                <select id="citySelect" class="filter-input">
-                                    <option value="">Все города</option>
-                                </select>
+                        <section class="categories-showcase">
+                            <div class="section-divider compact">
+                                <div>
+                                    <p class="section-kicker">Категории</p>
+                                    <h3>Все категории</h3>
+                                </div>
                             </div>
-                            <div class="filter-group">
-                                <label for="categorySelect">Категория</label>
-                                <select id="categorySelect" class="filter-input">
-                                    <option value="">Все категории</option>
-                                </select>
-                            </div>
-                            <button id="searchBtn" class="btn btn-primary search-btn">Показать объявления</button>
-                        </div>
-                    </section>
+                            <div id="categoryShowcase" class="category-showcase-grid"></div>
+                        </section>
 
-                    <div id="searchResults" class="items-grid"></div>
+                        <section class="promo-banner">
+                            <div class="promo-copy">
+                                <p class="promo-label">Marketplace</p>
+                                <h2>Покупайте и продавайте по всей Черногории</h2>
+                                <p>Недвижимость, авто, услуги и подработка в привычном формате объявлений.</p>
+                            </div>
+                            <div class="promo-visual" aria-hidden="true">
+                                <span class="promo-shape promo-shape-blue"></span>
+                                <span class="promo-shape promo-shape-green"></span>
+                                <span class="promo-shape promo-shape-orange"></span>
+                            </div>
+                        </section>
+
+                        <section id="searchResultsSection" class="results-section hidden">
+                            <div class="section-divider compact">
+                                <div>
+                                    <p class="section-kicker">Результаты</p>
+                                    <h3 id="searchResultsTitle">Найденные объявления</h3>
+                                </div>
+                            </div>
+                            <div id="searchResults" class="items-grid"></div>
+                        </section>
+                    </section>
 
                     <section class="section-divider">
                         <div>
@@ -267,6 +269,7 @@
             </div>
             <div class="profile-actions">
                 <button id="profileSaveBtn" class="btn btn-primary btn-block" onclick="updateProfile()">Сохранить</button>
+                <button class="btn btn-secondary btn-block" onclick="openSupportChat()">Написать в поддержку</button>
                 <button id="profileLogoutBtn" class="btn btn-danger btn-block" onclick="logout()">Выйти</button>
             </div>
             <div class="profile-reviews">
@@ -300,6 +303,72 @@
                 <p class="info-text">Скриншот виден только администраторам.</p>
             </div>
             <button class="btn btn-primary btn-block" onclick="submitReview()">Отправить отзыв</button>
+        </div>
+    </div>
+
+    <div id="promotionModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closePromotionModal()">✕</button>
+            <h2>Продвижение на первую линию</h2>
+            <p id="promotionTargetInfo" class="info-text"></p>
+            <div class="promotion-plan-list">
+                <button type="button" class="promotion-plan-card" onclick="startPromotionPayment('day')">
+                    <strong>1 день</strong>
+                    <span>100 ⭐</span>
+                </button>
+                <button type="button" class="promotion-plan-card" onclick="startPromotionPayment('three_days')">
+                    <strong>3 дня</strong>
+                    <span>150 ⭐</span>
+                </button>
+                <button type="button" class="promotion-plan-card" onclick="startPromotionPayment('week')">
+                    <strong>7 дней</strong>
+                    <span>250 ⭐</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="filtersModal" class="modal hidden">
+        <div class="modal-content modal-large filter-modal-content">
+            <button class="modal-close" onclick="closeFiltersModal()">✕</button>
+            <div class="filter-modal-header">
+                <h2>Фильтры</h2>
+                <button type="button" class="link-btn" onclick="resetFilters()">Сбросить</button>
+            </div>
+
+            <div class="filter-sheet">
+                <div class="filter-block">
+                    <h3>Все категории</h3>
+                    <div id="filterCategoryChips" class="filter-chip-grid"></div>
+                </div>
+
+                <div class="filter-block">
+                    <label for="citySelect">Где искать</label>
+                    <select id="citySelect" class="filter-input">
+                        <option value="">Все города</option>
+                    </select>
+                </div>
+
+                <div class="filter-block">
+                    <h3>Цена</h3>
+                    <div class="price-grid">
+                        <input type="number" id="minPriceInput" class="filter-input" placeholder="От">
+                        <input type="number" id="maxPriceInput" class="filter-input" placeholder="До">
+                    </div>
+                </div>
+
+                <div class="filter-block">
+                    <h3>Сортировка</h3>
+                    <div class="sort-options">
+                        <label><input type="radio" name="sortOption" value="default" checked> По умолчанию</label>
+                        <label><input type="radio" name="sortOption" value="date"> По дате</label>
+                        <label><input type="radio" name="sortOption" value="cheap"> Дешевле</label>
+                        <label><input type="radio" name="sortOption" value="expensive"> Дороже</label>
+                    </div>
+                </div>
+
+                <button id="searchBtn" class="btn btn-primary btn-block">Показать объявления</button>
+            </div>
         </div>
     </div>
 

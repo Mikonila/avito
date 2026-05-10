@@ -1,7 +1,7 @@
 const Listing = require('../models/Listing');
 const Review = require('../models/Review');
 const User = require('../models/User');
-const { getRequesterTelegramId } = require('../middleware/auth');
+const { getRequesterTelegramId, isAdminTelegramId } = require('../middleware/auth');
 const { destroyImages, uploadImages } = require('../utils/cloudinary');
 const { validateImages } = require('../utils/validators');
 
@@ -89,10 +89,23 @@ async function createReview(req, res) {
 async function deleteReview(req, res) {
   try {
     const { review_id } = req.params;
+    const requesterTelegramId = getRequesterTelegramId(req);
+
+    if (!requesterTelegramId) {
+      return res.status(401).json({ error: 'Не удалось определить пользователя Telegram' });
+    }
+
     const review = await Review.findById(review_id);
 
     if (!review) {
       return res.status(404).json({ error: 'Отзыв не найден' });
+    }
+
+    const requester = await User.findByTelegramId(requesterTelegramId);
+    const isAdmin = isAdminTelegramId(requesterTelegramId);
+
+    if (!isAdmin && (!requester || requester.id !== review.author_user_id)) {
+      return res.status(403).json({ error: 'Удалить отзыв может только его автор или администратор' });
     }
 
     const deleted = await Review.delete(review_id);

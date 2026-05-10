@@ -3,19 +3,34 @@ const MAX_IMAGE_COUNT = 4;
 const MAX_IMAGE_SIZE_BYTES = 1572864;
 const FALLBACK_TELEGRAM_ID_KEY = 'fallback_telegram_id';
 const CLOTHING_CATEGORY_ID = 'cat-5';
+const SUPPORT_LINK = 'https://t.me/helionstudio';
+const PROMOTION_PLANS = {
+    day: { label: '1 день', stars: 100 },
+    three_days: { label: '3 дня', stars: 150 },
+    week: { label: '7 дней', stars: 250 }
+};
 
 let state = {
     user: null,
     categories: [],
     cities: [],
     currentListings: [],
+    homeListings: [],
     currentServices: [],
     images: [],
     serviceImages: [],
     adImages: [],
     reviewScreenshot: null,
     selectedItem: null,
-    viewedProfileId: null
+    viewedProfileId: null,
+    promotionListingId: null,
+    filters: {
+        categoryId: '',
+        cityId: '',
+        minPrice: '',
+        maxPrice: '',
+        sort: 'default'
+    }
 };
 
 const API_BASE = '/api';
@@ -91,7 +106,8 @@ function getTelegramPayload() {
         telegram_id: getTelegramId(),
         first_name: telegramUser?.first_name || '',
         last_name: telegramUser?.last_name || '',
-        username: telegramUser?.username || ''
+        username: telegramUser?.username || '',
+        avatar_url: telegramUser?.photo_url || ''
     };
 }
 
@@ -119,6 +135,25 @@ function getSubcategoryName(categoryId, subcategoryId) {
 
 function getProfileDisplayName(user) {
     return [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username || 'Пользователь';
+}
+
+function getAvatarMarkup(avatarUrl, fallbackText = '👤') {
+    if (avatarUrl) {
+        return `<img src="${avatarUrl}" alt="Аватар" class="review-avatar-image">`;
+    }
+
+    return `<span class="review-avatar-fallback">${fallbackText}</span>`;
+}
+
+function updateSearchTriggerLabel() {
+    const cityName = state.filters.cityId ? getCityName(state.filters.cityId) : 'по всей Черногории';
+    const categoryName = state.filters.categoryId ? getCategoryName(state.filters.categoryId) : 'во всех категориях';
+    const label = `Поиск ${categoryName.toLowerCase()} ${cityName}`;
+    const target = document.getElementById('searchTriggerLabel');
+
+    if (target) {
+        target.textContent = label;
+    }
 }
 
 async function registerUser() {
@@ -186,7 +221,6 @@ function populateSelects() {
     const serviceCitySelect = document.querySelectorAll('#serviceForm .listing-form .form-row select')[2];
 
     populateSelectElement(document.getElementById('citySelect'), state.cities, 'Все города');
-    populateSelectElement(document.getElementById('categorySelect'), state.categories, 'Все категории');
     populateSelectElement(document.getElementById('profileCitySelect'), state.cities, 'Не указан');
 
     populateSelectElement(productCategorySelect, state.categories, null);
@@ -196,12 +230,137 @@ function populateSelects() {
 
     populateSubcategorySelect('product');
     populateSubcategorySelect('service');
+    renderCategoryShowcase();
+    renderFilterCategoryChips();
+    updateSearchTriggerLabel();
 }
 
 function showMainApp() {
     document.getElementById('mainApp').classList.remove('hidden');
     loadRandomListings();
 }
+
+window.openSupportChat = function() {
+    if (tg?.openTelegramLink) {
+        tg.openTelegramLink(SUPPORT_LINK);
+        return;
+    }
+
+    window.open(SUPPORT_LINK, '_blank', 'noopener,noreferrer');
+};
+
+function renderCategoryShowcase() {
+    const container = document.getElementById('categoryShowcase');
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = state.categories.map((category, index) => `
+        <button
+            type="button"
+            class="category-tile category-tile-${(index % 6) + 1} ${state.filters.categoryId === category.id ? 'active' : ''}"
+            data-category-tile="${category.id}"
+        >
+            <div class="category-tile-copy">
+                <strong>${category.name}</strong>
+                <span>${category.subcategories?.length ? `${category.subcategories.length} раздела` : 'Открыть объявления'}</span>
+            </div>
+            <div class="category-tile-icon">${category.icon || '📦'}</div>
+        </button>
+    `).join('');
+
+    container.querySelectorAll('[data-category-tile]').forEach((button) => {
+        button.addEventListener('click', () => {
+            state.filters.categoryId = button.dataset.categoryTile;
+            syncFilterUi();
+            closeFiltersModal();
+            performSearch();
+        });
+    });
+}
+
+function renderFilterCategoryChips() {
+    const container = document.getElementById('filterCategoryChips');
+
+    if (!container) {
+        return;
+    }
+
+    const allChip = `
+        <button type="button" class="filter-chip ${!state.filters.categoryId ? 'active' : ''}" data-filter-category="">
+            Все
+        </button>
+    `;
+
+    const categoryChips = state.categories.map((category) => `
+        <button
+            type="button"
+            class="filter-chip ${state.filters.categoryId === category.id ? 'active' : ''}"
+            data-filter-category="${category.id}"
+        >
+            ${category.name}
+        </button>
+    `).join('');
+
+    container.innerHTML = allChip + categoryChips;
+
+    container.querySelectorAll('[data-filter-category]').forEach((button) => {
+        button.addEventListener('click', () => {
+            state.filters.categoryId = button.dataset.filterCategory;
+            syncFilterUi();
+        });
+    });
+}
+
+function syncFilterUi() {
+    const citySelect = document.getElementById('citySelect');
+    const minPriceInput = document.getElementById('minPriceInput');
+    const maxPriceInput = document.getElementById('maxPriceInput');
+    const sortInput = document.querySelector(`input[name="sortOption"][value="${state.filters.sort}"]`);
+
+    if (citySelect) {
+        citySelect.value = state.filters.cityId;
+    }
+
+    if (minPriceInput) {
+        minPriceInput.value = state.filters.minPrice;
+    }
+
+    if (maxPriceInput) {
+        maxPriceInput.value = state.filters.maxPrice;
+    }
+
+    if (sortInput) {
+        sortInput.checked = true;
+    }
+
+    renderCategoryShowcase();
+    renderFilterCategoryChips();
+    updateSearchTriggerLabel();
+}
+
+function openFiltersModal() {
+    syncFilterUi();
+    document.getElementById('filtersModal').classList.remove('hidden');
+}
+
+window.closeFiltersModal = function() {
+    document.getElementById('filtersModal').classList.add('hidden');
+};
+
+window.resetFilters = function() {
+    state.filters = {
+        categoryId: '',
+        cityId: '',
+        minPrice: '',
+        maxPrice: '',
+        sort: 'default'
+    };
+    syncFilterUi();
+    document.getElementById('searchResultsSection').classList.add('hidden');
+    renderListings(state.homeListings, 'randomListings');
+};
 
 function getCategorySelect(formType) {
     return document.querySelector(`#${formType}Form .listing-form .form-row select`);
@@ -246,6 +405,8 @@ function attachEventListeners() {
 
     document.getElementById('searchBtn').addEventListener('click', performSearch);
     document.getElementById('profileBtn').addEventListener('click', showProfileModal);
+    document.getElementById('openFiltersBtn').addEventListener('click', openFiltersModal);
+    document.getElementById('searchOpenBtn').addEventListener('click', openFiltersModal);
     document.querySelector('[data-tab-jump="listings"]').addEventListener('click', () => switchTab('listings'));
 
     document.querySelectorAll('.listing-type').forEach((btn) => {
@@ -267,6 +428,22 @@ function attachEventListeners() {
         }
     });
 
+    document.getElementById('citySelect').addEventListener('change', (event) => {
+        state.filters.cityId = event.target.value;
+        updateSearchTriggerLabel();
+    });
+    document.getElementById('minPriceInput').addEventListener('input', (event) => {
+        state.filters.minPrice = event.target.value;
+    });
+    document.getElementById('maxPriceInput').addEventListener('input', (event) => {
+        state.filters.maxPrice = event.target.value;
+    });
+    document.querySelectorAll('input[name="sortOption"]').forEach((input) => {
+        input.addEventListener('change', (event) => {
+            state.filters.sort = event.target.value;
+        });
+    });
+
     document.getElementById('imageInput').addEventListener('change', (e) => handleImageSelect(e, 'images'));
     document.getElementById('serviceImageInput').addEventListener('change', (e) => handleImageSelect(e, 'serviceImages'));
     document.getElementById('adImageInput').addEventListener('change', (e) => handleImageSelect(e, 'adImages'));
@@ -277,8 +454,13 @@ function switchTab(tabName) {
     document.querySelectorAll('.tab').forEach((tab) => tab.classList.remove('active'));
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
 
-    document.querySelectorAll('.tab-pane').forEach((pane) => pane.classList.add('hidden'));
-    document.getElementById(tabName).classList.remove('hidden');
+    document.querySelectorAll('.tab-pane').forEach((pane) => {
+        pane.classList.remove('active');
+        pane.classList.add('hidden');
+    });
+    const targetPane = document.getElementById(tabName);
+    targetPane.classList.remove('hidden');
+    targetPane.classList.add('active');
 
     if (tabName === 'my-items') {
         loadMyItems();
@@ -289,8 +471,13 @@ function switchListingType(type) {
     document.querySelectorAll('.listing-type').forEach((btn) => btn.classList.remove('active'));
     document.querySelector(`[data-type="${type}"]`).classList.add('active');
 
-    document.querySelectorAll('.form-section').forEach((section) => section.classList.add('hidden'));
-    document.getElementById(`${type}Form`).classList.remove('hidden');
+    document.querySelectorAll('.form-section').forEach((section) => {
+        section.classList.remove('active');
+        section.classList.add('hidden');
+    });
+    const targetSection = document.getElementById(`${type}Form`);
+    targetSection.classList.remove('hidden');
+    targetSection.classList.add('active');
 }
 
 function switchMyItemsType(type) {
@@ -443,6 +630,7 @@ async function handleListingSubmit(e, formIndex) {
         const result = await response.json();
         if (result.success || result.listing_id || result.service_id) {
             alert('Объявление опубликовано');
+            const createdListingId = result.listing_id || null;
             form.reset();
             state.images = [];
             state.serviceImages = [];
@@ -452,6 +640,10 @@ async function handleListingSubmit(e, formIndex) {
             renderImagePreview('adImages');
             populateSubcategorySelect('product');
             populateSubcategorySelect('service');
+
+            if (createdListingId) {
+                openPromotionModal(createdListingId, title);
+            }
         } else {
             alert(result.error || 'Ошибка при публикации');
         }
@@ -462,15 +654,20 @@ async function handleListingSubmit(e, formIndex) {
 }
 
 async function performSearch() {
-    const cityId = document.getElementById('citySelect').value;
-    const categoryId = document.getElementById('categorySelect').value;
+    state.filters.cityId = document.getElementById('citySelect').value;
 
     try {
+        const cityId = state.filters.cityId;
+        const categoryId = state.filters.categoryId;
         const endpoint = `/listings/search?${cityId ? `city_id=${cityId}` : ''}${categoryId ? `${cityId ? '&' : ''}category_id=${categoryId}` : ''}`;
         const response = await fetch(`${API_BASE}${endpoint}`);
-        const listings = await response.json();
+        const listings = applyListingFilters(await response.json());
         state.currentListings = listings;
+        document.getElementById('searchResultsSection').classList.remove('hidden');
+        document.getElementById('searchResultsTitle').textContent = categoryId ? `Объявления: ${getCategoryName(categoryId)}` : 'Найденные объявления';
         renderListings(listings, 'searchResults');
+        closeFiltersModal();
+        switchTab('search');
     } catch (error) {
         console.error('Search error:', error);
     }
@@ -480,10 +677,39 @@ async function loadRandomListings() {
     try {
         const response = await fetch(`${API_BASE}/listings/random?limit=20`);
         const listings = await response.json();
+        state.homeListings = listings;
         renderListings(listings, 'randomListings');
     } catch (error) {
         console.error('Error loading random listings:', error);
     }
+}
+
+function applyListingFilters(listings) {
+    let filtered = [...listings];
+
+    if (state.filters.minPrice) {
+        filtered = filtered.filter((item) => Number(item.price) >= Number(state.filters.minPrice));
+    }
+
+    if (state.filters.maxPrice) {
+        filtered = filtered.filter((item) => Number(item.price) <= Number(state.filters.maxPrice));
+    }
+
+    switch (state.filters.sort) {
+        case 'date':
+            filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            break;
+        case 'cheap':
+            filtered.sort((a, b) => Number(a.price) - Number(b.price));
+            break;
+        case 'expensive':
+            filtered.sort((a, b) => Number(b.price) - Number(a.price));
+            break;
+        default:
+            break;
+    }
+
+    return filtered;
 }
 
 async function loadMyItems() {
@@ -544,6 +770,7 @@ function renderListings(listings, containerId) {
             content += `
                 <div class="item-actions">
                     <button onclick="event.stopPropagation(); editItem('${item.id}')">Редактировать</button>
+                    <button onclick="event.stopPropagation(); openPromotionModal('${item.id}', '${String(item.title).replace(/'/g, '&#39;')}')">Продвинуть</button>
                     <button class="delete" onclick="event.stopPropagation(); deleteItem('${item.id}', '${containerId}')">Удалить</button>
                 </div>
             `;
@@ -581,6 +808,7 @@ function showItemDetails(item) {
         </div>
         ${gallery}
         <div class="item-details-price">${item.price} EUR</div>
+        ${item.is_premium ? `<div class="promotion-status">В первой линии${item.premium_expires_at ? ` до ${new Date(item.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}
         <div class="item-details-description">${item.description || 'Описание отсутствует'}</div>
         <div class="item-details-contact">
             <strong>Продавец</strong>
@@ -662,22 +890,31 @@ function renderReviews(reviews, canModerate) {
 
     container.innerHTML = reviews.map((review) => {
         const typeLabel = review.review_type === 'product' ? 'Отзыв о товаре' : 'Отзыв о продавце';
+        const canDelete = canModerate || review.author_user_id === state.user?.id;
         const screenshotLink = canModerate && review.screenshot_url
             ? `<a class="review-screenshot-link" href="${review.screenshot_url}" target="_blank" rel="noreferrer">Скриншот</a>`
             : '';
-        const deleteButton = canModerate
+        const authorProfileButton = canModerate
+            ? `<button class="review-admin-link" onclick="openReviewAuthorProfile('${review.author_user_id}')">Профиль автора</button>`
+            : '';
+        const deleteButton = canDelete
             ? `<button class="review-delete-btn" onclick="deleteReview('${review.id}')">✕</button>`
             : '';
 
         return `
             <div class="review-card">
                 <div class="review-header">
-                    <div>
-                        <strong>${review.author_name}</strong>
+                    <div class="review-author-block">
+                        <div class="review-avatar">
+                            ${getAvatarMarkup(review.author_avatar_url)}
+                        </div>
+                        <div>
                         <div class="review-meta">${typeLabel}${review.listing_title ? ` • ${review.listing_title}` : ''} • ${new Date(review.created_at).toLocaleDateString('ru-RU')}</div>
+                        </div>
                     </div>
                     <div class="review-actions">
                         ${screenshotLink}
+                        ${authorProfileButton}
                         ${deleteButton}
                     </div>
                 </div>
@@ -686,6 +923,14 @@ function renderReviews(reviews, canModerate) {
         `;
     }).join('');
 }
+
+window.openReviewAuthorProfile = async function(userId) {
+    if (state.user?.is_admin !== true) {
+        return;
+    }
+
+    await showUserProfile(userId);
+};
 
 window.showProfileModal = async function() {
     await showUserProfile(state.user.id);
@@ -745,6 +990,61 @@ window.openReviewModal = function() {
     renderImagePreview('reviewScreenshot');
     closeItemModal();
     document.getElementById('reviewModal').classList.remove('hidden');
+};
+
+window.openPromotionModal = function(listingId, title = 'объявление') {
+    state.promotionListingId = listingId;
+    document.getElementById('promotionTargetInfo').textContent = `Выберите срок продвижения для объявления: ${title}`;
+    document.getElementById('promotionModal').classList.remove('hidden');
+};
+
+window.closePromotionModal = function() {
+    document.getElementById('promotionModal').classList.add('hidden');
+};
+
+window.startPromotionPayment = async function(planKey) {
+    if (!state.promotionListingId) {
+        return;
+    }
+
+    const plan = PROMOTION_PLANS[planKey];
+    if (!plan) {
+        alert('Неизвестный тариф продвижения');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/listings/${state.promotionListingId}/promotion/invoice`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                user_id: state.user.id,
+                plan: planKey
+            })
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success || !result.invoice_link) {
+            throw new Error(result.error || 'Не удалось подготовить оплату');
+        }
+
+        if (tg?.openInvoice) {
+            tg.openInvoice(result.invoice_link, async (status) => {
+                if (status === 'paid') {
+                    closePromotionModal();
+                    alert(`Продвижение оплачено: ${plan.label} за ${plan.stars} ⭐`);
+                    await loadMyItems();
+                    await loadRandomListings();
+                }
+            });
+            return;
+        }
+
+        window.open(result.invoice_link, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+        console.error('Error starting promotion payment:', error);
+        alert(error.message || 'Ошибка при создании платежа');
+    }
 };
 
 window.closeReviewModal = function() {

@@ -7,6 +7,7 @@ router.get('/user/:user_id', listingController.getListingsByUser);
 router.get('/details/:listing_id', listingController.getListingDetails);
 router.get('/search', listingController.searchListings);
 router.get('/random', listingController.getRandomListings);
+router.post('/:listing_id/promotion/invoice', listingController.createPromotionInvoice);
 router.delete('/:listing_id', listingController.deleteListing);
 router.put('/:listing_id', listingController.updateListing);
 

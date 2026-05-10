@@ -15,7 +15,7 @@ function serializeUser(user) {
 
 async function register(req, res) {
   try {
-    const { telegram_id, first_name = '', last_name = '', username = '' } = req.body;
+    const { telegram_id, first_name = '', last_name = '', username = '', avatar_url = '' } = req.body;
 
     if (!telegram_id) {
       return res.status(400).json({ error: 'Не передан Telegram ID' });
@@ -26,7 +26,8 @@ async function register(req, res) {
       const syncedUser = await User.fillMissingFromTelegram(existingUser.id, {
         first_name,
         last_name,
-        username
+        username,
+        avatar_url
       });
       return res.json(serializeUser(syncedUser));
     }
@@ -34,7 +35,8 @@ async function register(req, res) {
     const newUser = await User.create(telegram_id, {
       first_name,
       last_name,
-      username
+      username,
+      avatar_url
     });
 
     res.json(serializeUser(newUser));

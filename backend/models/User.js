@@ -4,15 +4,15 @@ const { v4: uuidv4 } = require('uuid');
 class User {
   static async create(telegram_id, userData) {
     const id = uuidv4();
-    const { first_name = '', last_name = '', username = '', phone = '', city = '', about = '' } = userData;
+    const { first_name = '', last_name = '', username = '', avatar_url = '', phone = '', city = '', about = '' } = userData;
 
     await db.run(
-      `INSERT INTO users (id, telegram_id, first_name, last_name, username, phone, city, about)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [id, telegram_id, first_name, last_name, username, phone, city, about]
+      `INSERT INTO users (id, telegram_id, first_name, last_name, username, avatar_url, phone, city, about)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [id, telegram_id, first_name, last_name, username, avatar_url, phone, city, about]
     );
 
-    return { id, telegram_id, first_name, last_name, username, phone, city, about };
+    return { id, telegram_id, first_name, last_name, username, avatar_url, phone, city, about };
   }
 
   static findByTelegramId(telegram_id) {
@@ -33,6 +33,7 @@ class User {
       first_name: currentUser.first_name || userData.first_name || '',
       last_name: currentUser.last_name || userData.last_name || '',
       username: currentUser.username || userData.username || '',
+      avatar_url: userData.avatar_url || currentUser.avatar_url || '',
       phone: currentUser.phone || '',
       city: currentUser.city || '',
       about: currentUser.about || ''
@@ -43,9 +44,10 @@ class User {
        SET first_name = $1,
            last_name = $2,
            username = $3,
+           avatar_url = $4,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $4`,
-      [nextUser.first_name, nextUser.last_name, nextUser.username, user_id]
+       WHERE id = $5`,
+      [nextUser.first_name, nextUser.last_name, nextUser.username, nextUser.avatar_url, user_id]
     );
 
     return User.findById(user_id);

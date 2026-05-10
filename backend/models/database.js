@@ -9,6 +9,7 @@ const SQLITE_SCHEMA = [
     username TEXT,
     first_name TEXT,
     last_name TEXT,
+    avatar_url TEXT,
     phone TEXT,
     city TEXT DEFAULT '',
     about TEXT,
@@ -121,6 +122,7 @@ const POSTGRES_SCHEMA = [
     username TEXT,
     first_name TEXT,
     last_name TEXT,
+    avatar_url TEXT,
     phone TEXT,
     city TEXT DEFAULT '',
     about TEXT,
@@ -348,6 +350,7 @@ async function ensureColumn(tableName, columnName, definition) {
 
 async function applyMigrations() {
   await ensureColumn('users', 'about', 'TEXT');
+  await ensureColumn('users', 'avatar_url', 'TEXT');
   await ensureColumn('listings', 'subcategory', 'TEXT');
   await ensureColumn('services', 'subcategory', 'TEXT');
 }

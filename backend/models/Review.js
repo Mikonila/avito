@@ -40,6 +40,7 @@ class Review {
          reviews.created_at,
          reviews.screenshot_url,
          listings.title AS listing_title,
+         author.avatar_url AS author_avatar_url,
          author.first_name AS author_first_name,
          author.last_name AS author_last_name,
          author.username AS author_username
@@ -66,7 +67,8 @@ class Review {
         review_type: review.review_type,
         text: review.text,
         created_at: review.created_at,
-        author_name: authorName,
+        author_name: includeAdminFields ? authorName : undefined,
+        author_avatar_url: review.author_avatar_url || '',
         screenshot_url: includeAdminFields ? review.screenshot_url : undefined
       };
     });

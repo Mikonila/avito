@@ -1,5 +1,8 @@
 const Listing = require('../models/Listing');
+const User = require('../models/User');
 const { validateImages } = require('../utils/validators');
+const { getRequesterTelegramId } = require('../middleware/auth');
+const { getTelegramBot, PROMOTION_PLANS } = require('../telegramBot');
 const { destroyImages, uploadImages } = require('../utils/cloudinary');
 
 async function createListing(req, res) {
@@ -160,8 +163,71 @@ async function updateListing(req, res) {
   }
 }
 
+async function createPromotionInvoice(req, res) {
+  try {
+    const { listing_id } = req.params;
+    const { user_id, plan } = req.body;
+    const requesterTelegramId = getRequesterTelegramId(req);
+
+    if (!requesterTelegramId || !user_id || !plan) {
+      return res.status(400).json({ error: 'Не заполнены обязательные поля' });
+    }
+
+    const promotionPlan = PROMOTION_PLANS[plan];
+    if (!promotionPlan) {
+      return res.status(400).json({ error: 'Неизвестный тариф продвижения' });
+    }
+
+    const requester = await User.findByTelegramId(requesterTelegramId);
+    if (!requester || requester.id !== user_id) {
+      return res.status(403).json({ error: 'Нельзя оплатить продвижение для чужого объявления' });
+    }
+
+    const listing = await Listing.findById(listing_id);
+    if (!listing || listing.user_id !== user_id) {
+      return res.status(404).json({ error: 'Объявление не найдено' });
+    }
+
+    const bot = getTelegramBot();
+    if (!bot) {
+      return res.status(503).json({ error: 'Telegram-бот недоступен, попробуйте позже' });
+    }
+
+    const payload = [
+      'promotion',
+      listing_id,
+      user_id,
+      plan,
+      promotionPlan.stars,
+      Date.now()
+    ].join(':');
+
+    const invoiceLink = await bot.createInvoiceLink(
+      'Продвижение объявления',
+      `${listing.title} • первая линия на ${promotionPlan.label}`,
+      payload,
+      '',
+      'XTR',
+      [{ label: `Продвижение на ${promotionPlan.label}`, amount: promotionPlan.stars }]
+    );
+
+    res.json({
+      success: true,
+      invoice_link: invoiceLink,
+      plan: {
+        key: plan,
+        ...promotionPlan
+      }
+    });
+  } catch (error) {
+    console.error('Error creating promotion invoice:', error);
+    res.status(500).json({ error: 'Не удалось создать счет на продвижение' });
+  }
+}
+
 module.exports = {
   createListing,
+  createPromotionInvoice,
   getListingsByUser,
   getListingDetails,
   searchListings,
