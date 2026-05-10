@@ -1,0 +1,53 @@
+{
+  "name": "montenegro-marketplace-mini-app",
+  "version": "1.0.0",
+  "description": "Telegram Mini App Marketplace for Montenegro",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "bot": "node bot.js",
+    "init-db": "node backend/init-db.js",
+    "seed-db": "node backend/seed-db.js",
+    "backup": "node scripts/backup.js",
+    "clean-logs": "node scripts/clean-logs.js",
+    "stats": "node scripts/stats.js",
+    "health": "node scripts/health-check.js",
+    "deploy-full": "node deploy/deploy-full.js",
+    "deploy-minimal": "node deploy/deploy-minimal.js",
+    "pm2-start": "pm2 start ecosystem.config.js",
+    "pm2-stop": "pm2 stop ecosystem.config.js",
+    "pm2-logs": "pm2 logs",
+    "railway-deploy-helper": "node scripts/railway-deploy-helper.js",
+    "railway-setup": "bash scripts/setup-railway.sh",
+    "railway-setup-win": "call scripts/setup-railway.bat"
+  },
+  "keywords": [
+    "telegram",
+    "mini-app",
+    "marketplace",
+    "avito"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cloudinary": "^2.10.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "express-static-gzip": "^2.1.7",
+    "extsprintf": "^1.4.1",
+    "node-telegram-bot-api": "^0.61.0",
+    "pg": "^8.12.0",
+    "request": "^2.88.2",
+    "sqlite3": "^5.1.6",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}

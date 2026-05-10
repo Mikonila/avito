@@ -1,0 +1,9 @@
+const express = require('express');
+const router = express.Router();
+const referenceController = require('../controllers/referenceController');
+
+router.get('/categories', referenceController.getCategories);
+router.get('/cities', referenceController.getCities);
+router.post('/init', referenceController.initData);
+
+module.exports = router;

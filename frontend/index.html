@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="sr-ME">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Marketplace Montenegro</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Loading state -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Učitavanje...</p>
+        </div>
+
+        <!-- Registration modal -->
+        <div id="registerModal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Dobrodošli!</h2>
+                <p>Prijavite se da započnete</p>
+                <div class="form-group">
+                    <input type="text" id="phoneInput" placeholder="Unesite broj telefona" maxlength="20">
+                </div>
+                <button id="registerBtn" class="btn btn-primary">Nastaviti</button>
+            </div>
+        </div>
+
+        <!-- Main app -->
+        <div id="mainApp" class="hidden">
+            <!-- Top bar -->
+            <header class="header">
+                <div class="header-content">
+                    <h1>Marketplace</h1>
+                    <div class="header-icons">
+                        <button id="profileBtn" class="icon-btn">👤</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Tab navigation -->
+            <nav class="tabs">
+                <button class="tab active" data-tab="search">🔍 Pretraga</button>
+                <button class="tab" data-tab="listings">📝 Oglasite</button>
+                <button class="tab" data-tab="my-items">❤️ Moji oglasi</button>
+            </nav>
+
+            <!-- Tab content -->
+            <div class="tab-content">
+                <!-- Search Tab -->
+                <div id="search" class="tab-pane active">
+                    <div class="search-filters">
+                        <div class="filter-group">
+                            <label for="citySelect">Grad:</label>
+                            <select id="citySelect" class="filter-input">
+                                <option value="">Svi gradovi</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="categorySelect">Kategorija:</label>
+                            <select id="categorySelect" class="filter-input">
+                                <option value="">Sve kategorije</option>
+                            </select>
+                        </div>
+                        <button id="searchBtn" class="btn btn-secondary btn-block">Pretraži</button>
+                    </div>
+
+                    <div id="searchResults" class="items-grid"></div>
+
+                    <div class="section-divider">
+                        <h3>Preporučeni oglasi</h3>
+                    </div>
+
+                    <div id="randomListings" class="items-grid"></div>
+                </div>
+
+                <!-- Listings Tab -->
+                <div id="listings" class="tab-pane hidden">
+                    <div class="listings-tabs">
+                        <button class="listing-type active" data-type="product">📦 Proizvodi</button>
+                        <button class="listing-type" data-type="service">🔧 Usluge</button>
+                        <button class="listing-type" data-type="ad">📢 Reklama</button>
+                    </div>
+
+                    <!-- Product form -->
+                    <div id="productForm" class="form-section active">
+                        <h3>Objavite proizvod</h3>
+                        <form class="listing-form">
+                            <div class="form-group">
+                                <label>Naslov</label>
+                                <input type="text" placeholder="Unesite naslov oglasa" maxlength="100" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Opis</label>
+                                <textarea placeholder="Detaljno opišite proizvod" maxlength="1000"></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Kategorija</label>
+                                    <select required></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Grad</label>
+                                    <select required></select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Cijena (EUR)</label>
+                                <input type="number" placeholder="0.00" step="0.01" required>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('imageInput').click()">+ Dodajte slike</button>
+                            <input type="file" id="imageInput" accept="image/*" multiple style="display:none;">
+                            <div id="imagePreview" class="image-preview"></div>
+                            <button type="submit" class="btn btn-primary btn-block">Objavite proizvod</button>
+                        </form>
+                    </div>
+
+                    <!-- Service form -->
+                    <div id="serviceForm" class="form-section hidden">
+                        <h3>Objavite uslugu</h3>
+                        <p class="info-text">✓ Prva usluga je besplatna | 💰 Ostale usluge su plaćene - Kontaktirajte @helionstudio</p>
+                        <form class="listing-form">
+                            <div class="form-group">
+                                <label>Naslov usluge</label>
+                                <input type="text" placeholder="Unesite naslov usluge" maxlength="100" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Opis</label>
+                                <textarea placeholder="Detaljno opišite svoju uslugu" maxlength="1000"></textarea>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Kategorija</label>
+                                    <select required></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Grad</label>
+                                    <select required></select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Cijena po uslizi (EUR)</label>
+                                <input type="number" placeholder="0.00" step="0.01" required>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('serviceImageInput').click()">+ Dodajte slike</button>
+                            <input type="file" id="serviceImageInput" accept="image/*" multiple style="display:none;">
+                            <div id="serviceImagePreview" class="image-preview"></div>
+                            <button type="submit" class="btn btn-primary btn-block">Objavite uslugu</button>
+                        </form>
+                    </div>
+
+                    <!-- Ad form -->
+                    <div id="adForm" class="form-section hidden">
+                        <h3>Objavite oglasu (plaćeno)</h3>
+                        <p class="info-text">Cijena: 9.99 EUR na 30 dana | Kontaktirajte @helionstudio za plaćanje</p>
+                        <form class="listing-form">
+                            <div class="form-group">
+                                <label>Naslov oglasa</label>
+                                <input type="text" placeholder="Naslov vaše reklame" maxlength="100" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Opis</label>
+                                <textarea placeholder="Detaljno opišite ponudu" maxlength="500"></textarea>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('adImageInput').click()">+ Dodajte sliku</button>
+                            <input type="file" id="adImageInput" accept="image/*" style="display:none;">
+                            <div id="adImagePreview" class="image-preview"></div>
+                            <div class="form-group">
+                                <label>Kontakt (@helionstudio)</label>
+                                <p class="contact-info">Za plaćanje i objavu reklame kontaktirajte: @helionstudio</p>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Zatraži objavu reklame</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- My Items Tab -->
+                <div id="my-items" class="tab-pane hidden">
+                    <div class="my-items-tabs">
+                        <button class="my-items-type active" data-type="products">📦 Proizvodi</button>
+                        <button class="my-items-type" data-type="services">🔧 Usluge</button>
+                    </div>
+
+                    <div id="myProducts" class="items-grid"></div>
+                    <div id="myServices" class="items-grid hidden"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Item details modal -->
+    <div id="itemModal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <button class="modal-close" onclick="closeItemModal()">✕</button>
+            <div id="itemContent"></div>
+        </div>
+    </div>
+
+    <!-- Profile modal -->
+    <div id="profileModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeProfileModal()">✕</button>
+            <h2>Profil</h2>
+            <div id="profileInfo"></div>
+            <div class="form-group">
+                <label>Grad:</label>
+                <select id="profileCitySelect"></select>
+            </div>
+            <div class="form-group">
+                <label>Telefon:</label>
+                <input type="tel" id="profilePhone" placeholder="Unesite broj telefona">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="updateProfile()">Spremi</button>
+            <button class="btn btn-danger btn-block" onclick="logout()">Odjava</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
