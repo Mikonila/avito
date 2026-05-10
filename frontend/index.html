@@ -47,19 +47,6 @@
             <div class="tab-content">
                 <div id="search" class="tab-pane active">
                     <section class="market-shell">
-                        <div class="search-toolbar">
-                            <button id="searchOpenBtn" class="search-trigger" type="button">
-                                <span class="search-trigger-badge">
-                                    <span class="brand-dot brand-dot-blue"></span>
-                                    <span class="brand-dot brand-dot-green"></span>
-                                    <span class="brand-dot brand-dot-red"></span>
-                                    <span class="brand-dot brand-dot-purple"></span>
-                                </span>
-                                <span id="searchTriggerLabel">Поиск объявлений</span>
-                            </button>
-                            <button id="openFiltersBtn" class="filter-trigger" type="button" aria-label="Открыть фильтры">⚙️</button>
-                        </div>
-
                         <section id="promoBannerSection" class="promo-banner">
                             <div class="promo-copy">
                                 <p class="promo-label">Marketplace</p>
@@ -72,6 +59,26 @@
                                 <span class="promo-shape promo-shape-orange"></span>
                             </div>
                         </section>
+
+                        <div class="search-toolbar">
+                            <div class="search-trigger">
+                                <span class="search-trigger-badge">
+                                    <span class="brand-dot brand-dot-blue"></span>
+                                    <span class="brand-dot brand-dot-green"></span>
+                                    <span class="brand-dot brand-dot-red"></span>
+                                    <span class="brand-dot brand-dot-purple"></span>
+                                </span>
+                                <input
+                                    id="searchTriggerInput"
+                                    class="search-trigger-input"
+                                    type="text"
+                                    placeholder="Поиск объявлений"
+                                    autocomplete="off"
+                                >
+                                <button id="searchSubmitInlineBtn" class="search-submit-inline hidden" type="button" aria-label="Найти">→</button>
+                            </div>
+                            <button id="openFiltersBtn" class="filter-trigger" type="button" aria-label="Открыть фильтры">⚙️</button>
+                        </div>
 
                         <section id="categoriesShowcaseSection" class="categories-showcase">
                             <div class="section-divider compact">
@@ -388,24 +395,7 @@
                     </div>
                 </div>
 
-                <button id="searchBtn" class="btn btn-primary btn-block">Показать объявления</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="searchModal" class="modal hidden">
-        <div class="modal-content search-modal-content">
-            <button class="modal-close" onclick="closeSearchModal()">✕</button>
-            <div class="filter-modal-header">
-                <h2>Поиск</h2>
-                <button type="button" class="link-btn" onclick="clearSearchQuery()">Очистить</button>
-            </div>
-            <div class="filter-sheet">
-                <div class="filter-block">
-                    <label for="searchQueryInput">Что ищете</label>
-                    <input type="text" id="searchQueryInput" class="filter-input" placeholder="Например: iPhone, квартира, клининг">
-                </div>
-                <button id="searchSubmitBtn" class="btn btn-primary btn-block">Найти объявления</button>
+                <button id="searchBtn" type="button" class="btn btn-primary btn-block">Применить фильтры</button>
             </div>
         </div>
     </div>

@@ -387,11 +387,7 @@ html, body, #app {
     border-radius: 28px;
     background: rgba(255, 255, 255, 0.92);
     box-shadow: var(--shadow-soft);
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--muted-color);
     text-align: left;
-    cursor: pointer;
 }
 
 .search-trigger-badge {
@@ -404,6 +400,36 @@ html, body, #app {
 .search-trigger .brand-dot {
     width: 12px;
     height: 12px;
+}
+
+.search-trigger-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-color);
+    font-family: inherit;
+}
+
+.search-trigger-input::placeholder {
+    color: var(--muted-color);
+}
+
+.search-trigger-input:focus {
+    outline: none;
+}
+
+.search-submit-inline {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 14px;
+    background: var(--secondary-color);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
 }
 
 .filter-trigger {
@@ -654,11 +680,6 @@ html, body, #app {
 
 .category-landing-tile-all {
     background: linear-gradient(135deg, #eef2ff, #ffffff);
-}
-
-.search-modal-content {
-    max-width: 560px;
-    padding-top: 22px;
 }
 
 .filter-modal-content {

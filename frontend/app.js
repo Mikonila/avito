@@ -154,13 +154,24 @@ function updateSearchTriggerLabel() {
     const query = state.filters.query?.trim();
     const categoryName = state.filters.categoryId ? getCategoryName(state.filters.categoryId) : 'во всех категориях';
     const subcategoryName = getSubcategoryName(state.filters.categoryId, state.filters.subcategoryId);
-    const subject = query || subcategoryName || categoryName.toLowerCase();
-    const label = query ? `${subject} ${cityName}` : `Поиск ${subject} ${cityName}`;
-    const target = document.getElementById('searchTriggerLabel');
+    const placeholder = query
+        ? ''
+        : `Поиск ${subcategoryName || categoryName.toLowerCase()} ${cityName}`;
+    const input = document.getElementById('searchTriggerInput');
 
-    if (target) {
-        target.textContent = label;
+    if (input) {
+        input.placeholder = placeholder;
     }
+}
+
+function updateSearchSubmitVisibility() {
+    const submitButton = document.getElementById('searchSubmitInlineBtn');
+
+    if (!submitButton) {
+        return;
+    }
+
+    submitButton.classList.toggle('hidden', !state.filters.query.trim());
 }
 
 function setSearchViewMode(mode) {
@@ -250,6 +261,7 @@ function populateSelects() {
     renderCategoryShowcase();
     renderFilterCategoryChips();
     updateSearchTriggerLabel();
+    updateSearchSubmitVisibility();
 }
 
 function showMainApp() {
@@ -421,7 +433,7 @@ function renderFilterCategoryChips() {
 
 function syncFilterUi() {
     const citySelect = document.getElementById('citySelect');
-    const searchQueryInput = document.getElementById('searchQueryInput');
+    const searchTriggerInput = document.getElementById('searchTriggerInput');
     const minPriceInput = document.getElementById('minPriceInput');
     const maxPriceInput = document.getElementById('maxPriceInput');
     const sortInput = document.querySelector(`input[name="sortOption"][value="${state.filters.sort}"]`);
@@ -430,8 +442,8 @@ function syncFilterUi() {
         citySelect.value = state.filters.cityId;
     }
 
-    if (searchQueryInput) {
-        searchQueryInput.value = state.filters.query;
+    if (searchTriggerInput) {
+        searchTriggerInput.value = state.filters.query;
     }
 
     if (minPriceInput) {
@@ -473,7 +485,6 @@ window.resetFilters = function() {
     state.activeCategoryId = '';
     syncFilterUi();
     setSearchViewMode('home');
-    closeSearchModal();
     renderListings(state.homeListings, 'randomListings');
 };
 
@@ -505,17 +516,7 @@ function renderCategoryLandingTiles(category) {
                 <strong>${subcategory.name}</strong>
                 <span>${category.name}</span>
             </button>
-        `),
-        `
-            <button
-                type="button"
-                class="category-landing-tile category-landing-tile-all"
-                onclick="openCategoryExplorerModal()"
-            >
-                <strong>Все категории →</strong>
-                <span>Открыть полный список</span>
-            </button>
-        `
+        `)
     ];
 
     container.innerHTML = tiles.join('');
@@ -566,26 +567,15 @@ window.closeCategoryLanding = function() {
     setSearchViewMode('home');
 };
 
-function openSearchModal() {
-    const input = document.getElementById('searchQueryInput');
-    if (input) {
-        input.value = state.filters.query;
-    }
-    document.getElementById('searchModal').classList.remove('hidden');
-}
-
-window.closeSearchModal = function() {
-    document.getElementById('searchModal').classList.add('hidden');
-};
-
 window.clearSearchQuery = function() {
     state.filters.query = '';
-    const input = document.getElementById('searchQueryInput');
+    const input = document.getElementById('searchTriggerInput');
     if (input) {
         input.value = '';
         input.focus();
     }
     updateSearchTriggerLabel();
+    updateSearchSubmitVisibility();
 };
 
 function getCategorySelect(formType) {
@@ -630,10 +620,9 @@ function attachEventListeners() {
     });
 
     document.getElementById('searchBtn').addEventListener('click', performSearch);
-    document.getElementById('searchSubmitBtn').addEventListener('click', performSearch);
+    document.getElementById('searchSubmitInlineBtn').addEventListener('click', performSearch);
     document.getElementById('profileBtn').addEventListener('click', showProfileModal);
     document.getElementById('openFiltersBtn').addEventListener('click', openFiltersModal);
-    document.getElementById('searchOpenBtn').addEventListener('click', openSearchModal);
     document.querySelector('[data-tab-jump="listings"]').addEventListener('click', () => switchTab('listings'));
 
     document.querySelectorAll('.listing-type').forEach((btn) => {
@@ -659,11 +648,12 @@ function attachEventListeners() {
         state.filters.cityId = event.target.value;
         updateSearchTriggerLabel();
     });
-    document.getElementById('searchQueryInput').addEventListener('input', (event) => {
+    document.getElementById('searchTriggerInput').addEventListener('input', (event) => {
         state.filters.query = event.target.value;
         updateSearchTriggerLabel();
+        updateSearchSubmitVisibility();
     });
-    document.getElementById('searchQueryInput').addEventListener('keydown', (event) => {
+    document.getElementById('searchTriggerInput').addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
             event.preventDefault();
             performSearch();
@@ -891,7 +881,7 @@ async function handleListingSubmit(e, formIndex) {
 }
 
 async function performSearch() {
-    const queryInput = document.getElementById('searchQueryInput');
+    const queryInput = document.getElementById('searchTriggerInput');
     state.filters.cityId = document.getElementById('citySelect').value;
     state.filters.query = queryInput ? queryInput.value.trim() : state.filters.query;
 
@@ -913,7 +903,6 @@ async function performSearch() {
                     : 'Найденные объявления';
         renderListings(listings, 'searchResults');
         setSearchViewMode('results');
-        closeSearchModal();
         closeFiltersModal();
         switchTab('search');
     } catch (error) {
