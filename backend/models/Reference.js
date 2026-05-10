@@ -90,19 +90,41 @@ function getInsertOrIgnoreQuery(tableName) {
   `;
 }
 
+async function syncReferenceItems(tableName, items) {
+  const existingRows = await db.all(`SELECT id, name FROM ${tableName}`);
+  const rowsById = new Map(existingRows.map((row) => [row.id, row]));
+  const renamedIds = new Set();
+
+  for (const item of items) {
+    const currentRow = rowsById.get(item.id);
+    if (currentRow && currentRow.name !== item.name && !renamedIds.has(currentRow.id)) {
+      await db.run(
+        `UPDATE ${tableName} SET name = $1 WHERE id = $2`,
+        [`__tmp__${tableName}_${currentRow.id}`, currentRow.id]
+      );
+      renamedIds.add(currentRow.id);
+    }
+
+    const conflictingRow = existingRows.find((row) => row.name === item.name && row.id !== item.id);
+    if (conflictingRow && !renamedIds.has(conflictingRow.id)) {
+      await db.run(
+        `UPDATE ${tableName} SET name = $1 WHERE id = $2`,
+        [`__tmp__${tableName}_${conflictingRow.id}`, conflictingRow.id]
+      );
+      renamedIds.add(conflictingRow.id);
+    }
+  }
+
+  const upsertQuery = getInsertOrIgnoreQuery(tableName);
+  for (const item of items) {
+    await db.run(upsertQuery, [item.id, item.name]);
+  }
+}
+
 async function initializeData() {
   await db.initializeDatabase();
-
-  const categoryQuery = getInsertOrIgnoreQuery('categories');
-  const cityQuery = getInsertOrIgnoreQuery('cities');
-
-  for (const category of CATEGORIES) {
-    await db.run(categoryQuery, [category.id, category.name]);
-  }
-
-  for (const city of CITIES) {
-    await db.run(cityQuery, [city.id, city.name]);
-  }
+  await syncReferenceItems('categories', CATEGORIES);
+  await syncReferenceItems('cities', CITIES);
 }
 
 async function getCategories() {
