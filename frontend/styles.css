@@ -1093,6 +1093,28 @@ html, body, #app {
     font-weight: 500;
 }
 
+.promotion-inline-panel {
+    margin-top: 16px;
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(229, 231, 235, 0.9);
+}
+
+.promotion-inline-panel h4 {
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.promotion-inline-panel p {
+    color: var(--muted-color);
+    line-height: 1.5;
+}
+
+.promotion-inline-panel-muted {
+    background: #f8fafc;
+}
+
 .empty-state {
     grid-column: 1 / -1;
     display: flex;

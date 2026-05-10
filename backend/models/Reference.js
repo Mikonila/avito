@@ -21,7 +21,7 @@ const CATEGORIES = [
       { id: 'sale', name: 'Продажа' }
     ]
   },
-  { id: 'cat-4', name: 'Для дома и дачи', icon: '🪑' },
+  { id: 'cat-4', name: 'Для дома', icon: '🪑' },
   {
     id: 'cat-5',
     name: 'Одежда и обувь',
@@ -32,7 +32,7 @@ const CATEGORIES = [
     ]
   },
   { id: 'cat-6', name: 'Хобби и отдых', icon: '🎣' },
-  { id: 'cat-7', name: 'Для детей', icon: '🧸' },
+  { id: 'cat-7', name: 'Детское', icon: '🧸' },
   {
     id: 'cat-8',
     name: 'Услуги',
@@ -65,7 +65,7 @@ const CATEGORIES = [
       { id: 'restaurants', name: 'Рестораны и заведения' }
     ]
   },
-  { id: 'cat-12', name: 'Запчасти и аксессуары', icon: '⚙️' },
+  { id: 'cat-12', name: 'Бесплатно', icon: '⚙️' },
   { id: 'cat-13', name: 'Авиша', icon: '🎭' }
 ];
 

@@ -26,6 +26,7 @@ let state = {
     selectedItem: null,
     viewedProfileId: null,
     promotionListingId: null,
+    promotionListingTitle: '',
     filters: {
         categoryId: '',
         subcategoryId: '',
@@ -673,7 +674,6 @@ function attachEventListeners() {
 
     document.getElementById('imageInput').addEventListener('change', (e) => handleImageSelect(e, 'images'));
     document.getElementById('serviceImageInput').addEventListener('change', (e) => handleImageSelect(e, 'serviceImages'));
-    document.getElementById('adImageInput').addEventListener('change', (e) => handleImageSelect(e, 'adImages'));
     document.getElementById('reviewScreenshotInput').addEventListener('change', handleReviewScreenshotSelect);
 }
 
@@ -802,6 +802,22 @@ window.removeImage = function(type, index) {
     renderImagePreview(type);
 };
 
+function showPublishedPromotionPanel(listingId, title) {
+    state.promotionListingId = listingId;
+    state.promotionListingTitle = title;
+
+    const info = document.getElementById('postPublishPromotionInfo');
+    const panel = document.getElementById('postPublishPromotionPanel');
+
+    if (info) {
+        info.textContent = `Выберите срок продвижения для товара: ${title}`;
+    }
+
+    if (panel) {
+        panel.classList.remove('hidden');
+    }
+}
+
 async function handleListingSubmit(e, formIndex) {
     e.preventDefault();
     const form = e.target;
@@ -858,6 +874,7 @@ async function handleListingSubmit(e, formIndex) {
         if (result.success || result.listing_id || result.service_id) {
             alert('Объявление опубликовано');
             const createdListingId = result.listing_id || null;
+            const createdTitle = title;
             form.reset();
             state.images = [];
             state.serviceImages = [];
@@ -869,7 +886,7 @@ async function handleListingSubmit(e, formIndex) {
             populateSubcategorySelect('service');
 
             if (createdListingId) {
-                openPromotionModal(createdListingId, title);
+                showPublishedPromotionPanel(createdListingId, createdTitle);
             }
         } else {
             alert(result.error || 'Ошибка при публикации');
@@ -1019,7 +1036,7 @@ function renderListings(listings, containerId) {
             content += `
                 <div class="item-actions">
                     <button onclick="event.stopPropagation(); editItem('${item.id}')">Редактировать</button>
-                    <button onclick="event.stopPropagation(); openPromotionModal('${item.id}', '${String(item.title).replace(/'/g, '&#39;')}')">Продвинуть</button>
+                    ${containerId === 'myProducts' ? `<button onclick="event.stopPropagation(); openPromotionModal('${item.id}', '${String(item.title).replace(/'/g, '&#39;')}')">Продвинуть</button>` : ''}
                     <button class="delete" onclick="event.stopPropagation(); deleteItem('${item.id}', '${containerId}')">Удалить</button>
                 </div>
             `;
@@ -1243,6 +1260,7 @@ window.openReviewModal = function() {
 
 window.openPromotionModal = function(listingId, title = 'объявление') {
     state.promotionListingId = listingId;
+    state.promotionListingTitle = title;
     document.getElementById('promotionTargetInfo').textContent = `Выберите срок продвижения для объявления: ${title}`;
     document.getElementById('promotionModal').classList.remove('hidden');
 };
@@ -1294,6 +1312,15 @@ window.startPromotionPayment = async function(planKey) {
         console.error('Error starting promotion payment:', error);
         alert(error.message || 'Ошибка при создании платежа');
     }
+};
+
+window.startPublishedListingPromotion = function(planKey) {
+    if (!state.promotionListingId) {
+        alert('Сначала опубликуйте товар');
+        return;
+    }
+
+    startPromotionPayment(planKey);
 };
 
 window.closeReviewModal = function() {
