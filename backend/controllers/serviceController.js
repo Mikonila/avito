@@ -6,7 +6,7 @@ async function createService(req, res) {
   let newlyUploadedImages = [];
 
   try {
-    const { user_id, title, description, category_id, city_id, price, images } = req.body;
+    const { user_id, title, description, category_id, subcategory = '', city_id, price, images } = req.body;
 
     if (!user_id || !title || !category_id || !city_id) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -30,6 +30,7 @@ async function createService(req, res) {
       title,
       description,
       category_id,
+      subcategory,
       city_id,
       price,
       images: JSON.stringify(uploadedImages)

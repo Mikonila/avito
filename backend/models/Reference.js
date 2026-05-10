@@ -1,18 +1,26 @@
 const db = require('./database');
 
 const CATEGORIES = [
-  { id: 'cat-1', name: 'Электроника' },
-  { id: 'cat-2', name: 'Автомобили' },
-  { id: 'cat-3', name: 'Жилье' },
-  { id: 'cat-4', name: 'Мебель' },
-  { id: 'cat-5', name: 'Одежда и обувь' },
-  { id: 'cat-6', name: 'Книги' },
-  { id: 'cat-7', name: 'Игрушки' },
-  { id: 'cat-8', name: 'Спорт и отдых' },
-  { id: 'cat-9', name: 'Домашние животные' },
-  { id: 'cat-10', name: 'Услуги' },
-  { id: 'cat-11', name: 'Бизнес' },
-  { id: 'cat-12', name: 'Разное' }
+  { id: 'cat-1', name: 'Электроника', icon: '💻' },
+  { id: 'cat-2', name: 'Автомобили', icon: '🚗' },
+  { id: 'cat-3', name: 'Недвижимость', icon: '🏠' },
+  { id: 'cat-4', name: 'Мебель', icon: '🛋️' },
+  {
+    id: 'cat-5',
+    name: 'Одежда и обувь',
+    icon: '👟',
+    subcategories: [
+      { id: 'men', name: 'Мужская' },
+      { id: 'women', name: 'Женская' }
+    ]
+  },
+  { id: 'cat-6', name: 'Книги', icon: '📚' },
+  { id: 'cat-7', name: 'Для детей', icon: '🧸' },
+  { id: 'cat-8', name: 'Спорт и отдых', icon: '⚽' },
+  { id: 'cat-9', name: 'Домашние животные', icon: '🐾' },
+  { id: 'cat-10', name: 'Услуги', icon: '🛠️' },
+  { id: 'cat-11', name: 'Бизнес', icon: '💼' },
+  { id: 'cat-12', name: 'Разное', icon: '📦' }
 ];
 
 const CITIES = [
@@ -53,7 +61,16 @@ async function initializeData() {
 
 async function getCategories() {
   const rows = await db.all(`SELECT * FROM categories ORDER BY name`);
-  return rows.length > 0 ? rows : CATEGORIES;
+  const source = rows.length > 0 ? rows : CATEGORIES;
+
+  return source.map((row) => {
+    const meta = CATEGORIES.find((category) => category.id === row.id) || {};
+    return {
+      ...row,
+      icon: meta.icon || row.icon || '📦',
+      subcategories: meta.subcategories || []
+    };
+  });
 }
 
 async function getCities() {

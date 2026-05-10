@@ -2,6 +2,7 @@ const tg = window.Telegram?.WebApp;
 const MAX_IMAGE_COUNT = 4;
 const MAX_IMAGE_SIZE_BYTES = 1572864;
 const FALLBACK_TELEGRAM_ID_KEY = 'fallback_telegram_id';
+const CLOTHING_CATEGORY_ID = 'cat-5';
 
 let state = {
     user: null,
@@ -99,6 +100,23 @@ function getCityName(value) {
     return city?.name || value || 'Не указан';
 }
 
+function getCategoryById(categoryId) {
+    return state.categories.find((category) => category.id === categoryId) || null;
+}
+
+function getCategoryName(categoryId) {
+    return getCategoryById(categoryId)?.name || 'Без категории';
+}
+
+function getSubcategoryName(categoryId, subcategoryId) {
+    if (!subcategoryId) {
+        return '';
+    }
+
+    const category = getCategoryById(categoryId);
+    return category?.subcategories?.find((item) => item.id === subcategoryId)?.name || subcategoryId;
+}
+
 function getProfileDisplayName(user) {
     return [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username || 'Пользователь';
 }
@@ -162,22 +180,63 @@ function populateSelectElement(select, options, placeholder) {
 }
 
 function populateSelects() {
-    const productFormSelects = document.querySelectorAll('#productForm select');
-    const serviceFormSelects = document.querySelectorAll('#serviceForm select');
+    const productCategorySelect = document.querySelector('#productForm .listing-form .form-row select');
+    const serviceCategorySelect = document.querySelector('#serviceForm .listing-form .form-row select');
+    const productCitySelect = document.querySelectorAll('#productForm .listing-form .form-row select')[2];
+    const serviceCitySelect = document.querySelectorAll('#serviceForm .listing-form .form-row select')[2];
 
     populateSelectElement(document.getElementById('citySelect'), state.cities, 'Все города');
     populateSelectElement(document.getElementById('categorySelect'), state.categories, 'Все категории');
     populateSelectElement(document.getElementById('profileCitySelect'), state.cities, 'Не указан');
 
-    populateSelectElement(productFormSelects[0], state.categories, null);
-    populateSelectElement(productFormSelects[1], state.cities, null);
-    populateSelectElement(serviceFormSelects[0], state.categories, null);
-    populateSelectElement(serviceFormSelects[1], state.cities, null);
+    populateSelectElement(productCategorySelect, state.categories, null);
+    populateSelectElement(productCitySelect, state.cities, null);
+    populateSelectElement(serviceCategorySelect, state.categories, null);
+    populateSelectElement(serviceCitySelect, state.cities, null);
+
+    populateSubcategorySelect('product');
+    populateSubcategorySelect('service');
 }
 
 function showMainApp() {
     document.getElementById('mainApp').classList.remove('hidden');
     loadRandomListings();
+}
+
+function getCategorySelect(formType) {
+    return document.querySelector(`#${formType}Form .listing-form .form-row select`);
+}
+
+function getSubcategorySelect(formType) {
+    return document.querySelector(`[data-subcategory-select="${formType}"]`);
+}
+
+function getSubcategoryGroup(formType) {
+    return getSubcategorySelect(formType)?.closest('.subcategory-group');
+}
+
+function populateSubcategorySelect(formType) {
+    const categorySelect = getCategorySelect(formType);
+    const subcategorySelect = getSubcategorySelect(formType);
+    const subcategoryGroup = getSubcategoryGroup(formType);
+
+    if (!categorySelect || !subcategorySelect || !subcategoryGroup) {
+        return;
+    }
+
+    const category = getCategoryById(categorySelect.value);
+    const subcategories = category?.subcategories || [];
+    const isVisible = subcategories.length > 0;
+
+    subcategoryGroup.classList.toggle('hidden', !isVisible);
+
+    if (!isVisible) {
+        subcategorySelect.innerHTML = '';
+        subcategorySelect.value = '';
+        return;
+    }
+
+    populateSelectElement(subcategorySelect, subcategories, 'Выберите подкатегорию');
 }
 
 function attachEventListeners() {
@@ -187,6 +246,7 @@ function attachEventListeners() {
 
     document.getElementById('searchBtn').addEventListener('click', performSearch);
     document.getElementById('profileBtn').addEventListener('click', showProfileModal);
+    document.querySelector('[data-tab-jump="listings"]').addEventListener('click', () => switchTab('listings'));
 
     document.querySelectorAll('.listing-type').forEach((btn) => {
         btn.addEventListener('click', () => switchListingType(btn.dataset.type));
@@ -198,6 +258,13 @@ function attachEventListeners() {
 
     document.querySelectorAll('.listing-form').forEach((form, index) => {
         form.addEventListener('submit', (e) => handleListingSubmit(e, index));
+    });
+
+    ['product', 'service'].forEach((formType) => {
+        const categorySelect = getCategorySelect(formType);
+        if (categorySelect) {
+            categorySelect.addEventListener('change', () => populateSubcategorySelect(formType));
+        }
     });
 
     document.getElementById('imageInput').addEventListener('change', (e) => handleImageSelect(e, 'images'));
@@ -324,17 +391,28 @@ window.removeImage = function(type, index) {
 async function handleListingSubmit(e, formIndex) {
     e.preventDefault();
     const form = e.target;
-    const inputs = form.querySelectorAll('input, textarea, select');
-    const [title, description, categoryId, cityId, price] = [
-        inputs[0].value,
-        inputs[1].value,
-        inputs[2].value,
-        inputs[3].value,
-        inputs[4].value
-    ];
+    const title = form.querySelector('input[type="text"]')?.value.trim() || '';
+    const description = form.querySelector('textarea')?.value.trim() || '';
+    const selects = form.querySelectorAll('select');
+    const isProductOrService = formIndex !== 2;
+    const categoryId = isProductOrService ? selects[0]?.value || '' : '';
+    const subcategory = isProductOrService ? selects[1]?.value || '' : '';
+    const cityId = isProductOrService ? selects[2]?.value || '' : '';
+    const priceInput = form.querySelector('input[type="number"]');
+    const price = priceInput ? priceInput.value : '';
+
+    if (formIndex === 2) {
+        alert('Реклама размещается платно. Свяжитесь с @helionstudio');
+        return;
+    }
 
     if (!title || !categoryId || !cityId || !price) {
         alert('Пожалуйста, заполните обязательные поля');
+        return;
+    }
+
+    if (categoryId === CLOTHING_CATEGORY_ID && !subcategory) {
+        alert('Для категории "Одежда и обувь" выберите подкатегорию');
         return;
     }
 
@@ -345,6 +423,7 @@ async function handleListingSubmit(e, formIndex) {
             title,
             description,
             category_id: categoryId,
+            subcategory,
             city_id: cityId,
             price: parseFloat(price),
             images: state.images
@@ -353,9 +432,6 @@ async function handleListingSubmit(e, formIndex) {
         if (formIndex === 1) {
             endpoint = '/services/create';
             body.images = state.serviceImages;
-        } else if (formIndex === 2) {
-            alert('Реклама размещается платно. Свяжитесь с @helionstudio');
-            return;
         }
 
         const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -374,6 +450,8 @@ async function handleListingSubmit(e, formIndex) {
             renderImagePreview('images');
             renderImagePreview('serviceImages');
             renderImagePreview('adImages');
+            populateSubcategorySelect('product');
+            populateSubcategorySelect('service');
         } else {
             alert(result.error || 'Ошибка при публикации');
         }
@@ -430,36 +508,45 @@ function renderListings(listings, containerId) {
     container.innerHTML = '';
 
     if (listings.length === 0) {
-        container.innerHTML = '<p style="grid-column: 1/-1; padding: 20px; text-align: center;">Нет доступных объявлений</p>';
+        container.innerHTML = '<div class="empty-state"><strong>Пока пусто</strong><span>Здесь появятся объявления после публикации или поиска.</span></div>';
         return;
     }
 
     listings.forEach((item) => {
         const card = document.createElement('div');
         card.className = 'item-card';
+        card.onclick = () => showItemDetails(item);
         const image = item.images && item.images[0] ? item.images[0] : '📦';
         const isImage = typeof image === 'string' && (image.startsWith('data:') || image.startsWith('http'));
+        const categoryName = getCategoryName(item.category_id);
+        const subcategoryName = getSubcategoryName(item.category_id, item.subcategory);
+        const badgeText = subcategoryName || categoryName;
 
         let content = `
-            <div class="item-image">
-                ${isImage ? `<img src="${image}" alt="${item.title}">` : `<span>${image}</span>`}
+            <div class="item-card-media">
+                <div class="item-badge">${badgeText}</div>
+                <div class="item-image">
+                    ${isImage ? `<img src="${image}" alt="${item.title}">` : `<span>${image}</span>`}
+                </div>
             </div>
             <div class="item-info">
+                <div class="item-category-line">${categoryName}</div>
                 <div class="item-title">${item.title}</div>
                 <div class="item-price">${item.price} EUR</div>
-                <div class="item-meta">${getCityName(item.city_id || item.city)}</div>
+                <div class="item-meta-row">
+                    <div class="item-meta">${getCityName(item.city_id || item.city)}</div>
+                    <div class="item-date">${item.created_at ? new Date(item.created_at).toLocaleDateString('ru-RU') : ''}</div>
+                </div>
             </div>
         `;
 
         if (containerId.includes('my')) {
             content += `
                 <div class="item-actions">
-                    <button onclick="editItem('${item.id}')">Редактировать</button>
-                    <button class="delete" onclick="deleteItem('${item.id}', '${containerId}')">Удалить</button>
+                    <button onclick="event.stopPropagation(); editItem('${item.id}')">Редактировать</button>
+                    <button class="delete" onclick="event.stopPropagation(); deleteItem('${item.id}', '${containerId}')">Удалить</button>
                 </div>
             `;
-        } else {
-            card.onclick = () => showItemDetails(item);
         }
 
         card.innerHTML = content;
@@ -471,6 +558,8 @@ function showItemDetails(item) {
     state.selectedItem = item;
     const modal = document.getElementById('itemModal');
     const content = document.getElementById('itemContent');
+    const categoryName = getCategoryName(item.category_id);
+    const subcategoryName = getSubcategoryName(item.category_id, item.subcategory);
 
     const gallery = item.images && item.images.length > 0 ? `
         <div class="item-details-gallery">
@@ -479,6 +568,11 @@ function showItemDetails(item) {
     ` : '';
 
     content.innerHTML = `
+        <div class="item-details-shell">
+        <div class="item-details-topline">
+            <span class="item-detail-chip">${categoryName}</span>
+            ${subcategoryName ? `<span class="item-detail-chip item-detail-chip-muted">${subcategoryName}</span>` : ''}
+        </div>
         <h2>${item.title}</h2>
         <div class="item-details-meta">
             <span>📍 ${getCityName(item.city_id || item.city)}</span>
@@ -495,6 +589,7 @@ function showItemDetails(item) {
         <div class="item-details-actions">
             <button class="btn btn-secondary btn-block" onclick="showSellerProfile()">Профиль продавца</button>
             <button class="btn btn-primary btn-block" onclick="openReviewModal()">Оставить отзыв</button>
+        </div>
         </div>
     `;
 

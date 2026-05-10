@@ -27,12 +27,12 @@ function withParsedImages(row) {
 class Service {
   static async create(user_id, data) {
     const id = uuidv4();
-    const { title, description, category_id, city_id, price, images } = data;
+    const { title, description, category_id, subcategory = '', city_id, price, images } = data;
 
     await db.run(
-      `INSERT INTO services (id, user_id, title, description, category_id, city_id, price, images, status, service_count)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active', 0)`,
-      [id, user_id, title, description, category_id, city_id, price, images || '[]']
+      `INSERT INTO services (id, user_id, title, description, category_id, subcategory, city_id, price, images, status, service_count)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active', 0)`,
+      [id, user_id, title, description, category_id, subcategory, city_id, price, images || '[]']
     );
 
     return id;

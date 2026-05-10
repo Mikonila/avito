@@ -27,12 +27,12 @@ function withParsedImages(row) {
 class Listing {
   static async create(user_id, data) {
     const id = uuidv4();
-    const { title, description, category_id, city_id, price, images } = data;
+    const { title, description, category_id, subcategory = '', city_id, price, images } = data;
 
     await db.run(
-      `INSERT INTO listings (id, user_id, title, description, category_id, city_id, price, images, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')`,
-      [id, user_id, title, description, category_id, city_id, price, images || '[]']
+      `INSERT INTO listings (id, user_id, title, description, category_id, subcategory, city_id, price, images, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active')`,
+      [id, user_id, title, description, category_id, subcategory, city_id, price, images || '[]']
     );
 
     return id;
@@ -100,18 +100,19 @@ class Listing {
   }
 
   static async update(id, user_id, data) {
-    const { title, description, price, category_id, city_id, images } = data;
+    const { title, description, price, category_id, subcategory = '', city_id, images } = data;
     const result = await db.run(
       `UPDATE listings
        SET title = $1,
            description = $2,
            price = $3,
            category_id = $4,
-           city_id = $5,
-           images = $6,
+           subcategory = $5,
+           city_id = $6,
+           images = $7,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7 AND user_id = $8`,
-      [title, description, price, category_id, city_id, images || '[]', id, user_id]
+       WHERE id = $8 AND user_id = $9`,
+      [title, description, price, category_id, subcategory, city_id, images || '[]', id, user_id]
     );
 
     return result.changes > 0;

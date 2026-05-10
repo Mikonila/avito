@@ -6,7 +6,7 @@ async function createListing(req, res) {
   let newlyUploadedImages = [];
 
   try {
-    const { user_id, title, description, category_id, city_id, price, images } = req.body;
+    const { user_id, title, description, category_id, subcategory = '', city_id, price, images } = req.body;
 
     if (!user_id || !title || !category_id || !city_id || !price) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -24,6 +24,7 @@ async function createListing(req, res) {
       title,
       description,
       category_id,
+      subcategory,
       city_id,
       price,
       images: JSON.stringify(uploadedImages)
@@ -117,7 +118,7 @@ async function updateListing(req, res) {
 
   try {
     const { listing_id } = req.params;
-    const { user_id, title, description, price, category_id, city_id, images } = req.body;
+    const { user_id, title, description, price, category_id, subcategory = '', city_id, images } = req.body;
 
     if (!user_id) {
       return res.status(400).json({ error: 'user_id is required' });
@@ -137,6 +138,7 @@ async function updateListing(req, res) {
       description,
       price,
       category_id,
+      subcategory,
       city_id,
       images: JSON.stringify(uploadedImages)
     });

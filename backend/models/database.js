@@ -33,6 +33,7 @@ const SQLITE_SCHEMA = [
     title TEXT NOT NULL,
     description TEXT,
     category_id TEXT NOT NULL,
+    subcategory TEXT,
     city_id TEXT NOT NULL,
     price REAL NOT NULL,
     images TEXT,
@@ -52,6 +53,7 @@ const SQLITE_SCHEMA = [
     title TEXT NOT NULL,
     description TEXT,
     category_id TEXT NOT NULL,
+    subcategory TEXT,
     city_id TEXT NOT NULL,
     price REAL NOT NULL,
     images TEXT,
@@ -143,6 +145,7 @@ const POSTGRES_SCHEMA = [
     title TEXT NOT NULL,
     description TEXT,
     category_id TEXT NOT NULL REFERENCES categories(id),
+    subcategory TEXT,
     city_id TEXT NOT NULL REFERENCES cities(id),
     price REAL NOT NULL,
     images TEXT,
@@ -159,6 +162,7 @@ const POSTGRES_SCHEMA = [
     title TEXT NOT NULL,
     description TEXT,
     category_id TEXT NOT NULL REFERENCES categories(id),
+    subcategory TEXT,
     city_id TEXT NOT NULL REFERENCES cities(id),
     price REAL NOT NULL,
     images TEXT,
@@ -344,6 +348,8 @@ async function ensureColumn(tableName, columnName, definition) {
 
 async function applyMigrations() {
   await ensureColumn('users', 'about', 'TEXT');
+  await ensureColumn('listings', 'subcategory', 'TEXT');
+  await ensureColumn('services', 'subcategory', 'TEXT');
 }
 
 async function initializeDatabase() {
