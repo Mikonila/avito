@@ -192,6 +192,24 @@ function isPostgresUrl(value) {
   return typeof value === 'string' && /^(postgres|postgresql):\/\//.test(value);
 }
 
+function isPlaceholderPostgresUrl(value) {
+  if (!isPostgresUrl(value)) {
+    return false;
+  }
+
+  try {
+    const parsedUrl = new URL(value);
+    return (
+      parsedUrl.hostname === 'host' ||
+      parsedUrl.username === 'user' ||
+      parsedUrl.password === 'password' ||
+      parsedUrl.pathname === '/dbname'
+    );
+  } catch (error) {
+    return false;
+  }
+}
+
 function resolveSqlitePath() {
   const configuredPath =
     process.env.DATABASE_URL && !isPostgresUrl(process.env.DATABASE_URL)
@@ -286,6 +304,12 @@ async function initializeDatabase() {
 
   readyPromise = (async () => {
     if (isPostgresUrl(process.env.DATABASE_URL)) {
+      if (isPlaceholderPostgresUrl(process.env.DATABASE_URL)) {
+        throw new Error(
+          'DATABASE_URL is still a template value. In Railway Variables, replace postgresql://user:password@host:5432/dbname with the real DATABASE_URL from your Railway PostgreSQL service.'
+        );
+      }
+
       dialect = 'postgres';
       pgPool = new Pool({
         connectionString: process.env.DATABASE_URL,
