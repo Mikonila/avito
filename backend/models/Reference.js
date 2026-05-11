@@ -1,6 +1,7 @@
 const db = require('./database');
 
 const CATEGORIES = [
+  { id: 'cat-13', name: 'Афиша', icon: '🎭' },
   { id: 'cat-1', name: 'Электроника', icon: '💻' },
   {
     id: 'cat-2',
@@ -66,7 +67,6 @@ const CATEGORIES = [
     ]
   },
   { id: 'cat-12', name: 'Бесплатно', icon: '⚙️' },
-  { id: 'cat-13', name: 'Авиша', icon: '🎭' },
   { id: 'cat-14', name: 'Медицина', icon: '🏥' },
   { id: 'cat-other', name: 'Другое', icon: '📦' }
 ];

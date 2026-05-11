@@ -2,7 +2,7 @@ const Service = require('../models/Service');
 const User = require('../models/User');
 const { validateImages } = require('../utils/validators');
 const { getRequesterTelegramId } = require('../middleware/auth');
-const { getTelegramBot, PROMOTION_PLANS } = require('../telegramBot');
+const { getTelegramBot, PROMOTION_PLANS, SERVICE_PUBLICATION_PLANS } = require('../telegramBot');
 const { destroyImages, uploadImages } = require('../utils/cloudinary');
 const {
   BAN_REASON,
@@ -11,11 +11,47 @@ const {
   requireAdminUser
 } = require('../utils/moderation');
 
+async function createServicePublicationInvoiceLink(bot, service, userId, planKey = 'month') {
+  const publicationPlan = SERVICE_PUBLICATION_PLANS[planKey];
+
+  if (!publicationPlan) {
+    throw new Error('Неизвестный тариф публикации');
+  }
+
+  const payload = [
+    'service_publication',
+    service.id,
+    userId,
+    planKey,
+    publicationPlan.stars,
+    Date.now()
+  ].join(':');
+
+  return bot.createInvoiceLink(
+    'Платная публикация услуги',
+    `${service.title} • публикация на ${publicationPlan.label}`,
+    payload,
+    '',
+    'XTR',
+    [{ label: `Публикация на ${publicationPlan.label}`, amount: publicationPlan.stars }]
+  );
+}
+
 async function createService(req, res) {
   let newlyUploadedImages = [];
 
   try {
-    const { user_id, title, description, category_id, subcategory = '', city_id, price, images } = req.body;
+    const {
+      user_id,
+      title,
+      description,
+      category_id,
+      subcategory = '',
+      city_id,
+      price,
+      images,
+      publication_plan = ''
+    } = req.body;
 
     if (!user_id || !title || !category_id || !city_id) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -31,10 +67,16 @@ async function createService(req, res) {
       return res.status(400).json({ error: imageValidation.errors.join('. ') });
     }
 
-    // Check if user can add more services
     const canAdd = await Service.canAddService(user_id);
-    if (!canAdd) {
-      return res.status(403).json({ error: 'You have reached the free services limit. Contact @helionstudio for premium services.' });
+    const requiresPaidPublication = !canAdd;
+
+    if (requiresPaidPublication && publication_plan !== 'month') {
+      return res.status(402).json({ error: 'Для публикации дополнительной услуги нужно оплатить размещение на 1 месяц' });
+    }
+
+    const bot = requiresPaidPublication ? getTelegramBot() : null;
+    if (requiresPaidPublication && !bot) {
+      return res.status(503).json({ error: 'Telegram-бот недоступен, попробуйте позже' });
     }
 
     const uploadedImages = await uploadImages(imageValidation.images, 'service');
@@ -47,8 +89,22 @@ async function createService(req, res) {
       subcategory,
       city_id,
       price,
-      images: JSON.stringify(uploadedImages)
+      images: JSON.stringify(uploadedImages),
+      status: requiresPaidPublication ? 'pending_payment' : 'active',
+      is_paid: false
     });
+
+    if (requiresPaidPublication) {
+      const service = await Service.findById(id);
+      const invoiceLink = await createServicePublicationInvoiceLink(bot, service, user_id, publication_plan);
+
+      return res.json({
+        success: true,
+        service_id: id,
+        payment_required: true,
+        invoice_link: invoiceLink
+      });
+    }
 
     res.json({ success: true, service_id: id });
   } catch (error) {
@@ -195,6 +251,81 @@ async function updateService(req, res) {
   }
 }
 
+async function createPublicationInvoice(req, res) {
+  try {
+    const { service_id } = req.params;
+    const { user_id, plan = 'month' } = req.body;
+    const requesterTelegramId = getRequesterTelegramId(req);
+
+    if (!requesterTelegramId || !user_id) {
+      return res.status(400).json({ error: 'Не заполнены обязательные поля' });
+    }
+
+    const requester = await User.findByTelegramId(requesterTelegramId);
+    if (!requester || requester.id !== user_id) {
+      return res.status(403).json({ error: 'Нельзя оплатить чужую услугу' });
+    }
+
+    const service = await Service.findById(service_id);
+    if (!service || service.user_id !== user_id) {
+      return res.status(404).json({ error: 'Услуга не найдена' });
+    }
+
+    const bot = getTelegramBot();
+    if (!bot) {
+      return res.status(503).json({ error: 'Telegram-бот недоступен, попробуйте позже' });
+    }
+
+    const invoiceLink = await createServicePublicationInvoiceLink(bot, service, user_id, plan);
+
+    res.json({
+      success: true,
+      payment_required: true,
+      invoice_link: invoiceLink,
+      plan: {
+        key: plan,
+        ...SERVICE_PUBLICATION_PLANS[plan]
+      }
+    });
+  } catch (error) {
+    console.error('Error creating service publication invoice:', error);
+    res.status(500).json({ error: 'Не удалось создать счет на публикацию' });
+  }
+}
+
+async function reactivateService(req, res) {
+  try {
+    const { service_id } = req.params;
+    const { user_id } = req.body;
+    const requesterTelegramId = getRequesterTelegramId(req);
+
+    if (!requesterTelegramId || !user_id) {
+      return res.status(400).json({ error: 'Не заполнены обязательные поля' });
+    }
+
+    const requester = await User.findByTelegramId(requesterTelegramId);
+    if (!requester || requester.id !== user_id) {
+      return res.status(403).json({ error: 'Нельзя активировать чужую услугу' });
+    }
+
+    const service = await Service.findById(service_id);
+    if (!service || service.user_id !== user_id) {
+      return res.status(404).json({ error: 'Услуга не найдена' });
+    }
+
+    const canAddFree = await Service.canAddService(user_id);
+    if (!service.is_paid && canAddFree) {
+      const expiresAt = await Service.activatePublication(service_id, 30, false);
+      return res.json({ success: Boolean(expiresAt), expires_at: expiresAt });
+    }
+
+    return createPublicationInvoice(req, res);
+  } catch (error) {
+    console.error('Error reactivating service:', error);
+    res.status(500).json({ error: 'Не удалось активировать услугу' });
+  }
+}
+
 async function createPromotionInvoice(req, res) {
   try {
     const { service_id } = req.params;
@@ -260,10 +391,12 @@ async function createPromotionInvoice(req, res) {
 
 module.exports = {
   createPromotionInvoice,
+  createPublicationInvoice,
   createService,
   adminDeleteService,
   getServicesByUser,
   searchServices,
   deleteService,
+  reactivateService,
   updateService
 };

@@ -217,6 +217,34 @@ async function updateListing(req, res) {
   }
 }
 
+async function reactivateListing(req, res) {
+  try {
+    const { listing_id } = req.params;
+    const { user_id } = req.body;
+    const requesterTelegramId = getRequesterTelegramId(req);
+
+    if (!requesterTelegramId || !user_id) {
+      return res.status(400).json({ error: 'Не заполнены обязательные поля' });
+    }
+
+    const requester = await User.findByTelegramId(requesterTelegramId);
+    if (!requester || requester.id !== user_id) {
+      return res.status(403).json({ error: 'Нельзя активировать чужое объявление' });
+    }
+
+    const listing = await Listing.findById(listing_id);
+    if (!listing || listing.user_id !== user_id) {
+      return res.status(404).json({ error: 'Объявление не найдено' });
+    }
+
+    const expiresAt = await Listing.activatePublication(listing_id, 30);
+    res.json({ success: Boolean(expiresAt), expires_at: expiresAt });
+  } catch (error) {
+    console.error('Error reactivating listing:', error);
+    res.status(500).json({ error: 'Не удалось активировать объявление' });
+  }
+}
+
 async function createPromotionInvoice(req, res) {
   try {
     const { listing_id } = req.params;
@@ -289,5 +317,6 @@ module.exports = {
   searchListings,
   getRandomListings,
   deleteListing,
+  reactivateListing,
   updateListing
 };

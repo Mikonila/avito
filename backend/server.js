@@ -13,10 +13,12 @@ const { initializeData } = require('./models/Reference');
 const { healthCheck, initializeDatabase, close } = require('./models/database');
 const { getTelegramBotStatus, startTelegramBot, stopTelegramBot } = require('./telegramBot');
 const { isCloudinaryConfigured } = require('./utils/cloudinary');
+const { archiveExpiredPublications } = require('./utils/publicationExpiry');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 let serverInstance = null;
+let expiryInterval = null;
 
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -53,6 +55,9 @@ async function shutdown(signal) {
   console.log(`${signal} received, shutting down...`);
 
   try {
+    if (expiryInterval) {
+      clearInterval(expiryInterval);
+    }
     await stopTelegramBot();
     await close();
   } catch (error) {
@@ -76,11 +81,19 @@ async function startServer() {
     serverInstance = app.listen(PORT, async () => {
       console.log(`Server running on port ${PORT}`);
 
+      let bot = null;
       try {
-        await startTelegramBot({ app });
+        bot = await startTelegramBot({ app });
       } catch (error) {
         console.error('Error starting Telegram bot:', error);
       }
+
+      await archiveExpiredPublications(bot);
+      expiryInterval = setInterval(() => {
+        archiveExpiredPublications(bot).catch((error) => {
+          console.error('Error archiving expired publications:', error);
+        });
+      }, 60 * 60 * 1000);
     });
   } catch (error) {
     console.error('Failed to start application:', error);

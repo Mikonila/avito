@@ -6,12 +6,11 @@ const CLOTHING_CATEGORY_ID = 'cat-5';
 const SERVICE_CATEGORY_ID = 'cat-8';
 const OTHER_SUBCATEGORY = { id: 'other', name: 'Другое' };
 const SUPPORT_LINK = 'https://t.me/helionstudio';
+const SERVICE_PUBLICATION_PLAN = { key: 'month', label: '1 месяц', stars: 100, rub: 182 };
 const PROMOTION_PLANS = {
-    test: { label: 'Тест', stars: 1, rub: 2 },
-    day: { label: '1 день', stars: 100, rub: 182 },
-    three_days: { label: '3 дня', stars: 150, rub: 265 },
-    week: { label: '7 дней', stars: 250, rub: 429 },
-    month: { label: 'месяц', stars: 500, rub: 849 }
+    three_days: { label: '3 дня', stars: 100, rub: 182 },
+    week: { label: '7 дней', stars: 150, rub: 265 },
+    month: { label: '1 месяц', stars: 250, rub: 429 }
 };
 
 let state = {
@@ -38,6 +37,7 @@ let state = {
     promotionListingId: null,
     promotionListingTitle: '',
     promotionTargetType: 'listing',
+    servicePublicationRequired: false,
     selectedPromotionPlans: {
         product: '',
         service: ''
@@ -773,6 +773,26 @@ function renderPromotionModalPlans() {
     `).join('');
 }
 
+async function refreshServicePublicationRequirement() {
+    if (!state.user?.id) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/services/user/${state.user.id}`);
+        const services = await response.json();
+        const hasFreeActiveService = services.some((service) => {
+            const isPaid = service.is_paid === true || service.is_paid === 1;
+            return !isPaid && ['active', 'pending_payment'].includes(service.status);
+        });
+
+        state.servicePublicationRequired = hasFreeActiveService;
+        document.getElementById('servicePublicationPanel')?.classList.toggle('hidden', !hasFreeActiveService);
+    } catch (error) {
+        console.error('Error checking service publication requirement:', error);
+    }
+}
+
 function attachEventListeners() {
     document.querySelectorAll('.tab').forEach((tab) => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
@@ -849,6 +869,10 @@ function switchTab(tabName) {
     if (tabName === 'my-items') {
         loadMyItems();
     }
+
+    if (tabName === 'listings') {
+        refreshServicePublicationRequirement();
+    }
 }
 
 function switchListingType(type) {
@@ -862,6 +886,10 @@ function switchListingType(type) {
     const targetSection = document.getElementById(`${type}Form`);
     targetSection.classList.remove('hidden');
     targetSection.classList.add('active');
+
+    if (type === 'service') {
+        refreshServicePublicationRequirement();
+    }
 }
 
 function handleImageSelect(e, type) {
@@ -1016,6 +1044,9 @@ async function handleListingSubmit(e, formIndex) {
             endpoint = '/services/create';
             itemType = 'service';
             body.images = state.serviceImages;
+            if (state.servicePublicationRequired) {
+                body.publication_plan = SERVICE_PUBLICATION_PLAN.key;
+            }
         }
 
         const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -1026,7 +1057,7 @@ async function handleListingSubmit(e, formIndex) {
 
         const result = await response.json();
         if (result.success || result.listing_id || result.service_id) {
-            alert('Объявление опубликовано');
+            alert(result.payment_required ? 'Услуга создана. После оплаты она появится в ленте.' : 'Объявление опубликовано');
             const createdListingId = result.listing_id || result.service_id || null;
             const createdTitle = title;
             form.reset();
@@ -1040,8 +1071,18 @@ async function handleListingSubmit(e, formIndex) {
             populateSubcategorySelect('service');
             state.selectedPromotionPlans[formType] = '';
             renderPromotionOptions(formType);
+            await refreshServicePublicationRequirement();
 
-            if (createdListingId && selectedPromotionPlan) {
+            if (result.payment_required && result.invoice_link) {
+                openInvoiceLink(result.invoice_link, async (status) => {
+                    if (status === 'paid') {
+                        alert('Публикация услуги оплачена');
+                        await loadMyItems();
+                        await loadRandomListings();
+                        await refreshServicePublicationRequirement();
+                    }
+                });
+            } else if (createdListingId && selectedPromotionPlan) {
                 openPromotionModal(createdListingId, createdTitle, itemType);
                 await startPromotionPayment(selectedPromotionPlan);
             } else if (createdListingId && itemType === 'listing') {
@@ -1182,6 +1223,11 @@ function renderListings(listings, containerId) {
         const promotionBadge = item.is_premium
             ? '<div class="promotion-card-label">Продвигается</div>'
             : '';
+        const statusBadge = item.status === 'archived'
+            ? '<div class="publication-status publication-status-archived">Архивировано</div>'
+            : item.status === 'pending_payment'
+                ? '<div class="publication-status publication-status-pending">Ожидает оплаты</div>'
+                : '';
 
         let content = `
             <div class="item-card-media">
@@ -1192,6 +1238,7 @@ function renderListings(listings, containerId) {
                 </div>
             </div>
             <div class="item-info">
+                ${statusBadge}
                 <div class="item-category-line">${categoryName}</div>
                 <div class="item-title">${escapeHtml(item.title)}</div>
                 <div class="item-price">${item.price} EUR</div>
@@ -1203,10 +1250,15 @@ function renderListings(listings, containerId) {
         `;
 
         if (containerId.includes('my')) {
+            const primaryAction = item.status === 'archived'
+                ? `<button onclick="event.stopPropagation(); reactivateItem('${item.id}', '${itemType}')">Активировать</button>`
+                : item.status === 'pending_payment'
+                    ? `<button onclick="event.stopPropagation(); payServicePublication('${item.id}')">Оплатить публикацию</button>`
+                    : `<button onclick="event.stopPropagation(); openPromotionModal('${item.id}', '${String(item.title).replace(/'/g, '&#39;')}', '${itemType}')">Продвинуть</button>`;
             content += `
                 <div class="item-actions">
                     <button onclick="event.stopPropagation(); editItem('${item.id}', '${itemType}')">Редактировать</button>
-                    <button onclick="event.stopPropagation(); openPromotionModal('${item.id}', '${String(item.title).replace(/'/g, '&#39;')}', '${itemType}')">Продвинуть</button>
+                    ${primaryAction}
                     <button class="delete" onclick="event.stopPropagation(); deleteItem('${item.id}', '${itemType}')">Удалить</button>
                 </div>
             `;
@@ -1244,6 +1296,11 @@ function showItemDetails(item) {
     const adminAction = isAdminUser()
         ? '<button class="btn btn-danger btn-block" onclick="openAdminModerationModalFromDetails()">Удалить объявление</button>'
         : '';
+    const statusLine = item.status === 'archived'
+        ? '<div class="publication-status publication-status-archived">Архивировано</div>'
+        : item.status === 'pending_payment'
+            ? '<div class="publication-status publication-status-pending">Ожидает оплаты</div>'
+            : '';
 
     content.innerHTML = `
         <div class="item-details-shell">
@@ -1251,6 +1308,7 @@ function showItemDetails(item) {
             <span class="item-detail-chip">${categoryName}</span>
             ${subcategoryName ? `<span class="item-detail-chip item-detail-chip-muted">${subcategoryName}</span>` : ''}
         </div>
+        ${statusLine}
         <h2>${item.title}</h2>
         <div class="item-details-meta">
             <span>📍 ${getCityName(item.city_id || item.city)}</span>
@@ -1259,6 +1317,7 @@ function showItemDetails(item) {
         </div>
         ${gallery}
         <div class="item-details-price">${item.price} EUR</div>
+        ${item.expires_at ? `<div class="info-text">Активно до ${new Date(item.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
         ${item.is_premium ? `<div class="promotion-status">В первой линии${item.premium_expires_at ? ` до ${new Date(item.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}
         <div class="item-details-description">${item.description || 'Описание отсутствует'}</div>
         <div class="item-details-contact">
@@ -1546,6 +1605,18 @@ window.closePromotionModal = function() {
     document.getElementById('promotionModal').classList.add('hidden');
 };
 
+function openInvoiceLink(invoiceLink, callback) {
+    if (tg?.openInvoice) {
+        tg.openInvoice(invoiceLink, callback);
+        return;
+    }
+
+    window.open(invoiceLink, '_blank', 'noopener,noreferrer');
+    if (callback) {
+        callback('opened');
+    }
+}
+
 window.startPromotionPayment = async function(planKey) {
     if (!state.promotionListingId) {
         return;
@@ -1575,19 +1646,14 @@ window.startPromotionPayment = async function(planKey) {
             throw new Error(result.error || 'Не удалось подготовить оплату');
         }
 
-        if (tg?.openInvoice) {
-            tg.openInvoice(result.invoice_link, async (status) => {
-                if (status === 'paid') {
-                    closePromotionModal();
-                    alert(`Продвижение оплачено: ${plan.label} за ${plan.stars} ⭐`);
-                    await loadMyItems();
-                    await loadRandomListings();
-                }
-            });
-            return;
-        }
-
-        window.open(result.invoice_link, '_blank', 'noopener,noreferrer');
+        openInvoiceLink(result.invoice_link, async (status) => {
+            if (status === 'paid') {
+                closePromotionModal();
+                alert(`Продвижение оплачено: ${plan.label} за ${plan.stars} ⭐`);
+                await loadMyItems();
+                await loadRandomListings();
+            }
+        });
     } catch (error) {
         console.error('Error starting promotion payment:', error);
         alert(error.message || 'Ошибка при создании платежа');
@@ -1705,6 +1771,82 @@ window.deleteItem = async function(itemId, itemType = 'listing') {
         loadMyItems();
     } catch (error) {
         console.error('Error deleting item:', error);
+    }
+};
+
+window.payServicePublication = async function(serviceId) {
+    try {
+        const response = await fetch(`${API_BASE}/services/${serviceId}/publication/invoice`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                user_id: state.user.id,
+                plan: SERVICE_PUBLICATION_PLAN.key
+            })
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.invoice_link) {
+            throw new Error(result.error || 'Не удалось создать счет');
+        }
+
+        openInvoiceLink(result.invoice_link, async (status) => {
+            if (status === 'paid') {
+                alert('Публикация оплачена');
+                await loadMyItems();
+                await loadRandomListings();
+                await refreshServicePublicationRequirement();
+            }
+        });
+    } catch (error) {
+        console.error('Error paying service publication:', error);
+        alert(error.message || 'Ошибка оплаты публикации');
+    }
+};
+
+window.reactivateItem = async function(itemId, itemType = 'listing') {
+    try {
+        const endpoint = itemType === 'service'
+            ? `/services/${itemId}/reactivate`
+            : `/listings/${itemId}/reactivate`;
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ user_id: state.user.id })
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            if (result.invoice_link) {
+                openInvoiceLink(result.invoice_link, async (status) => {
+                    if (status === 'paid') {
+                        alert('Публикация активирована');
+                        await loadMyItems();
+                        await loadRandomListings();
+                    }
+                });
+                return;
+            }
+            throw new Error(result.error || 'Не удалось активировать публикацию');
+        }
+
+        if (result.payment_required && result.invoice_link) {
+            openInvoiceLink(result.invoice_link, async (status) => {
+                if (status === 'paid') {
+                    alert('Публикация активирована');
+                    await loadMyItems();
+                    await loadRandomListings();
+                }
+            });
+            return;
+        }
+
+        alert('Публикация активирована на 1 месяц');
+        await loadMyItems();
+        await loadRandomListings();
+    } catch (error) {
+        console.error('Error reactivating item:', error);
+        alert(error.message || 'Ошибка активации');
     }
 };
 

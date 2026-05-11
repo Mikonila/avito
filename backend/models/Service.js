@@ -24,15 +24,30 @@ function withParsedImages(row) {
   };
 }
 
+function getNextExpiry(days = 30) {
+  return new Date(Date.now() + (days * 24 * 60 * 60 * 1000)).toISOString();
+}
+
 class Service {
   static async create(user_id, data) {
     const id = uuidv4();
-    const { title, description, category_id, subcategory = '', city_id, price, images } = data;
+    const {
+      title,
+      description,
+      category_id,
+      subcategory = '',
+      city_id,
+      price,
+      images,
+      is_paid = false,
+      status = 'active'
+    } = data;
+    const expiresAt = status === 'active' ? getNextExpiry() : null;
 
     await db.run(
-      `INSERT INTO services (id, user_id, title, description, category_id, subcategory, city_id, price, images, status, service_count)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active', 0)`,
-      [id, user_id, title, description, category_id, subcategory, city_id, price, images || '[]']
+      `INSERT INTO services (id, user_id, title, description, category_id, subcategory, city_id, price, images, status, service_count, is_paid, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0, $11, $12)`,
+      [id, user_id, title, description, category_id, subcategory, city_id, price, images || '[]', status, is_paid, expiresAt]
     );
 
     return id;
@@ -80,7 +95,11 @@ class Service {
 
   static async canAddService(user_id) {
     const row = await db.get(
-      `SELECT COUNT(*) as count FROM services WHERE user_id = $1 AND is_paid = $2`,
+      `SELECT COUNT(*) as count
+       FROM services
+       WHERE user_id = $1
+         AND is_paid = $2
+         AND status IN ('active', 'pending_payment')`,
       [user_id, false]
     );
 
@@ -146,6 +165,49 @@ class Service {
     );
 
     return result.changes > 0 ? nextExpiry.toISOString() : null;
+  }
+
+  static async activatePublication(id, days = 30, isPaid = true) {
+    const expiresAt = getNextExpiry(days);
+    const result = await db.run(
+      `UPDATE services
+       SET status = 'active',
+           is_paid = $1,
+           expires_at = $2,
+           archived_notified_at = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [isPaid, expiresAt, id]
+    );
+
+    return result.changes > 0 ? expiresAt : null;
+  }
+
+  static async findExpiredActive() {
+    const rows = await db.all(
+      `SELECT services.*, users.telegram_id
+       FROM services
+       JOIN users ON users.id = services.user_id
+       WHERE services.status = 'active'
+         AND services.expires_at IS NOT NULL
+         AND services.expires_at <= CURRENT_TIMESTAMP
+         AND services.archived_notified_at IS NULL`
+    );
+
+    return rows.map(withParsedImages);
+  }
+
+  static async archive(id) {
+    const result = await db.run(
+      `UPDATE services
+       SET status = 'archived',
+           archived_notified_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [id]
+    );
+
+    return result.changes > 0;
   }
 }
 

@@ -24,15 +24,20 @@ function withParsedImages(row) {
   };
 }
 
+function getNextExpiry(days = 30) {
+  return new Date(Date.now() + (days * 24 * 60 * 60 * 1000)).toISOString();
+}
+
 class Listing {
   static async create(user_id, data) {
     const id = uuidv4();
     const { title, description, category_id, subcategory = '', city_id, price, images } = data;
+    const expiresAt = getNextExpiry();
 
     await db.run(
-      `INSERT INTO listings (id, user_id, title, description, category_id, subcategory, city_id, price, images, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active')`,
-      [id, user_id, title, description, category_id, subcategory, city_id, price, images || '[]']
+      `INSERT INTO listings (id, user_id, title, description, category_id, subcategory, city_id, price, images, status, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active', $10)`,
+      [id, user_id, title, description, category_id, subcategory, city_id, price, images || '[]', expiresAt]
     );
 
     return id;
@@ -163,6 +168,48 @@ class Listing {
     );
 
     return result.changes > 0 ? nextExpiry.toISOString() : null;
+  }
+
+  static async activatePublication(id, days = 30) {
+    const expiresAt = getNextExpiry(days);
+    const result = await db.run(
+      `UPDATE listings
+       SET status = 'active',
+           expires_at = $1,
+           archived_notified_at = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2`,
+      [expiresAt, id]
+    );
+
+    return result.changes > 0 ? expiresAt : null;
+  }
+
+  static async findExpiredActive() {
+    const rows = await db.all(
+      `SELECT listings.*, users.telegram_id
+       FROM listings
+       JOIN users ON users.id = listings.user_id
+       WHERE listings.status = 'active'
+         AND listings.expires_at IS NOT NULL
+         AND listings.expires_at <= CURRENT_TIMESTAMP
+         AND listings.archived_notified_at IS NULL`
+    );
+
+    return rows.map(withParsedImages);
+  }
+
+  static async archive(id) {
+    const result = await db.run(
+      `UPDATE listings
+       SET status = 'archived',
+           archived_notified_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [id]
+    );
+
+    return result.changes > 0;
   }
 }
 

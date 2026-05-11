@@ -1024,6 +1024,26 @@ html, body, #app {
     box-shadow: 0 8px 18px rgba(139, 92, 246, 0.14);
 }
 
+.publication-status {
+    display: inline-flex;
+    width: fit-content;
+    margin-bottom: 8px;
+    border-radius: 999px;
+    padding: 7px 10px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.publication-status-archived {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.publication-status-pending {
+    background: var(--brand-soft);
+    color: var(--secondary-color);
+}
+
 .item-image {
     width: 100%;
     aspect-ratio: 4 / 3;

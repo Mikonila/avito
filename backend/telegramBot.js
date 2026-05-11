@@ -9,11 +9,12 @@ let botMode = 'disabled';
 let startupPromise = null;
 let webhookRouteRegistered = false;
 const PROMOTION_PLANS = {
-  test: { days: 1, stars: 1, label: 'тестовый день' },
-  day: { days: 1, stars: 100, label: '1 день' },
-  three_days: { days: 3, stars: 150, label: '3 дня' },
-  week: { days: 7, stars: 250, label: '7 дней' },
-  month: { days: 30, stars: 500, label: 'месяц' }
+  three_days: { days: 3, stars: 100, label: '3 дня' },
+  week: { days: 7, stars: 150, label: '7 дней' },
+  month: { days: 30, stars: 250, label: '1 месяц' }
+};
+const SERVICE_PUBLICATION_PLANS = {
+  month: { days: 30, stars: 100, label: '1 месяц' }
 };
 
 function getWebAppUrl() {
@@ -26,6 +27,10 @@ function getSupportUsername() {
 
 function getSupportTelegramLink() {
   return `https://t.me/${getSupportUsername()}`;
+}
+
+function getAdminTelegramId() {
+  return process.env.ADMIN_TELEGRAM_ID ? String(process.env.ADMIN_TELEGRAM_ID) : '';
 }
 
 function parsePromotionPayload(payload) {
@@ -63,6 +68,33 @@ function parsePromotionPayload(payload) {
   };
 }
 
+function parseServicePublicationPayload(payload) {
+  if (typeof payload !== 'string' || !payload.startsWith('service_publication:')) {
+    return null;
+  }
+
+  const parts = payload.split(':');
+  if (parts.length !== 6) {
+    return null;
+  }
+
+  const [, serviceId, userId, planKey, stars, nonce] = parts;
+  const plan = SERVICE_PUBLICATION_PLANS[planKey];
+
+  if (!serviceId || !userId || !plan || String(plan.stars) !== String(stars) || !nonce) {
+    return null;
+  }
+
+  return {
+    serviceId,
+    userId,
+    planKey,
+    stars: Number(stars),
+    days: plan.days,
+    label: plan.label
+  };
+}
+
 function buildWelcomeKeyboard() {
   return {
     inline_keyboard: [
@@ -76,71 +108,113 @@ function buildWelcomeKeyboard() {
   };
 }
 
-function registerHandlers(bot) {
-  bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id;
-    const firstName = msg.from.first_name;
+function buildSenderInfo(msg) {
+  const from = msg.from || {};
+  const name = [from.first_name, from.last_name].filter(Boolean).join(' ').trim() || 'Без имени';
+  const username = from.username ? `@${from.username}` : 'username не указан';
+  const userId = from.id ? String(from.id) : 'id не указан';
+  const chatId = msg.chat?.id ? String(msg.chat.id) : 'chat id не указан';
 
-    bot.sendMessage(
-      chatId,
-      `Добро пожаловать, ${firstName}! 👋\n\n` +
-        'Это бесплатный маркетплейс Черногории. Здесь вы можете:\n\n' +
-        '• 📦 Продавать товары бесплатно\n' +
-        '• 🔧 Предоставлять услуги (1 бесплатно)\n' +
-        '• 📢 Размещать рекламу\n' +
-        '• 🔍 Искать товары и услуги\n\n' +
-        'Нажмите кнопку ниже, чтобы начать!',
-      { reply_markup: buildWelcomeKeyboard() }
-    );
-  });
+  return `Новое сообщение пользователю поддержки\n\nОт: ${name}\nUsername: ${username}\nTelegram ID: ${userId}\nChat ID: ${chatId}`;
+}
 
-  bot.onText(/\/help/, (msg) => {
-    bot.sendMessage(
-      msg.chat.id,
-      '❓ Справка по маркетплейсу\n\n' +
-        '📋 Команды:\n' +
-        '/start - Главное меню\n' +
-        '/help - Эта справка\n' +
-        '/support - Служба поддержки\n\n' +
-        '💡 Подсказки:\n' +
-        '• Первая услуга бесплатна\n' +
-        '• Дополнительные услуги - платные\n' +
-        '• Реклама стоит 9.99 EUR\n' +
-        '• Контакт администратора: @helionstudio'
-    );
-  });
+async function sendWelcome(bot, msg) {
+  const chatId = msg.chat.id;
+  const firstName = msg.from?.first_name || 'друг';
 
-  bot.onText(/\/support/, (msg) => {
-    bot.sendMessage(
-      msg.chat.id,
-      '📞 Служба поддержки\n\n' +
-        'Если у вас есть вопросы или проблемы, свяжитесь с нами:\n\n' +
-        `👤 Поддержка: @${getSupportUsername()}\n\n` +
-        'Мы поможем вам с:\n' +
-        '• Платежами за услуги\n' +
-        '• Размещением рекламы\n' +
-        '• Технической поддержкой',
-      {
-        reply_markup: {
-          inline_keyboard: [[{ text: 'Написать в поддержку', url: getSupportTelegramLink() }]]
-        }
+  await bot.sendMessage(
+    chatId,
+    `Добро пожаловать, ${firstName}! 👋\n\n` +
+      'Это Violet — маркетплейс Черногории. Здесь можно:\n\n' +
+      '• продавать и покупать вещи по всей Черногории\n' +
+      '• размещать услуги\n' +
+      '• находить события в афише\n' +
+      '• искать объявления по городам, категориям и цене\n\n' +
+      'Нажмите кнопку ниже, чтобы открыть приложение.',
+    { reply_markup: buildWelcomeKeyboard() }
+  );
+}
+
+async function sendSupport(bot, msg) {
+  await bot.sendMessage(
+    msg.chat.id,
+    'Служба поддержки\n\n' +
+      `Напишите администратору: @${getSupportUsername()}\n\n` +
+      'Можно обратиться по вопросам публикаций, оплаты, рекламы и разблокировки.',
+    {
+      reply_markup: {
+        inline_keyboard: [[{ text: 'Написать в поддержку', url: getSupportTelegramLink() }]]
       }
-    );
-  });
+    }
+  );
+}
 
-  bot.on('message', (msg) => {
+async function sendHelp(bot, msg) {
+  await bot.sendMessage(
+    msg.chat.id,
+    'Справка по Violet\n\n' +
+      '/start - открыть приложение\n' +
+      '/support - написать в поддержку\n\n' +
+      'Обычные сообщения в этот чат будут переданы администратору.'
+  );
+}
+
+async function forwardUserMessageToAdmin(bot, msg) {
+  const adminId = getAdminTelegramId();
+
+  if (!adminId) {
+    console.warn('ADMIN_TELEGRAM_ID is not set. User message was not forwarded.');
+    await bot.sendMessage(
+      msg.chat.id,
+      `Сообщение не удалось передать автоматически. Напишите напрямую: @${getSupportUsername()}`
+    );
+    return;
+  }
+
+  await bot.sendMessage(adminId, buildSenderInfo(msg));
+  await bot.forwardMessage(adminId, msg.chat.id, msg.message_id);
+  await bot.sendMessage(msg.chat.id, 'Сообщение передано администратору.');
+}
+
+function registerHandlers(bot) {
+  bot.on('message', async (msg) => {
     const text = msg.text || '';
 
-    if (!text || text.startsWith('/') || msg.successful_payment) {
+    if (msg.successful_payment) {
       return;
     }
 
-    bot.sendMessage(
-      msg.chat.id,
-      'Привет! 👋\n\n' +
-        'Используйте /start для открытия маркетплейса\n' +
-        'Или /help для справки'
-    );
+    const command = text.trim().split(/\s+/)[0].split('@')[0].toLowerCase();
+
+    try {
+      if (command === '/start') {
+        await sendWelcome(bot, msg);
+        return;
+      }
+
+      if (command === '/help') {
+        await sendHelp(bot, msg);
+        return;
+      }
+
+      if (command === '/support') {
+        await sendSupport(bot, msg);
+        return;
+      }
+
+      if (text.startsWith('/')) {
+        await sendHelp(bot, msg);
+        return;
+      }
+
+      await forwardUserMessageToAdmin(bot, msg);
+    } catch (error) {
+      console.error('Error handling Telegram message:', error);
+      await bot.sendMessage(
+        msg.chat.id,
+        `Не удалось обработать сообщение. Напишите напрямую: @${getSupportUsername()}`
+      ).catch(() => {});
+    }
   });
 
   bot.on('polling_error', (error) => {
@@ -149,8 +223,9 @@ function registerHandlers(bot) {
 
   bot.on('pre_checkout_query', async (query) => {
     const promotion = parsePromotionPayload(query.invoice_payload);
+    const servicePublication = parseServicePublicationPayload(query.invoice_payload);
 
-    if (!promotion) {
+    if (!promotion && !servicePublication) {
       await bot.answerPreCheckoutQuery(query.id, false, {
         error_message: 'Не удалось проверить данные платежа'
       });
@@ -164,6 +239,32 @@ function registerHandlers(bot) {
     try {
       const payment = msg.successful_payment;
       const promotion = parsePromotionPayload(payment?.invoice_payload);
+      const servicePublication = parseServicePublicationPayload(payment?.invoice_payload);
+
+      if (servicePublication) {
+        const expiresAt = await Service.activatePublication(
+          servicePublication.serviceId,
+          servicePublication.days,
+          true
+        );
+
+        if (!expiresAt) {
+          await bot.sendMessage(
+            msg.chat.id,
+            'Оплата прошла, но услуга не найдена. Напишите в поддержку, мы поможем.'
+          );
+          return;
+        }
+
+        await bot.sendMessage(
+          msg.chat.id,
+          `Публикация услуги активирована.\n\n` +
+            `Срок: ${servicePublication.label}\n` +
+            `Стоимость: ${servicePublication.stars} ⭐\n` +
+            `Активно до: ${new Date(expiresAt).toLocaleDateString('ru-RU')}`
+        );
+        return;
+      }
 
       if (!promotion) {
         return;
@@ -330,9 +431,11 @@ function getTelegramBot() {
 
 module.exports = {
   PROMOTION_PLANS,
+  SERVICE_PUBLICATION_PLANS,
   getSupportTelegramLink,
   getTelegramBotStatus,
   getTelegramBot,
+  parseServicePublicationPayload,
   parsePromotionPayload,
   startTelegramBot,
   stopTelegramBot

@@ -45,6 +45,8 @@ const SQLITE_SCHEMA = [
     views INTEGER DEFAULT 0,
     is_premium BOOLEAN DEFAULT 0,
     premium_expires_at DATETIME,
+    expires_at DATETIME,
+    archived_notified_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id),
@@ -67,6 +69,8 @@ const SQLITE_SCHEMA = [
     is_paid BOOLEAN DEFAULT 0,
     is_premium BOOLEAN DEFAULT 0,
     premium_expires_at DATETIME,
+    expires_at DATETIME,
+    archived_notified_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id),
@@ -163,6 +167,8 @@ const POSTGRES_SCHEMA = [
     views INTEGER DEFAULT 0,
     is_premium BOOLEAN DEFAULT FALSE,
     premium_expires_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ,
+    archived_notified_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
@@ -182,6 +188,8 @@ const POSTGRES_SCHEMA = [
     is_paid BOOLEAN DEFAULT FALSE,
     is_premium BOOLEAN DEFAULT FALSE,
     premium_expires_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ,
+    archived_notified_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
@@ -368,6 +376,18 @@ async function applyMigrations() {
   await ensureColumn('services', 'subcategory', 'TEXT');
   await ensureColumn('services', 'is_premium', 'BOOLEAN DEFAULT FALSE');
   await ensureColumn('services', 'premium_expires_at', 'TIMESTAMPTZ');
+  await ensureColumn('listings', 'expires_at', 'TIMESTAMPTZ');
+  await ensureColumn('listings', 'archived_notified_at', 'TIMESTAMPTZ');
+  await ensureColumn('services', 'expires_at', 'TIMESTAMPTZ');
+  await ensureColumn('services', 'archived_notified_at', 'TIMESTAMPTZ');
+
+  if (dialect === 'postgres') {
+    await pgPool.query(`UPDATE listings SET expires_at = created_at + INTERVAL '30 days' WHERE expires_at IS NULL`);
+    await pgPool.query(`UPDATE services SET expires_at = created_at + INTERVAL '30 days' WHERE expires_at IS NULL AND status = 'active'`);
+  } else {
+    await sqliteRun(`UPDATE listings SET expires_at = datetime(created_at, '+30 days') WHERE expires_at IS NULL`);
+    await sqliteRun(`UPDATE services SET expires_at = datetime(created_at, '+30 days') WHERE expires_at IS NULL AND status = 'active'`);
+  }
 }
 
 async function initializeDatabase() {
