@@ -223,8 +223,8 @@ async function deleteReview(req, res) {
 
     const deleted = await Review.delete(review_id);
 
-    if (deleted && review.screenshot_url) {
-      await destroyImages([review.screenshot_url]);
+    if (deleted) {
+      await destroyImages([review.screenshot_url, review.display_author_avatar_url].filter(Boolean));
     }
 
     res.json({ success: deleted });

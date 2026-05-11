@@ -411,9 +411,33 @@
             <h2>Модерация объявления</h2>
             <p id="adminModerationInfo" class="info-text"></p>
             <div class="moderation-actions">
+                <button type="button" class="btn btn-primary btn-block" onclick="openAdminSeedReviewModal()">Добавить отзыв</button>
                 <button type="button" class="btn btn-danger btn-block" onclick="adminDeleteSelectedItem(false)">Удалить</button>
                 <button type="button" class="btn btn-danger btn-block" onclick="adminDeleteSelectedItem(true)">Удалить и забанить пользователя</button>
             </div>
+        </div>
+    </div>
+
+    <div id="adminSeedReviewModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeAdminSeedReviewModal()">✕</button>
+            <h2>Добавить отзыв</h2>
+            <p id="adminSeedReviewInfo" class="info-text"></p>
+            <div class="form-group">
+                <label>Имя автора отзыва</label>
+                <input type="text" id="adminSeedReviewName" placeholder="Например, Анна" maxlength="80" lang="ru" inputmode="text">
+            </div>
+            <div class="form-group">
+                <label>Текст отзыва</label>
+                <textarea id="adminSeedReviewText" placeholder="Введите текст отзыва" maxlength="1000" lang="ru" inputmode="text"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Аватарка автора</label>
+                <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('adminSeedReviewAvatarInput').click()">+ Загрузить аватарку</button>
+                <input type="file" id="adminSeedReviewAvatarInput" accept="image/*" style="display:none;">
+                <div id="adminSeedReviewAvatarPreview" class="image-preview"></div>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="submitAdminSeedReview()">Добавить отзыв</button>
         </div>
     </div>
 

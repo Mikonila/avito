@@ -8,6 +8,7 @@ let botInstance = null;
 let botMode = 'disabled';
 let startupPromise = null;
 let webhookRouteRegistered = false;
+let handlersRegistered = false;
 const PROMOTION_PLANS = {
   three_days: { days: 3, stars: 100, label: '3 дня' },
   week: { days: 7, stars: 150, label: '7 дней' },
@@ -172,11 +173,30 @@ async function forwardUserMessageToAdmin(bot, msg) {
   }
 
   await bot.sendMessage(adminId, buildSenderInfo(msg));
-  await bot.forwardMessage(adminId, msg.chat.id, msg.message_id);
+
+  try {
+    if (typeof bot.copyMessage === 'function') {
+      await bot.copyMessage(adminId, msg.chat.id, msg.message_id);
+    } else {
+      await bot.forwardMessage(adminId, msg.chat.id, msg.message_id);
+    }
+  } catch (forwardError) {
+    console.error('Failed to relay user message to admin:', forwardError.message);
+    await bot.sendMessage(
+      adminId,
+      `Не удалось переслать сообщение автоматически. Chat ID: ${msg.chat?.id || 'не указан'}`
+    ).catch(() => {});
+    throw forwardError;
+  }
+
   await bot.sendMessage(msg.chat.id, 'Сообщение передано администратору.');
 }
 
 function registerHandlers(bot) {
+  if (handlersRegistered) {
+    return;
+  }
+
   bot.on('message', async (msg) => {
     const text = msg.text || '';
 
@@ -292,6 +312,8 @@ function registerHandlers(bot) {
       console.error('Error processing successful payment:', error);
     }
   });
+
+  handlersRegistered = true;
 }
 
 function resolveMode(requestedMode, app) {
@@ -315,14 +337,19 @@ function resolveMode(requestedMode, app) {
   return canUseWebhook ? 'webhook' : 'polling';
 }
 
-function registerWebhookRoute(app, bot) {
+function registerWebhookRoute(app) {
   if (webhookRouteRegistered) {
     return;
   }
 
   app.post(WEBHOOK_PATH, async (req, res) => {
     try {
-      await bot.processUpdate(req.body);
+      if (!botInstance) {
+        res.sendStatus(503);
+        return;
+      }
+
+      await botInstance.processUpdate(req.body);
       res.sendStatus(200);
     } catch (error) {
       console.error('Telegram webhook error:', error);
@@ -375,7 +402,7 @@ async function startTelegramBot(options = {}) {
         throw new Error('Webhook mode requires an Express app instance.');
       }
 
-      registerWebhookRoute(options.app, botInstance);
+      registerWebhookRoute(options.app);
 
       const webhookUrl = new URL(WEBHOOK_PATH, `${getWebAppUrl().replace(/\/$/, '')}/`).toString();
       await botInstance.setWebHook(webhookUrl);
@@ -393,6 +420,7 @@ async function startTelegramBot(options = {}) {
     startupPromise = null;
     botInstance = null;
     botMode = 'disabled';
+    handlersRegistered = false;
     throw error;
   });
 
@@ -415,6 +443,7 @@ async function stopTelegramBot() {
   botInstance = null;
   botMode = 'disabled';
   startupPromise = null;
+  handlersRegistered = false;
 }
 
 function getTelegramBotStatus() {

@@ -51,6 +51,7 @@ let state = {
     adminModerationItem: null,
     editingItem: null,
     editImages: [],
+    adminReviewAvatar: null,
     viewedProfileId: null,
     promotionListingId: null,
     promotionListingTitle: '',
@@ -258,12 +259,42 @@ function getProfileDisplayName(user) {
     return [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username || 'Пользователь';
 }
 
+function getAvatarInitial(user) {
+    const source = String(user?.first_name || user?.username || '').trim();
+    if (!source) {
+        return '';
+    }
+
+    return source.charAt(0).toUpperCase();
+}
+
 function getAvatarMarkup(avatarUrl, fallbackText = '👤') {
     if (avatarUrl) {
         return `<img src="${avatarUrl}" alt="Аватар" class="review-avatar-image">`;
     }
 
     return `<span class="review-avatar-fallback">${fallbackText}</span>`;
+}
+
+function updateProfileButtonAvatar() {
+    const profileBtn = document.getElementById('profileBtn');
+    if (!profileBtn) {
+        return;
+    }
+
+    const avatarUrl = state.user?.avatar_url || '';
+    const avatarInitial = getAvatarInitial(state.user);
+    const accessibleName = escapeHtml(getProfileDisplayName(state.user || {}));
+
+    profileBtn.setAttribute('aria-label', `Профиль: ${accessibleName}`);
+    profileBtn.classList.add('profile-icon-btn');
+
+    if (avatarUrl) {
+        profileBtn.innerHTML = `<img src="${avatarUrl}" alt="" class="profile-btn-avatar-image">`;
+        return;
+    }
+
+    profileBtn.innerHTML = `<span class="profile-btn-avatar-fallback">${escapeHtml(avatarInitial)}</span>`;
 }
 
 function updateSearchTriggerLabel() {
@@ -388,6 +419,7 @@ function populateSelects() {
 
 function showMainApp() {
     document.getElementById('mainApp').classList.remove('hidden');
+    updateProfileButtonAvatar();
     setSearchViewMode('home');
     loadRandomListings();
 }
@@ -424,10 +456,15 @@ function renderCategoryShowcase() {
         </button>
     `;
 
-    const categoryTiles = state.categories.map((category, index) => `
+    const showcaseCategories = [...state.categories];
+    if (showcaseCategories[0]?.id === 'cat-13' && showcaseCategories[1]) {
+        [showcaseCategories[0], showcaseCategories[1]] = [showcaseCategories[1], showcaseCategories[0]];
+    }
+
+    const categoryTiles = showcaseCategories.map((category, index) => `
         <button
             type="button"
-            class="category-tile category-tile-${(index % 6) + 1} ${index === 0 ? 'category-tile-featured' : ''} ${state.filters.categoryId === category.id ? 'active' : ''}"
+            class="category-tile category-tile-${(index % 6) + 1} ${state.filters.categoryId === category.id ? 'active' : ''}"
             data-category-tile="${category.id}"
         >
             <div class="category-tile-copy">
@@ -878,6 +915,7 @@ function attachEventListeners() {
     document.getElementById('imageInput').addEventListener('change', (e) => handleImageSelect(e, 'images'));
     document.getElementById('serviceImageInput').addEventListener('change', (e) => handleImageSelect(e, 'serviceImages'));
     document.getElementById('reviewScreenshotInput').addEventListener('change', handleReviewScreenshotSelect);
+    document.getElementById('adminSeedReviewAvatarInput').addEventListener('change', handleAdminReviewAvatarSelect);
 }
 
 function switchTab(tabName) {
@@ -967,13 +1005,36 @@ function handleReviewScreenshotSelect(e) {
     e.target.value = '';
 }
 
+function handleAdminReviewAvatarSelect(e) {
+    const file = e.target.files[0];
+
+    if (!file) {
+        return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        alert('Аватарка должна быть меньше 1.5 МБ');
+        e.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        state.adminReviewAvatar = event.target.result;
+        renderImagePreview('adminReviewAvatar');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+}
+
 function renderImagePreview(type) {
     const previewIdMap = {
         images: 'imagePreview',
         serviceImages: 'serviceImagePreview',
         adImages: 'adImagePreview',
         editImages: 'editImagePreview',
-        reviewScreenshot: 'reviewScreenshotPreview'
+        reviewScreenshot: 'reviewScreenshotPreview',
+        adminReviewAvatar: 'adminSeedReviewAvatarPreview'
     };
 
     const preview = document.getElementById(previewIdMap[type]);
@@ -983,7 +1044,8 @@ function renderImagePreview(type) {
 
     preview.innerHTML = '';
 
-    const images = type === 'reviewScreenshot' ? (state.reviewScreenshot ? [state.reviewScreenshot] : []) : state[type];
+    const singleImageTypes = ['reviewScreenshot', 'adminReviewAvatar'];
+    const images = singleImageTypes.includes(type) ? (state[type] ? [state[type]] : []) : state[type];
 
     images.forEach((image, index) => {
         const div = document.createElement('div');
@@ -999,6 +1061,8 @@ function renderImagePreview(type) {
 window.removeImage = function(type, index) {
     if (type === 'reviewScreenshot') {
         state.reviewScreenshot = null;
+    } else if (type === 'adminReviewAvatar') {
+        state.adminReviewAvatar = null;
     } else {
         state[type].splice(index, 1);
     }
@@ -1342,7 +1406,7 @@ function showItemDetails(item) {
         </div>
     ` : '';
     const adminAction = isAdminUser()
-        ? '<button class="btn btn-danger btn-block" onclick="openAdminModerationModalFromDetails()">Удалить объявление</button>'
+        ? '<button class="admin-details-menu-btn" type="button" onclick="openAdminModerationModalFromDetails()" aria-label="Действия администратора">⋯</button>'
         : '';
     const statusLine = item.status === 'archived'
         ? '<div class="publication-status publication-status-archived">Архивировано</div>'
@@ -1359,9 +1423,8 @@ function showItemDetails(item) {
         ${statusLine}
         <h2>${item.title}</h2>
         <div class="item-details-meta">
-            <span>📍 ${getCityName(item.city_id || item.city)}</span>
-            <span>👁️ ${item.views || 0} просмотров</span>
-            <span>📅 ${new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
+            <span>${getCityName(item.city_id || item.city)}</span>
+            <span>${new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
         </div>
         ${gallery}
         <div class="item-details-price">${item.price} EUR</div>
@@ -1462,7 +1525,10 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
         const screenshotLink = canModerate && review.screenshot_url
             ? `<a class="review-screenshot-link" href="${review.screenshot_url}" target="_blank" rel="noreferrer">Скриншот</a>`
             : '';
-        const authorProfileButton = canModerate
+        const authorName = review.is_admin_seeded || canModerate
+            ? `<div class="review-author-name">${escapeHtml(review.author_name || 'Пользователь')}</div>`
+            : '';
+        const authorProfileButton = canModerate && !review.is_admin_seeded
             ? `<button class="review-admin-link" onclick="openReviewAuthorProfile('${review.author_user_id}')">Профиль автора</button>`
             : '';
         const deleteButton = canDelete
@@ -1477,7 +1543,8 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
                             ${getAvatarMarkup(review.author_avatar_url)}
                         </div>
                         <div>
-                        <div class="review-meta">${typeLabel}${review.listing_title ? ` • ${review.listing_title}` : ''} • ${new Date(review.created_at).toLocaleDateString('ru-RU')}</div>
+                            ${authorName}
+                            <div class="review-meta">${typeLabel}${review.listing_title ? ` • ${escapeHtml(review.listing_title)}` : ''} • ${new Date(review.created_at).toLocaleDateString('ru-RU')}</div>
                         </div>
                     </div>
                     <div class="review-actions">
@@ -1486,7 +1553,7 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
                         ${deleteButton}
                     </div>
                 </div>
-                <p class="review-text">${review.text}</p>
+                <p class="review-text">${escapeHtml(review.text)}</p>
             </div>
         `;
     }).join('');
@@ -1519,7 +1586,7 @@ async function loadItemReviews(item) {
             throw new Error(user.error || 'Не удалось загрузить отзывы');
         }
 
-        const itemReviews = (user.reviews || []).filter((review) => review.listing_id === item.id);
+        const itemReviews = (user.reviews || []).filter((review) => review.listing_id === item.id || review.service_id === item.id);
         renderReviews(itemReviews, state.user?.is_admin === true, 'itemReviewsList', 'По этому объявлению пока нет отзывов.');
     } catch (error) {
         console.error('Error loading item reviews:', error);
@@ -1613,6 +1680,7 @@ window.updateProfile = async function() {
         }
 
         state.user = result.user;
+        updateProfileButtonAvatar();
         alert('Профиль обновлен');
         await showUserProfile(state.user.id);
     } catch (error) {
@@ -1739,7 +1807,8 @@ window.submitReview = async function() {
                 user_id: state.user.id,
                 telegram_id: getTelegramId(),
                 target_user_id: state.selectedItem.user_id,
-                listing_id: state.selectedItem.id,
+                listing_id: state.selectedItem.item_type === 'service' ? null : state.selectedItem.id,
+                service_id: state.selectedItem.item_type === 'service' ? state.selectedItem.id : null,
                 review_type: reviewType,
                 text: reviewText,
                 screenshot: state.reviewScreenshot
@@ -1924,6 +1993,102 @@ window.openAdminModerationModalFromDetails = function() {
 window.closeAdminModerationModal = function() {
     document.getElementById('adminModerationModal').classList.add('hidden');
     state.adminModerationItem = null;
+};
+
+window.openAdminSeedReviewModal = function() {
+    if (!isAdminUser()) {
+        return;
+    }
+
+    const item = state.adminModerationItem || state.selectedItem;
+    if (!item) {
+        alert('Сначала выберите объявление');
+        return;
+    }
+
+    state.adminModerationItem = {
+        id: item.id,
+        title: item.title || 'Объявление',
+        item_type: item.item_type || 'listing',
+        user_id: item.user_id
+    };
+    state.adminReviewAvatar = null;
+
+    document.getElementById('adminSeedReviewInfo').textContent =
+        `Отзыв будет добавлен к публикации «${state.adminModerationItem.title}».`;
+    document.getElementById('adminSeedReviewName').value = '';
+    document.getElementById('adminSeedReviewText').value = '';
+    renderImagePreview('adminReviewAvatar');
+    document.getElementById('adminModerationModal').classList.add('hidden');
+    document.getElementById('adminSeedReviewModal').classList.remove('hidden');
+};
+
+window.closeAdminSeedReviewModal = function() {
+    document.getElementById('adminSeedReviewModal').classList.add('hidden');
+    state.adminReviewAvatar = null;
+    renderImagePreview('adminReviewAvatar');
+};
+
+window.submitAdminSeedReview = async function() {
+    const item = state.adminModerationItem;
+    const authorName = document.getElementById('adminSeedReviewName').value.trim();
+    const reviewText = document.getElementById('adminSeedReviewText').value.trim();
+
+    if (!item) {
+        alert('Сначала выберите объявление');
+        return;
+    }
+
+    if (!authorName) {
+        alert('Введите имя автора отзыва');
+        return;
+    }
+
+    if (!reviewText) {
+        alert('Введите текст отзыва');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/reviews/admin-seeded`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                target_user_id: item.user_id,
+                listing_id: item.item_type === 'service' ? null : item.id,
+                service_id: item.item_type === 'service' ? item.id : null,
+                review_type: 'product',
+                author_name: authorName,
+                text: reviewText,
+                avatar: state.adminReviewAvatar
+            })
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Не удалось добавить отзыв');
+        }
+
+        alert('Отзыв добавлен');
+        closeAdminSeedReviewModal();
+
+        if (state.selectedItem?.id === item.id) {
+            await loadItemReviews(state.selectedItem);
+        }
+
+        if (state.viewedProfileId === item.user_id) {
+            if (state.activeSearchView === 'seller') {
+                await showSellerProfilePage(item.user_id);
+            } else {
+                await showUserProfile(item.user_id);
+            }
+        }
+
+        state.adminModerationItem = null;
+    } catch (error) {
+        console.error('Error adding admin seeded review:', error);
+        alert(error.message || 'Ошибка при добавлении отзыва');
+    }
 };
 
 async function refreshListingsAfterModeration() {
