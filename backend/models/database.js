@@ -13,6 +13,9 @@ const SQLITE_SCHEMA = [
     phone TEXT,
     city TEXT DEFAULT '',
     about TEXT,
+    is_banned BOOLEAN DEFAULT 0,
+    banned_at DATETIME,
+    ban_reason TEXT,
     balance REAL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -62,6 +65,8 @@ const SQLITE_SCHEMA = [
     service_count INTEGER DEFAULT 0,
     max_free_services INTEGER DEFAULT 1,
     is_paid BOOLEAN DEFAULT 0,
+    is_premium BOOLEAN DEFAULT 0,
+    premium_expires_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id),
@@ -126,6 +131,9 @@ const POSTGRES_SCHEMA = [
     phone TEXT,
     city TEXT DEFAULT '',
     about TEXT,
+    is_banned BOOLEAN DEFAULT FALSE,
+    banned_at TIMESTAMPTZ,
+    ban_reason TEXT,
     balance REAL DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -172,6 +180,8 @@ const POSTGRES_SCHEMA = [
     service_count INTEGER DEFAULT 0,
     max_free_services INTEGER DEFAULT 1,
     is_paid BOOLEAN DEFAULT FALSE,
+    is_premium BOOLEAN DEFAULT FALSE,
+    premium_expires_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
@@ -351,8 +361,13 @@ async function ensureColumn(tableName, columnName, definition) {
 async function applyMigrations() {
   await ensureColumn('users', 'about', 'TEXT');
   await ensureColumn('users', 'avatar_url', 'TEXT');
+  await ensureColumn('users', 'is_banned', 'BOOLEAN DEFAULT FALSE');
+  await ensureColumn('users', 'banned_at', 'TIMESTAMPTZ');
+  await ensureColumn('users', 'ban_reason', 'TEXT');
   await ensureColumn('listings', 'subcategory', 'TEXT');
   await ensureColumn('services', 'subcategory', 'TEXT');
+  await ensureColumn('services', 'is_premium', 'BOOLEAN DEFAULT FALSE');
+  await ensureColumn('services', 'premium_expires_at', 'TIMESTAMPTZ');
 }
 
 async function initializeDatabase() {

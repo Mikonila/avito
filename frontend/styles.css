@@ -235,6 +235,8 @@ html, body, #app {
     border-radius: var(--radius-lg);
     width: 90%;
     max-width: 460px;
+    max-height: 90vh;
+    overflow-y: auto;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
     position: relative;
 }
@@ -578,6 +580,16 @@ html, body, #app {
     line-height: 1.6;
 }
 
+.rules-link {
+    margin-top: 12px;
+    border: none;
+    background: none;
+    color: var(--primary-color);
+    font-weight: 800;
+    cursor: pointer;
+    padding: 0;
+}
+
 .promo-visual {
     position: relative;
     min-height: 220px;
@@ -866,6 +878,21 @@ html, body, #app {
     cursor: pointer;
 }
 
+.moderation-actions {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.rules-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 18px;
+    padding-left: 22px;
+    color: var(--text-color);
+    line-height: 1.55;
+}
+
 .items-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -874,6 +901,7 @@ html, body, #app {
 }
 
 .item-card {
+    position: relative;
     background: var(--surface-color);
     border-radius: 22px;
     overflow: hidden;
@@ -881,6 +909,28 @@ html, body, #app {
     border: 1px solid rgba(229, 231, 235, 0.92);
     cursor: pointer;
     transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+}
+
+.admin-remove-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 4;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.94);
+    color: #ffffff;
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(239, 68, 68, 0.28);
+}
+
+.admin-remove-btn:hover {
+    background: #dc2626;
 }
 
 .item-card:hover {
@@ -1443,6 +1493,10 @@ html, body, #app {
     margin-top: 18px;
 }
 
+.promotion-plan-list-inline {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .promotion-plan-card {
     display: flex;
     align-items: center;
@@ -1455,6 +1509,11 @@ html, body, #app {
     font-size: 15px;
     font-weight: 700;
     box-shadow: var(--shadow-soft);
+}
+
+.promotion-plan-card.active {
+    border-color: rgba(37, 99, 235, 0.7);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .promotion-plan-card strong {
@@ -1570,6 +1629,7 @@ html, body, #app {
     .modal-content {
         width: 95%;
         padding: 20px;
+        max-height: 88vh;
     }
 
     .item-details-gallery {
@@ -1650,5 +1710,15 @@ html, body, #app {
     .seller-profile-card {
         padding: 14px;
         border-radius: 16px;
+    }
+
+    .promotion-plan-list-inline {
+        gap: 8px;
+    }
+
+    .promotion-plan-card {
+        padding: 12px;
+        border-radius: 14px;
+        font-size: 13px;
     }
 }

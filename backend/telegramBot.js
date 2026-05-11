@@ -1,5 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const Listing = require('./models/Listing');
+const Service = require('./models/Service');
 
 const WEBHOOK_PATH = '/api/telegram/webhook';
 
@@ -10,7 +11,8 @@ let webhookRouteRegistered = false;
 const PROMOTION_PLANS = {
   day: { days: 1, stars: 100, label: '1 день' },
   three_days: { days: 3, stars: 150, label: '3 дня' },
-  week: { days: 7, stars: 250, label: '7 дней' }
+  week: { days: 7, stars: 250, label: '7 дней' },
+  month: { days: 30, stars: 500, label: 'месяц' }
 };
 
 function getWebAppUrl() {
@@ -31,19 +33,27 @@ function parsePromotionPayload(payload) {
   }
 
   const parts = payload.split(':');
-  if (parts.length !== 6) {
+  if (parts.length !== 6 && parts.length !== 7) {
     return null;
   }
 
-  const [, listingId, userId, planKey, stars, nonce] = parts;
+  const hasItemType = parts.length === 7;
+  const itemType = hasItemType ? parts[1] : 'listing';
+  const itemId = hasItemType ? parts[2] : parts[1];
+  const userId = hasItemType ? parts[3] : parts[2];
+  const planKey = hasItemType ? parts[4] : parts[3];
+  const stars = hasItemType ? parts[5] : parts[4];
+  const nonce = hasItemType ? parts[6] : parts[5];
   const plan = PROMOTION_PLANS[planKey];
 
-  if (!listingId || !userId || !plan || String(plan.stars) !== String(stars) || !nonce) {
+  if (!['listing', 'service'].includes(itemType) || !itemId || !userId || !plan || String(plan.stars) !== String(stars) || !nonce) {
     return null;
   }
 
   return {
-    listingId,
+    itemId,
+    itemType,
+    listingId: itemId,
     userId,
     planKey,
     stars: Number(stars),
@@ -158,7 +168,8 @@ function registerHandlers(bot) {
         return;
       }
 
-      const expiresAt = await Listing.activatePromotion(promotion.listingId, promotion.days);
+      const model = promotion.itemType === 'service' ? Service : Listing;
+      const expiresAt = await model.activatePromotion(promotion.itemId, promotion.days);
 
       if (!expiresAt) {
         await bot.sendMessage(

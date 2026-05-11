@@ -78,6 +78,20 @@ class User {
 
     return result.changes > 0;
   }
+
+  static async ban(user_id, reason = '') {
+    const result = await db.run(
+      `UPDATE users
+       SET is_banned = $1,
+           banned_at = CURRENT_TIMESTAMP,
+           ban_reason = $2,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [true, reason, user_id]
+    );
+
+    return result.changes > 0;
+  }
 }
 
 module.exports = User;

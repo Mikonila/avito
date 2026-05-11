@@ -49,9 +49,9 @@
                     <section class="market-shell">
                         <section id="promoBannerSection" class="promo-banner">
                             <div class="promo-copy">
-                                <p class="promo-label">Marketplace</p>
                                 <h2>Покупайте и продавайте по всей Черногории</h2>
                                 <p>Недвижимость, авто, услуги и подработка в привычном формате объявлений.</p>
+                                <button type="button" class="rules-link" onclick="openPlatformRulesModal()">Подробнее о правилах платформы</button>
                             </div>
                             <div class="promo-visual" aria-hidden="true">
                                 <span class="promo-shape promo-shape-blue"></span>
@@ -190,29 +190,12 @@
                             <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('imageInput').click()">+ Добавить фотографии</button>
                             <input type="file" id="imageInput" accept="image/*" multiple style="display:none;">
                             <div id="imagePreview" class="image-preview"></div>
-                            <button type="submit" class="btn btn-primary btn-block">Опубликовать товар</button>
-                            <div class="promotion-inline-panel promotion-inline-panel-muted">
+                            <div class="promotion-inline-panel" data-promotion-form="product">
                                 <h4>Продвижение на первую линию</h4>
-                                <p>После публикации товара здесь появятся кнопки оплаты продвижения: 1 день — 100 ⭐, 3 дня — 150 ⭐, 7 дней — 250 ⭐.</p>
+                                <p>Вы можете поднять публикацию в первую линию рекомендаций на выбранный срок.</p>
+                                <div class="promotion-plan-list promotion-plan-list-inline" data-promotion-options="product"></div>
                             </div>
-                            <div id="postPublishPromotionPanel" class="promotion-inline-panel hidden">
-                                <h4>Товар опубликован. Продвинуть на первую линию</h4>
-                                <p id="postPublishPromotionInfo" class="info-text"></p>
-                                <div class="promotion-plan-list">
-                                    <button type="button" class="promotion-plan-card" onclick="startPublishedListingPromotion('day')">
-                                        <strong>1 день</strong>
-                                        <span>100 ⭐</span>
-                                    </button>
-                                    <button type="button" class="promotion-plan-card" onclick="startPublishedListingPromotion('three_days')">
-                                        <strong>3 дня</strong>
-                                        <span>150 ⭐</span>
-                                    </button>
-                                    <button type="button" class="promotion-plan-card" onclick="startPublishedListingPromotion('week')">
-                                        <strong>7 дней</strong>
-                                        <span>250 ⭐</span>
-                                    </button>
-                                </div>
-                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Опубликовать товар</button>
                         </form>
                         </div>
                     </div>
@@ -251,6 +234,11 @@
                             <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('serviceImageInput').click()">+ Добавить фотографии</button>
                             <input type="file" id="serviceImageInput" accept="image/*" multiple style="display:none;">
                             <div id="serviceImagePreview" class="image-preview"></div>
+                            <div class="promotion-inline-panel" data-promotion-form="service">
+                                <h4>Продвижение на первую линию</h4>
+                                <p>Вы можете поднять публикацию в первую линию рекомендаций на выбранный срок.</p>
+                                <div class="promotion-plan-list promotion-plan-list-inline" data-promotion-options="service"></div>
+                            </div>
                             <button type="submit" class="btn btn-primary btn-block">Опубликовать услугу</button>
                         </form>
                         </div>
@@ -266,13 +254,7 @@
                 </div>
 
                 <div id="my-items" class="tab-pane hidden">
-                    <div class="my-items-tabs">
-                        <button class="my-items-type active" data-type="products">Товары</button>
-                        <button class="my-items-type" data-type="services">Услуги</button>
-                    </div>
-
-                    <div id="myProducts" class="items-grid"></div>
-                    <div id="myServices" class="items-grid hidden"></div>
+                    <div id="myItems" class="items-grid"></div>
                 </div>
             </div>
         </div>
@@ -357,25 +339,78 @@
         </div>
     </div>
 
+    <div id="editItemModal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <button class="modal-close" onclick="closeEditItemModal()">✕</button>
+            <h2>Редактировать объявление</h2>
+            <form id="editItemForm" class="listing-form">
+                <div class="form-group">
+                    <label>Название</label>
+                    <input type="text" id="editTitle" maxlength="100" required>
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="editDescription" maxlength="1000"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Категория</label>
+                        <select id="editCategory" required></select>
+                    </div>
+                    <div class="form-group subcategory-group hidden" id="editSubcategoryGroup">
+                        <label>Подкатегория</label>
+                        <select id="editSubcategory"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Город</label>
+                        <select id="editCity" required></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Цена (EUR)</label>
+                    <input type="number" id="editPrice" step="0.01" required>
+                </div>
+                <div id="editImagePreview" class="image-preview"></div>
+                <button type="submit" class="btn btn-primary btn-block">Сохранить изменения</button>
+            </form>
+        </div>
+    </div>
+
     <div id="promotionModal" class="modal hidden">
         <div class="modal-content">
             <button class="modal-close" onclick="closePromotionModal()">✕</button>
             <h2>Продвижение на первую линию</h2>
             <p id="promotionTargetInfo" class="info-text"></p>
-            <div class="promotion-plan-list">
-                <button type="button" class="promotion-plan-card" onclick="startPromotionPayment('day')">
-                    <strong>1 день</strong>
-                    <span>100 ⭐</span>
-                </button>
-                <button type="button" class="promotion-plan-card" onclick="startPromotionPayment('three_days')">
-                    <strong>3 дня</strong>
-                    <span>150 ⭐</span>
-                </button>
-                <button type="button" class="promotion-plan-card" onclick="startPromotionPayment('week')">
-                    <strong>7 дней</strong>
-                    <span>250 ⭐</span>
-                </button>
+            <div id="promotionModalPlans" class="promotion-plan-list"></div>
+        </div>
+    </div>
+
+    <div id="adminModerationModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeAdminModerationModal()">✕</button>
+            <h2>Модерация объявления</h2>
+            <p id="adminModerationInfo" class="info-text"></p>
+            <div class="moderation-actions">
+                <button type="button" class="btn btn-danger btn-block" onclick="adminDeleteSelectedItem(false)">Удалить</button>
+                <button type="button" class="btn btn-danger btn-block" onclick="adminDeleteSelectedItem(true)">Удалить и забанить пользователя</button>
+                <button type="button" class="btn btn-secondary btn-block" onclick="closeAdminModerationModal()">Свернуть окно</button>
             </div>
+        </div>
+    </div>
+
+    <div id="platformRulesModal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <button class="modal-close" onclick="closePlatformRulesModal()">✕</button>
+            <h2>Правила платформы</h2>
+            <p class="info-text">Публикуйте только честные объявления о товарах и услугах, которые разрешены законом Черногории и правилами платформы.</p>
+            <ul class="rules-list">
+                <li>Запрещены мошеннические схемы, фальшивые документы, фишинг, обман с оплатой или доставкой.</li>
+                <li>Запрещены наркотики, психотропные вещества, оружие, боеприпасы, взрывчатые вещества и опасные товары.</li>
+                <li>Нельзя продавать краденые вещи, подделки, чужие персональные данные, аккаунты и доступы.</li>
+                <li>Запрещены услуги сексуального характера, угрозы, дискриминация, призывы к насилию и незаконной деятельности.</li>
+                <li>Не публикуйте спам, дубли объявлений, недостоверные цены, чужие фотографии и вводящие в заблуждение описания.</li>
+                <li>Администраторы могут удалить объявление и заблокировать пользователя, если публикация нарушает правила или вызывает подозрение.</li>
+            </ul>
         </div>
     </div>
 

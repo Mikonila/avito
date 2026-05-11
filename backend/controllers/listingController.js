@@ -4,6 +4,12 @@ const { validateImages } = require('../utils/validators');
 const { getRequesterTelegramId } = require('../middleware/auth');
 const { getTelegramBot, PROMOTION_PLANS } = require('../telegramBot');
 const { destroyImages, uploadImages } = require('../utils/cloudinary');
+const {
+  BAN_REASON,
+  ensureUserCanPublish,
+  notifyUserAboutBan,
+  requireAdminUser
+} = require('../utils/moderation');
 
 async function createListing(req, res) {
   let newlyUploadedImages = [];
@@ -13,6 +19,11 @@ async function createListing(req, res) {
 
     if (!user_id || !title || !category_id || !city_id || !price) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const author = await ensureUserCanPublish(user_id, res);
+    if (!author) {
+      return;
     }
 
     const imageValidation = validateImages(images);
@@ -116,6 +127,44 @@ async function deleteListing(req, res) {
   }
 }
 
+async function adminDeleteListing(req, res) {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) {
+      return;
+    }
+
+    const { listing_id } = req.params;
+    const { ban_user = false } = req.body;
+    const listing = await Listing.findById(listing_id);
+
+    if (!listing) {
+      return res.status(404).json({ error: 'Объявление не найдено' });
+    }
+
+    const author = await User.findById(listing.user_id);
+    const deleted = await Listing.deleteAny(listing_id);
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'Объявление не найдено' });
+    }
+
+    if (listing.images?.length) {
+      await destroyImages(listing.images);
+    }
+
+    if (ban_user && author) {
+      await User.ban(author.id, BAN_REASON);
+      await notifyUserAboutBan(author, listing.title);
+    }
+
+    res.json({ success: true, banned: Boolean(ban_user && author) });
+  } catch (error) {
+    console.error('Error deleting listing as admin:', error);
+    res.status(500).json({ error: 'Не удалось удалить объявление' });
+  }
+}
+
 async function updateListing(req, res) {
   let newlyUploadedImages = [];
 
@@ -125,6 +174,11 @@ async function updateListing(req, res) {
 
     if (!user_id) {
       return res.status(400).json({ error: 'user_id is required' });
+    }
+
+    const author = await ensureUserCanPublish(user_id, res);
+    if (!author) {
+      return;
     }
 
     const imageValidation = validateImages(images);
@@ -195,6 +249,7 @@ async function createPromotionInvoice(req, res) {
 
     const payload = [
       'promotion',
+      'listing',
       listing_id,
       user_id,
       plan,
@@ -227,6 +282,7 @@ async function createPromotionInvoice(req, res) {
 
 module.exports = {
   createListing,
+  adminDeleteListing,
   createPromotionInvoice,
   getListingsByUser,
   getListingDetails,

@@ -5,6 +5,9 @@ const serviceController = require('../controllers/serviceController');
 router.post('/create', serviceController.createService);
 router.get('/user/:user_id', serviceController.getServicesByUser);
 router.get('/search', serviceController.searchServices);
+router.post('/:service_id/promotion/invoice', serviceController.createPromotionInvoice);
+router.delete('/:service_id/admin', serviceController.adminDeleteService);
 router.delete('/:service_id', serviceController.deleteService);
+router.put('/:service_id', serviceController.updateService);
 
 module.exports = router;

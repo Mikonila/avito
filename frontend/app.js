@@ -9,7 +9,8 @@ const SUPPORT_LINK = 'https://t.me/helionstudio';
 const PROMOTION_PLANS = {
     day: { label: '1 день', stars: 100 },
     three_days: { label: '3 дня', stars: 150 },
-    week: { label: '7 дней', stars: 250 }
+    week: { label: '7 дней', stars: 250 },
+    month: { label: 'месяц', stars: 500 }
 };
 
 let state = {
@@ -18,6 +19,7 @@ let state = {
     cities: [],
     currentListings: [],
     homeListings: [],
+    myItems: [],
     currentServices: [],
     activeSearchView: 'home',
     activeCategoryId: '',
@@ -28,9 +30,17 @@ let state = {
     adImages: [],
     reviewScreenshot: null,
     selectedItem: null,
+    adminModerationItem: null,
+    editingItem: null,
+    editImages: [],
     viewedProfileId: null,
     promotionListingId: null,
     promotionListingTitle: '',
+    promotionTargetType: 'listing',
+    selectedPromotionPlans: {
+        product: '',
+        service: ''
+    },
     filters: {
         categoryId: '',
         subcategoryId: '',
@@ -106,6 +116,19 @@ function getAuthHeaders(includeJson = true) {
     }
 
     return headers;
+}
+
+function isAdminUser() {
+    return state.user?.is_admin === true || state.user?.is_admin === 1;
+}
+
+function escapeHtml(value = '') {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function getTelegramPayload() {
@@ -327,9 +350,13 @@ function populateSelects() {
     populateSelectElement(productCitySelect, state.cities, null);
     populateSelectElement(serviceCategorySelect, state.categories, null);
     populateSelectElement(serviceCitySelect, state.cities, null);
+    populateSelectElement(document.getElementById('editCategory'), state.categories, null);
+    populateSelectElement(document.getElementById('editCity'), state.cities, null);
 
     populateSubcategorySelect('product');
     populateSubcategorySelect('service');
+    renderPromotionOptions('product');
+    renderPromotionOptions('service');
     renderCategoryShowcase();
     renderFilterCategoryChips();
     updateSearchTriggerLabel();
@@ -681,6 +708,68 @@ function populateSubcategorySelect(formType) {
     populateSelectElement(subcategorySelect, subcategories, 'Выберите подкатегорию');
 }
 
+function getSubcategoriesForCategory(categoryId) {
+    const category = getCategoryById(categoryId);
+    const baseSubcategories = category?.subcategories || [];
+
+    return baseSubcategories.some((item) => item.id === OTHER_SUBCATEGORY.id)
+        ? baseSubcategories
+        : [...baseSubcategories, OTHER_SUBCATEGORY];
+}
+
+function updateEditSubcategorySelect() {
+    const categorySelect = document.getElementById('editCategory');
+    const subcategorySelect = document.getElementById('editSubcategory');
+    const subcategoryGroup = document.getElementById('editSubcategoryGroup');
+
+    if (!categorySelect || !subcategorySelect || !subcategoryGroup) {
+        return;
+    }
+
+    const subcategories = getSubcategoriesForCategory(categorySelect.value);
+    subcategoryGroup.classList.toggle('hidden', subcategories.length === 0);
+    populateSelectElement(subcategorySelect, subcategories, 'Выберите подкатегорию');
+}
+
+function renderPromotionOptions(formType) {
+    const container = document.querySelector(`[data-promotion-options="${formType}"]`);
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = Object.entries(PROMOTION_PLANS).map(([planKey, plan]) => `
+        <button
+            type="button"
+            class="promotion-plan-card ${state.selectedPromotionPlans[formType] === planKey ? 'active' : ''}"
+            onclick="selectPromotionPlan('${formType}', '${planKey}')"
+        >
+            <strong>${plan.label}</strong>
+            <span>${plan.stars} ⭐</span>
+        </button>
+    `).join('');
+}
+
+window.selectPromotionPlan = function(formType, planKey) {
+    state.selectedPromotionPlans[formType] = state.selectedPromotionPlans[formType] === planKey ? '' : planKey;
+    renderPromotionOptions(formType);
+};
+
+function renderPromotionModalPlans() {
+    const container = document.getElementById('promotionModalPlans');
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = Object.entries(PROMOTION_PLANS).map(([planKey, plan]) => `
+        <button type="button" class="promotion-plan-card" onclick="startPromotionPayment('${planKey}')">
+            <strong>${plan.label}</strong>
+            <span>${plan.stars} ⭐</span>
+        </button>
+    `).join('');
+}
+
 function attachEventListeners() {
     document.querySelectorAll('.tab').forEach((tab) => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
@@ -696,13 +785,12 @@ function attachEventListeners() {
         btn.addEventListener('click', () => switchListingType(btn.dataset.type));
     });
 
-    document.querySelectorAll('.my-items-type').forEach((btn) => {
-        btn.addEventListener('click', () => switchMyItemsType(btn.dataset.type));
-    });
-
-    document.querySelectorAll('.listing-form').forEach((form, index) => {
+    document.querySelectorAll('#productForm .listing-form, #serviceForm .listing-form').forEach((form, index) => {
         form.addEventListener('submit', (e) => handleListingSubmit(e, index));
     });
+
+    document.getElementById('editItemForm').addEventListener('submit', handleEditItemSubmit);
+    document.getElementById('editCategory').addEventListener('change', updateEditSubcategorySelect);
 
     ['product', 'service'].forEach((formType) => {
         const categorySelect = getCategorySelect(formType);
@@ -773,14 +861,6 @@ function switchListingType(type) {
     targetSection.classList.add('active');
 }
 
-function switchMyItemsType(type) {
-    document.querySelectorAll('.my-items-type').forEach((btn) => btn.classList.remove('active'));
-    document.querySelector(`[data-type="${type}"]`).classList.add('active');
-
-    document.getElementById('myProducts').classList.toggle('hidden', type !== 'products');
-    document.getElementById('myServices').classList.toggle('hidden', type !== 'services');
-}
-
 function handleImageSelect(e, type) {
     const files = Array.from(e.target.files);
     state[type] = state[type] || [];
@@ -835,6 +915,7 @@ function renderImagePreview(type) {
         images: 'imagePreview',
         serviceImages: 'serviceImagePreview',
         adImages: 'adImagePreview',
+        editImages: 'editImagePreview',
         reviewScreenshot: 'reviewScreenshotPreview'
     };
 
@@ -896,6 +977,8 @@ async function handleListingSubmit(e, formIndex) {
     const cityId = isProductOrService ? selects[2]?.value || '' : '';
     const priceInput = form.querySelector('input[type="number"]');
     const price = priceInput ? priceInput.value : '';
+    const formType = formIndex === 1 ? 'service' : 'product';
+    const selectedPromotionPlan = state.selectedPromotionPlans[formType];
 
     if (formIndex === 2) {
         alert('Реклама размещается платно. Свяжитесь с @helionstudio');
@@ -914,6 +997,7 @@ async function handleListingSubmit(e, formIndex) {
 
     try {
         let endpoint = '/listings/create';
+        let itemType = 'listing';
         let body = {
             user_id: state.user.id,
             title,
@@ -927,6 +1011,7 @@ async function handleListingSubmit(e, formIndex) {
 
         if (formIndex === 1) {
             endpoint = '/services/create';
+            itemType = 'service';
             body.images = state.serviceImages;
         }
 
@@ -939,7 +1024,7 @@ async function handleListingSubmit(e, formIndex) {
         const result = await response.json();
         if (result.success || result.listing_id || result.service_id) {
             alert('Объявление опубликовано');
-            const createdListingId = result.listing_id || null;
+            const createdListingId = result.listing_id || result.service_id || null;
             const createdTitle = title;
             form.reset();
             state.images = [];
@@ -950,8 +1035,13 @@ async function handleListingSubmit(e, formIndex) {
             renderImagePreview('adImages');
             populateSubcategorySelect('product');
             populateSubcategorySelect('service');
+            state.selectedPromotionPlans[formType] = '';
+            renderPromotionOptions(formType);
 
-            if (createdListingId) {
+            if (createdListingId && selectedPromotionPlan) {
+                openPromotionModal(createdListingId, createdTitle, itemType);
+                await startPromotionPayment(selectedPromotionPlan);
+            } else if (createdListingId && itemType === 'listing') {
                 showPublishedPromotionPanel(createdListingId, createdTitle);
             }
         } else {
@@ -1055,9 +1145,13 @@ async function loadMyItems() {
 
         const listings = await listingsRes.json();
         const services = await servicesRes.json();
+        const publications = sortPublications([
+            ...listings.map((item) => normalizePublication(item, 'listing')),
+            ...services.map((item) => normalizePublication(item, 'service'))
+        ]);
 
-        renderListings(listings, 'myProducts');
-        renderListings(services, 'myServices');
+        state.myItems = publications;
+        renderListings(publications, 'myItems');
     } catch (error) {
         console.error('Error loading my items:', error);
     }
@@ -1081,17 +1175,18 @@ function renderListings(listings, containerId) {
         const categoryName = getCategoryName(item.category_id);
         const subcategoryName = getSubcategoryName(item.category_id, item.subcategory);
         const badgeText = subcategoryName || categoryName;
+        const itemType = item.item_type || 'listing';
 
         let content = `
             <div class="item-card-media">
                 <div class="item-badge">${badgeText}</div>
                 <div class="item-image">
-                    ${isImage ? `<img src="${image}" alt="${item.title}">` : `<span>${image}</span>`}
+                    ${isImage ? `<img src="${image}" alt="${escapeHtml(item.title)}">` : `<span>${image}</span>`}
                 </div>
             </div>
             <div class="item-info">
                 <div class="item-category-line">${categoryName}</div>
-                <div class="item-title">${item.title}</div>
+                <div class="item-title">${escapeHtml(item.title)}</div>
                 <div class="item-price">${item.price} EUR</div>
                 <div class="item-meta-row">
                     <div class="item-meta">${getCityName(item.city_id || item.city)}</div>
@@ -1103,14 +1198,26 @@ function renderListings(listings, containerId) {
         if (containerId.includes('my')) {
             content += `
                 <div class="item-actions">
-                    <button onclick="event.stopPropagation(); editItem('${item.id}')">Редактировать</button>
-                    ${containerId === 'myProducts' ? `<button onclick="event.stopPropagation(); openPromotionModal('${item.id}', '${String(item.title).replace(/'/g, '&#39;')}')">Продвинуть</button>` : ''}
-                    <button class="delete" onclick="event.stopPropagation(); deleteItem('${item.id}', '${containerId}')">Удалить</button>
+                    <button onclick="event.stopPropagation(); editItem('${item.id}', '${itemType}')">Редактировать</button>
+                    <button onclick="event.stopPropagation(); openPromotionModal('${item.id}', '${String(item.title).replace(/'/g, '&#39;')}', '${itemType}')">Продвинуть</button>
+                    <button class="delete" onclick="event.stopPropagation(); deleteItem('${item.id}', '${itemType}')">Удалить</button>
                 </div>
             `;
         }
 
         card.innerHTML = content;
+        if (isAdminUser()) {
+            const adminButton = document.createElement('button');
+            adminButton.className = 'admin-remove-btn';
+            adminButton.type = 'button';
+            adminButton.textContent = '×';
+            adminButton.title = 'Модерация объявления';
+            adminButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                window.openAdminModerationModal(item);
+            });
+            card.appendChild(adminButton);
+        }
         container.appendChild(card);
     });
 }
@@ -1127,6 +1234,9 @@ function showItemDetails(item) {
             ${item.images.map((img) => `<img src="${img}" alt="${item.title}">`).join('')}
         </div>
     ` : '';
+    const adminAction = isAdminUser()
+        ? '<button class="btn btn-danger btn-block" onclick="openAdminModerationModalFromDetails()">Удалить объявление</button>'
+        : '';
 
     content.innerHTML = `
         <div class="item-details-shell">
@@ -1151,6 +1261,7 @@ function showItemDetails(item) {
         <div class="item-details-actions">
             <button class="btn btn-secondary btn-block" onclick="showSellerProfile()">Профиль продавца</button>
             <button class="btn btn-primary btn-block" onclick="openReviewModal()">Оставить отзыв</button>
+            ${adminAction}
         </div>
         <div class="item-reviews-section">
             <div class="section-divider compact">
@@ -1415,10 +1526,12 @@ window.openReviewModal = function() {
     document.getElementById('reviewModal').classList.remove('hidden');
 };
 
-window.openPromotionModal = function(listingId, title = 'объявление') {
+window.openPromotionModal = function(listingId, title = 'объявление', itemType = 'listing') {
     state.promotionListingId = listingId;
     state.promotionListingTitle = title;
+    state.promotionTargetType = itemType;
     document.getElementById('promotionTargetInfo').textContent = `Выберите срок продвижения для объявления: ${title}`;
+    renderPromotionModalPlans();
     document.getElementById('promotionModal').classList.remove('hidden');
 };
 
@@ -1438,7 +1551,10 @@ window.startPromotionPayment = async function(planKey) {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/listings/${state.promotionListingId}/promotion/invoice`, {
+        const endpoint = state.promotionTargetType === 'service'
+            ? `/services/${state.promotionListingId}/promotion/invoice`
+            : `/listings/${state.promotionListingId}/promotion/invoice`;
+        const response = await fetch(`${API_BASE}${endpoint}`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({
@@ -1469,15 +1585,6 @@ window.startPromotionPayment = async function(planKey) {
         console.error('Error starting promotion payment:', error);
         alert(error.message || 'Ошибка при создании платежа');
     }
-};
-
-window.startPublishedListingPromotion = function(planKey) {
-    if (!state.promotionListingId) {
-        alert('Сначала опубликуйте товар');
-        return;
-    }
-
-    startPromotionPayment(planKey);
 };
 
 window.closeReviewModal = function() {
@@ -1574,13 +1681,13 @@ window.deleteReview = async function(reviewId) {
     }
 };
 
-window.deleteItem = async function(itemId, containerId) {
+window.deleteItem = async function(itemId, itemType = 'listing') {
     if (!confirm('Вы уверены, что хотите удалить?')) {
         return;
     }
 
     try {
-        const endpoint = containerId.includes('Products') ? `/listings/${itemId}` : `/services/${itemId}`;
+        const endpoint = itemType === 'service' ? `/services/${itemId}` : `/listings/${itemId}`;
         await fetch(`${API_BASE}${endpoint}`, {
             method: 'DELETE',
             headers: getAuthHeaders(),
@@ -1594,8 +1701,179 @@ window.deleteItem = async function(itemId, containerId) {
     }
 };
 
-window.editItem = function() {
-    alert('Редактирование пока в разработке');
+window.openAdminModerationModal = function(item) {
+    if (!isAdminUser()) {
+        return;
+    }
+
+    state.adminModerationItem = {
+        id: item.id,
+        title: item.title || 'Объявление',
+        item_type: item.item_type || 'listing',
+        user_id: item.user_id
+    };
+
+    document.getElementById('adminModerationInfo').textContent =
+        `Выберите действие для публикации «${state.adminModerationItem.title}».`;
+    document.getElementById('adminModerationModal').classList.remove('hidden');
+};
+
+window.openAdminModerationModalFromDetails = function() {
+    if (state.selectedItem) {
+        window.openAdminModerationModal(state.selectedItem);
+    }
+};
+
+window.closeAdminModerationModal = function() {
+    document.getElementById('adminModerationModal').classList.add('hidden');
+    state.adminModerationItem = null;
+};
+
+async function refreshListingsAfterModeration() {
+    await loadRandomListings();
+
+    if (state.user?.id) {
+        await loadMyItems();
+    }
+
+    if (state.activeSearchView === 'category' && state.activeCategoryId) {
+        await openCategoryLanding(state.activeCategoryId, state.filters.subcategoryId);
+        return;
+    }
+
+    if (state.activeSearchView === 'results') {
+        await performSearch();
+    }
+}
+
+window.adminDeleteSelectedItem = async function(banUser = false) {
+    const item = state.adminModerationItem;
+
+    if (!item) {
+        return;
+    }
+
+    const confirmationText = banUser
+        ? 'Удалить объявление и забанить пользователя?'
+        : 'Удалить объявление?';
+
+    if (!confirm(confirmationText)) {
+        return;
+    }
+
+    try {
+        const endpoint = item.item_type === 'service'
+            ? `/services/${item.id}/admin`
+            : `/listings/${item.id}/admin`;
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ ban_user: banUser })
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Не удалось выполнить действие');
+        }
+
+        if (state.selectedItem?.id === item.id) {
+            closeItemModal();
+            state.selectedItem = null;
+        }
+
+        closeAdminModerationModal();
+        await refreshListingsAfterModeration();
+        alert(banUser ? 'Объявление удалено, пользователь забанен' : 'Объявление удалено');
+    } catch (error) {
+        console.error('Admin moderation error:', error);
+        alert(error.message || 'Ошибка модерации');
+    }
+};
+
+window.openPlatformRulesModal = function() {
+    document.getElementById('platformRulesModal').classList.remove('hidden');
+};
+
+window.closePlatformRulesModal = function() {
+    document.getElementById('platformRulesModal').classList.add('hidden');
+};
+
+window.editItem = function(itemId, itemType = 'listing') {
+    const item = state.myItems.find((entry) => entry.id === itemId && entry.item_type === itemType);
+
+    if (!item) {
+        alert('Объявление не найдено');
+        return;
+    }
+
+    state.editingItem = item;
+    state.editImages = item.images || [];
+
+    document.getElementById('editTitle').value = item.title || '';
+    document.getElementById('editDescription').value = item.description || '';
+    document.getElementById('editCategory').value = item.category_id || '';
+    updateEditSubcategorySelect();
+    document.getElementById('editSubcategory').value = item.subcategory || '';
+    document.getElementById('editCity').value = item.city_id || '';
+    document.getElementById('editPrice').value = item.price || '';
+    renderImagePreview('editImages');
+    document.getElementById('editItemModal').classList.remove('hidden');
+};
+
+window.closeEditItemModal = function() {
+    document.getElementById('editItemModal').classList.add('hidden');
+    state.editingItem = null;
+    state.editImages = [];
+};
+
+async function handleEditItemSubmit(event) {
+    event.preventDefault();
+
+    if (!state.editingItem) {
+        return;
+    }
+
+    const itemType = state.editingItem.item_type || 'listing';
+    const endpoint = itemType === 'service'
+        ? `/services/${state.editingItem.id}`
+        : `/listings/${state.editingItem.id}`;
+
+    const payload = {
+        user_id: state.user.id,
+        title: document.getElementById('editTitle').value.trim(),
+        description: document.getElementById('editDescription').value.trim(),
+        category_id: document.getElementById('editCategory').value,
+        subcategory: document.getElementById('editSubcategory').value,
+        city_id: document.getElementById('editCity').value,
+        price: parseFloat(document.getElementById('editPrice').value),
+        images: state.editImages
+    };
+
+    if (!payload.title || !payload.category_id || !payload.city_id || !payload.price) {
+        alert('Пожалуйста, заполните обязательные поля');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Не удалось сохранить изменения');
+        }
+
+        alert('Изменения сохранены');
+        closeEditItemModal();
+        await loadMyItems();
+        await loadRandomListings();
+    } catch (error) {
+        console.error('Error updating item:', error);
+        alert(error.message || 'Ошибка при сохранении');
+    }
 };
 
 window.logout = function() {

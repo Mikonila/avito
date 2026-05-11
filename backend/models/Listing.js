@@ -113,6 +113,15 @@ class Listing {
     return result.changes > 0;
   }
 
+  static async deleteAny(id) {
+    const result = await db.run(
+      `DELETE FROM listings WHERE id = $1`,
+      [id]
+    );
+
+    return result.changes > 0;
+  }
+
   static async update(id, user_id, data) {
     const { title, description, price, category_id, subcategory = '', city_id, images } = data;
     const result = await db.run(
