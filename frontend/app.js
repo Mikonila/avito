@@ -3,6 +3,8 @@ const MAX_IMAGE_COUNT = 4;
 const MAX_IMAGE_SIZE_BYTES = 1572864;
 const FALLBACK_TELEGRAM_ID_KEY = 'fallback_telegram_id';
 const CLOTHING_CATEGORY_ID = 'cat-5';
+const SERVICE_CATEGORY_ID = 'cat-8';
+const OTHER_SUBCATEGORY = { id: 'other', name: 'Другое' };
 const SUPPORT_LINK = 'https://t.me/helionstudio';
 const PROMOTION_PLANS = {
     day: { label: '1 день', stars: 100 },
@@ -19,6 +21,8 @@ let state = {
     currentServices: [],
     activeSearchView: 'home',
     activeCategoryId: '',
+    lastCategoryId: '',
+    sellerReturnView: 'home',
     images: [],
     serviceImages: [],
     adImages: [],
@@ -138,6 +142,72 @@ function getSubcategoryName(categoryId, subcategoryId) {
     return category?.subcategories?.find((item) => item.id === subcategoryId)?.name || subcategoryId;
 }
 
+function normalizePublication(item, type) {
+    return {
+        ...item,
+        item_type: type,
+        source_type: type
+    };
+}
+
+function sortPublications(items, preferredCategoryId = '') {
+    const isPreferred = (item) => {
+        if (!preferredCategoryId) {
+            return false;
+        }
+
+        if (preferredCategoryId === SERVICE_CATEGORY_ID && item.item_type === 'service') {
+            return true;
+        }
+
+        return item.category_id === preferredCategoryId;
+    };
+
+    return [...items].sort((a, b) => {
+        const aPreferred = isPreferred(a) ? 0 : 1;
+        const bPreferred = isPreferred(b) ? 0 : 1;
+
+        if (aPreferred !== bPreferred) {
+            return aPreferred - bPreferred;
+        }
+
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+}
+
+function buildQuery(params) {
+    const searchParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value) {
+            searchParams.set(key, value);
+        }
+    });
+
+    return searchParams.toString();
+}
+
+async function fetchPublications({ cityId = '', categoryId = '' } = {}) {
+    const listingQuery = buildQuery({ city_id: cityId, category_id: categoryId });
+    const serviceCategoryId = categoryId === SERVICE_CATEGORY_ID ? '' : categoryId;
+    const serviceQuery = buildQuery({ city_id: cityId, category_id: serviceCategoryId });
+
+    const [listingsResponse, servicesResponse] = await Promise.all([
+        fetch(`${API_BASE}/listings/search${listingQuery ? `?${listingQuery}` : ''}`),
+        fetch(`${API_BASE}/services/search${serviceQuery ? `?${serviceQuery}` : ''}`)
+    ]);
+
+    const [listings, services] = await Promise.all([
+        listingsResponse.json(),
+        servicesResponse.json()
+    ]);
+
+    return [
+        ...listings.map((item) => normalizePublication(item, 'listing')),
+        ...services.map((item) => normalizePublication(item, 'service'))
+    ];
+}
+
 function getProfileDisplayName(user) {
     return [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username || 'Пользователь';
 }
@@ -182,6 +252,7 @@ function setSearchViewMode(mode) {
     document.getElementById('categoriesShowcaseSection')?.classList.toggle('hidden', mode !== 'home');
     document.getElementById('homeRecommendationsBlock')?.classList.toggle('hidden', mode !== 'home');
     document.getElementById('categoryLandingSection')?.classList.toggle('hidden', mode !== 'category');
+    document.getElementById('sellerProfileSection')?.classList.toggle('hidden', mode !== 'seller');
     document.getElementById('searchResultsSection')?.classList.toggle('hidden', mode !== 'results');
 }
 
@@ -349,16 +420,7 @@ function renderCategoryExplorer() {
                     <small>${category.name}</small>
                 </button>
             `).join('')
-            : `
-                <button
-                    type="button"
-                    class="category-explorer-card ${state.filters.categoryId === category.id && !state.filters.subcategoryId ? 'active' : ''}"
-                    onclick="applyCategorySelection('${category.id}', '')"
-                >
-                    <span>Открыть объявления</span>
-                    <small>${category.name}</small>
-                </button>
-            `;
+            : '';
 
         return `
             <section class="category-explorer-group">
@@ -375,7 +437,7 @@ function renderCategoryExplorer() {
                         Открыть
                     </button>
                 </div>
-                <div class="category-explorer-grid">
+                <div class="category-explorer-grid ${subcategories.length ? '' : 'hidden'}">
                     ${cards}
                 </div>
             </section>
@@ -462,6 +524,7 @@ function syncFilterUi() {
     renderCategoryShowcase();
     renderFilterCategoryChips();
     updateSearchTriggerLabel();
+    updateSearchSubmitVisibility();
 }
 
 function openFiltersModal() {
@@ -486,7 +549,7 @@ window.resetFilters = function() {
     state.activeCategoryId = '';
     syncFilterUi();
     setSearchViewMode('home');
-    renderListings(state.homeListings, 'randomListings');
+    loadRandomListings();
 };
 
 function renderCategoryLandingTiles(category) {
@@ -531,6 +594,7 @@ async function openCategoryLanding(categoryId, subcategoryId = '') {
     }
 
     state.activeCategoryId = categoryId;
+    state.lastCategoryId = categoryId;
     state.filters.categoryId = categoryId;
     state.filters.subcategoryId = subcategoryId;
     syncFilterUi();
@@ -546,9 +610,8 @@ async function openCategoryLanding(categoryId, subcategoryId = '') {
 
     try {
         const cityId = state.filters.cityId;
-        const endpoint = `/listings/search?${cityId ? `city_id=${cityId}&` : ''}category_id=${categoryId}`;
-        const response = await fetch(`${API_BASE}${endpoint}`);
-        const listings = applyListingFilters(await response.json());
+        const publications = await fetchPublications({ cityId, categoryId });
+        const listings = sortPublications(applyListingFilters(publications), categoryId);
         state.currentListings = listings;
         renderListings(listings, 'categoryRecommendations');
     } catch (error) {
@@ -601,7 +664,10 @@ function populateSubcategorySelect(formType) {
     }
 
     const category = getCategoryById(categorySelect.value);
-    const subcategories = category?.subcategories || [];
+    const baseSubcategories = category?.subcategories || [];
+    const subcategories = baseSubcategories.some((item) => item.id === OTHER_SUBCATEGORY.id)
+        ? baseSubcategories
+        : [...baseSubcategories, OTHER_SUBCATEGORY];
     const isVisible = subcategories.length > 0;
 
     subcategoryGroup.classList.toggle('hidden', !isVisible);
@@ -905,9 +971,11 @@ async function performSearch() {
     try {
         const cityId = state.filters.cityId;
         const categoryId = state.filters.categoryId;
-        const endpoint = `/listings/search?${cityId ? `city_id=${cityId}` : ''}${categoryId ? `${cityId ? '&' : ''}category_id=${categoryId}` : ''}`;
-        const response = await fetch(`${API_BASE}${endpoint}`);
-        const listings = applyListingFilters(await response.json());
+        if (categoryId) {
+            state.lastCategoryId = categoryId;
+        }
+        const publications = await fetchPublications({ cityId, categoryId });
+        const listings = sortPublications(applyListingFilters(publications), categoryId);
         const subcategoryName = getSubcategoryName(categoryId, state.filters.subcategoryId);
         state.currentListings = listings;
         document.getElementById('searchResultsSection').classList.remove('hidden');
@@ -929,8 +997,8 @@ async function performSearch() {
 
 async function loadRandomListings() {
     try {
-        const response = await fetch(`${API_BASE}/listings/random?limit=20`);
-        const listings = await response.json();
+        const publications = await fetchPublications();
+        const listings = sortPublications(publications, state.lastCategoryId);
         state.homeListings = listings;
         renderListings(listings, 'randomListings');
     } catch (error) {
@@ -1084,10 +1152,22 @@ function showItemDetails(item) {
             <button class="btn btn-secondary btn-block" onclick="showSellerProfile()">Профиль продавца</button>
             <button class="btn btn-primary btn-block" onclick="openReviewModal()">Оставить отзыв</button>
         </div>
+        <div class="item-reviews-section">
+            <div class="section-divider compact">
+                <div>
+                    <p class="section-kicker">Отзывы</p>
+                    <h3>Отзывы по объявлению</h3>
+                </div>
+            </div>
+            <div id="itemReviewsList" class="reviews-list">
+                <p class="info-text">Загрузка отзывов...</p>
+            </div>
+        </div>
         </div>
     `;
 
     modal.classList.remove('hidden');
+    loadItemReviews(item);
 }
 
 window.closeItemModal = function() {
@@ -1100,7 +1180,7 @@ window.showSellerProfile = async function() {
     }
 
     closeItemModal();
-    await showUserProfile(state.selectedItem.user_id);
+    await showSellerProfilePage(state.selectedItem.user_id);
 };
 
 async function showUserProfile(userId) {
@@ -1146,15 +1226,12 @@ async function showUserProfile(userId) {
     }
 }
 
-function renderReviews(reviews, canModerate) {
-    const container = document.getElementById('profileReviews');
-
+function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет отзывов.') {
     if (!reviews.length) {
-        container.innerHTML = '<p class="info-text">Пока нет отзывов.</p>';
-        return;
+        return `<p class="info-text">${emptyText}</p>`;
     }
 
-    container.innerHTML = reviews.map((review) => {
+    return reviews.map((review) => {
         const typeLabel = review.review_type === 'product' ? 'Отзыв о товаре' : 'Отзыв о продавце';
         const canDelete = canModerate || review.author_user_id === state.user?.id;
         const screenshotLink = canModerate && review.screenshot_url
@@ -1189,6 +1266,86 @@ function renderReviews(reviews, canModerate) {
         `;
     }).join('');
 }
+
+function renderReviews(reviews, canModerate, containerId = 'profileReviews', emptyText = 'Пока нет отзывов.') {
+    const container = document.getElementById(containerId);
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = renderReviewsMarkup(reviews, canModerate, emptyText);
+}
+
+async function loadItemReviews(item) {
+    const container = document.getElementById('itemReviewsList');
+
+    if (!container || !item?.user_id) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/users/profile/${item.user_id}`, {
+            headers: getAuthHeaders(false)
+        });
+        const user = await response.json();
+
+        if (!response.ok) {
+            throw new Error(user.error || 'Не удалось загрузить отзывы');
+        }
+
+        const itemReviews = (user.reviews || []).filter((review) => review.listing_id === item.id);
+        renderReviews(itemReviews, state.user?.is_admin === true, 'itemReviewsList', 'По этому объявлению пока нет отзывов.');
+    } catch (error) {
+        console.error('Error loading item reviews:', error);
+        container.innerHTML = '<p class="info-text">Не удалось загрузить отзывы.</p>';
+    }
+}
+
+async function showSellerProfilePage(userId) {
+    try {
+        const response = await fetch(`${API_BASE}/users/profile/${userId}`, {
+            headers: getAuthHeaders(false)
+        });
+        const user = await response.json();
+
+        if (!response.ok) {
+            throw new Error(user.error || 'Не удалось загрузить профиль');
+        }
+
+        if (state.activeSearchView !== 'seller') {
+            state.sellerReturnView = state.activeSearchView || 'home';
+        }
+
+        state.viewedProfileId = userId;
+        const canModerate = state.user?.is_admin === true;
+        document.getElementById('sellerProfileContent').innerHTML = `
+            <div class="seller-profile-card">
+                <div class="seller-profile-avatar">
+                    ${getAvatarMarkup(user.avatar_url)}
+                </div>
+                <div>
+                    <h3>${getProfileDisplayName(user)}</h3>
+                    <p>${user.username ? `@${user.username}` : 'Username не указан'}</p>
+                    <p>${getCityName(user.city)}</p>
+                    <p>${user.about || 'Пользователь пока ничего не рассказал о себе'}</p>
+                </div>
+            </div>
+        `;
+
+        renderReviews(user.reviews || [], canModerate, 'sellerProfileReviews');
+        setSearchViewMode('seller');
+        switchTab('search');
+    } catch (error) {
+        console.error('Error loading seller profile:', error);
+        alert('Ошибка при загрузке профиля продавца');
+    }
+}
+
+window.closeSellerProfilePage = function() {
+    state.viewedProfileId = null;
+    setSearchViewMode(state.sellerReturnView || 'home');
+};
 
 window.openReviewAuthorProfile = async function(userId) {
     if (state.user?.is_admin !== true) {
@@ -1370,8 +1527,14 @@ window.submitReview = async function() {
         closeReviewModal();
 
         if (state.viewedProfileId === state.selectedItem.user_id) {
-            await showUserProfile(state.viewedProfileId);
+            if (state.activeSearchView === 'seller') {
+                await showSellerProfilePage(state.viewedProfileId);
+            } else {
+                await showUserProfile(state.viewedProfileId);
+            }
         }
+
+        await loadItemReviews(state.selectedItem);
     } catch (error) {
         console.error('Error creating review:', error);
         alert(error.message || 'Ошибка при отправке отзыва');
@@ -1395,7 +1558,15 @@ window.deleteReview = async function(reviewId) {
         }
 
         if (state.viewedProfileId) {
-            await showUserProfile(state.viewedProfileId);
+            if (state.activeSearchView === 'seller') {
+                await showSellerProfilePage(state.viewedProfileId);
+            } else {
+                await showUserProfile(state.viewedProfileId);
+            }
+        }
+
+        if (state.selectedItem) {
+            await loadItemReviews(state.selectedItem);
         }
     } catch (error) {
         console.error('Error deleting review:', error);

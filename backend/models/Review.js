@@ -39,13 +39,14 @@ class Review {
          reviews.text,
          reviews.created_at,
          reviews.screenshot_url,
-         listings.title AS listing_title,
+         COALESCE(listings.title, services.title) AS listing_title,
          author.avatar_url AS author_avatar_url,
          author.first_name AS author_first_name,
          author.last_name AS author_last_name,
          author.username AS author_username
        FROM reviews
        LEFT JOIN listings ON listings.id = reviews.listing_id
+       LEFT JOIN services ON services.id = reviews.listing_id
        LEFT JOIN users AS author ON author.id = reviews.author_user_id
        WHERE reviews.target_user_id = $1
        ORDER BY reviews.created_at DESC`,

@@ -66,7 +66,9 @@ const CATEGORIES = [
     ]
   },
   { id: 'cat-12', name: 'Бесплатно', icon: '⚙️' },
-  { id: 'cat-13', name: 'Авиша', icon: '🎭' }
+  { id: 'cat-13', name: 'Авиша', icon: '🎭' },
+  { id: 'cat-14', name: 'Медицина', icon: '🏥' },
+  { id: 'cat-other', name: 'Другое', icon: '📦' }
 ];
 
 const CITIES = [
