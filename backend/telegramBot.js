@@ -9,6 +9,7 @@ let botMode = 'disabled';
 let startupPromise = null;
 let webhookRouteRegistered = false;
 const PROMOTION_PLANS = {
+  test: { days: 1, stars: 1, label: 'тестовый день' },
   day: { days: 1, stars: 100, label: '1 день' },
   three_days: { days: 3, stars: 150, label: '3 дня' },
   week: { days: 7, stars: 250, label: '7 дней' },

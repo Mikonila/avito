@@ -7,6 +7,7 @@ const SERVICE_CATEGORY_ID = 'cat-8';
 const OTHER_SUBCATEGORY = { id: 'other', name: 'Другое' };
 const SUPPORT_LINK = 'https://t.me/helionstudio';
 const PROMOTION_PLANS = {
+    test: { label: 'Тест', stars: 1 },
     day: { label: '1 день', stars: 100 },
     three_days: { label: '3 дня', stars: 150 },
     week: { label: '7 дней', stars: 250 },
@@ -1176,10 +1177,14 @@ function renderListings(listings, containerId) {
         const subcategoryName = getSubcategoryName(item.category_id, item.subcategory);
         const badgeText = subcategoryName || categoryName;
         const itemType = item.item_type || 'listing';
+        const promotionBadge = item.is_premium
+            ? '<div class="promotion-card-label">Продвигается</div>'
+            : '';
 
         let content = `
             <div class="item-card-media">
                 <div class="item-badge">${badgeText}</div>
+                ${promotionBadge}
                 <div class="item-image">
                     ${isImage ? `<img src="${image}" alt="${escapeHtml(item.title)}">` : `<span>${image}</span>`}
                 </div>

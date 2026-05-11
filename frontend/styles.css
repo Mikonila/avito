@@ -548,7 +548,7 @@ html, body, #app {
 
 .promo-banner {
     display: grid;
-    grid-template-columns: 1.2fr 1fr;
+    grid-template-columns: 1fr;
     align-items: center;
     gap: 20px;
     padding: 24px;
@@ -581,11 +581,15 @@ html, body, #app {
 }
 
 .rules-link {
-    margin-top: 12px;
+    display: inline;
+    margin-left: 6px;
     border: none;
     background: none;
     color: var(--primary-color);
-    font-weight: 800;
+    font-weight: 500;
+    font-size: inherit;
+    white-space: nowrap;
+    vertical-align: baseline;
     cursor: pointer;
     padding: 0;
 }
@@ -636,7 +640,7 @@ html, body, #app {
 .category-landing {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 14px;
 }
 
 .category-landing.hidden,
@@ -669,14 +673,14 @@ html, body, #app {
 .category-landing-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
+    gap: 10px;
 }
 
 .category-landing-tile {
-    min-height: 138px;
+    min-height: 86px;
     border: none;
-    border-radius: 24px;
-    padding: 18px;
+    border-radius: 18px;
+    padding: 13px;
     background: linear-gradient(135deg, #f4f4f5, #ffffff);
     text-align: left;
     cursor: pointer;
@@ -695,14 +699,14 @@ html, body, #app {
 
 .category-landing-tile strong {
     display: block;
-    font-size: 18px;
+    font-size: 15px;
     line-height: 1.1;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
 }
 
 .category-landing-tile span {
     color: var(--muted-color);
-    font-size: 13px;
+    font-size: 11px;
 }
 
 .category-landing-tile-all {
@@ -957,6 +961,20 @@ html, body, #app {
     font-weight: 700;
 }
 
+.promotion-card-label {
+    position: absolute;
+    left: 20px;
+    bottom: 12px;
+    z-index: 2;
+    border-radius: 999px;
+    background: #ffedd5;
+    color: #c2410c;
+    padding: 7px 10px;
+    font-size: 11px;
+    font-weight: 800;
+    box-shadow: 0 8px 18px rgba(194, 65, 12, 0.14);
+}
+
 .item-image {
     width: 100%;
     aspect-ratio: 4 / 3;
@@ -1182,6 +1200,30 @@ html, body, #app {
 
 .promotion-inline-panel-muted {
     background: #f8fafc;
+}
+
+.ad-option-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    padding: 16px;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+}
+
+.ad-option-card strong {
+    font-size: 15px;
+    line-height: 1.35;
+}
+
+.ad-option-card span {
+    flex: 0 0 auto;
+    color: var(--accent-color);
+    font-size: 22px;
+    font-weight: 900;
 }
 
 .empty-state {
@@ -1489,26 +1531,31 @@ html, body, #app {
 
 .promotion-plan-list {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
     gap: 12px;
     margin-top: 18px;
 }
 
 .promotion-plan-list-inline {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
 }
 
 .promotion-plan-card {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 7px;
     border: 1px solid var(--border-color);
     background: #fff;
-    border-radius: 18px;
-    padding: 18px;
+    border-radius: 16px;
+    padding: 12px 8px;
+    min-height: 78px;
     cursor: pointer;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     box-shadow: var(--shadow-soft);
+    text-align: center;
 }
 
 .promotion-plan-card.active {
@@ -1517,11 +1564,14 @@ html, body, #app {
 }
 
 .promotion-plan-card strong {
-    font-size: 16px;
+    font-size: 14px;
+    line-height: 1.1;
 }
 
 .promotion-plan-card span {
     color: var(--accent-color);
+    font-size: 15px;
+    line-height: 1;
 }
 
 @media (max-width: 768px) {
@@ -1694,7 +1744,22 @@ html, body, #app {
     }
 
     .category-landing-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .category-landing-tile {
+        min-height: 72px;
+        padding: 10px;
+        border-radius: 14px;
+    }
+
+    .category-landing-tile strong {
+        font-size: 13px;
+    }
+
+    .category-landing-tile span {
+        font-size: 10px;
     }
 
     .category-back-btn {
