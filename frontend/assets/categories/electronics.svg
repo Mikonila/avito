@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 140">
+  <defs>
+    <linearGradient id="phone" x1="67" y1="19" x2="135" y2="119" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#eff6ff"/>
+      <stop offset=".45" stop-color="#9ee7ff"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="140" fill="none"/>
+  <rect x="64" y="19" width="71" height="106" rx="18" fill="url(#phone)" stroke="#1f2937" stroke-opacity=".08" stroke-width="4"/>
+  <circle cx="86" cy="44" r="10" fill="#1f2937" opacity=".75"/>
+  <circle cx="111" cy="42" r="9" fill="#1f2937" opacity=".65"/>
+  <circle cx="98" cy="64" r="8" fill="#1f2937" opacity=".45"/>
+  <path d="M36 104h79c7 0 13 6 13 13H27c0-7 4-13 9-13z" fill="#111827" opacity=".12"/>
+</svg>

@@ -1,5 +1,6 @@
 const Listing = require('../models/Listing');
 const Review = require('../models/Review');
+const Service = require('../models/Service');
 const User = require('../models/User');
 const { getRequesterTelegramId, isAdminTelegramId } = require('../middleware/auth');
 const { destroyImages, uploadImages } = require('../utils/cloudinary');
@@ -13,6 +14,7 @@ async function createReview(req, res) {
       user_id,
       target_user_id,
       listing_id = null,
+      service_id = null,
       review_type,
       text,
       screenshot
@@ -49,6 +51,10 @@ async function createReview(req, res) {
       return res.status(404).json({ error: 'Продавец не найден' });
     }
 
+    if (listing_id && service_id) {
+      return res.status(400).json({ error: 'Отзыв можно привязать только к одной публикации' });
+    }
+
     if (listing_id) {
       const listing = await Listing.findById(listing_id);
       if (!listing) {
@@ -57,6 +63,17 @@ async function createReview(req, res) {
 
       if (listing.user_id !== target_user_id) {
         return res.status(400).json({ error: 'Этот товар не принадлежит выбранному продавцу' });
+      }
+    }
+
+    if (service_id) {
+      const service = await Service.findById(service_id);
+      if (!service) {
+        return res.status(404).json({ error: 'Услуга не найдена' });
+      }
+
+      if (service.user_id !== target_user_id) {
+        return res.status(400).json({ error: 'Эта услуга не принадлежит выбранному продавцу' });
       }
     }
 
@@ -71,6 +88,7 @@ async function createReview(req, res) {
       target_user_id,
       author_user_id: user_id,
       listing_id,
+      service_id,
       review_type,
       text: String(text).trim(),
       screenshot_url: uploadedScreenshotUrls[0]
@@ -83,6 +101,101 @@ async function createReview(req, res) {
       await destroyImages(uploadedScreenshotUrls);
     }
     res.status(500).json({ error: 'Не удалось отправить отзыв' });
+  }
+}
+
+async function createAdminSeededReview(req, res) {
+  let uploadedAvatarUrls = [];
+
+  try {
+    const {
+      target_user_id,
+      listing_id = null,
+      service_id = null,
+      review_type = 'product',
+      text,
+      author_name,
+      avatar
+    } = req.body;
+    const requesterTelegramId = getRequesterTelegramId(req);
+
+    if (!requesterTelegramId || !isAdminTelegramId(requesterTelegramId)) {
+      return res.status(403).json({ error: 'Доступно только администратору' });
+    }
+
+    const admin = await User.findByTelegramId(requesterTelegramId);
+    if (!admin) {
+      return res.status(401).json({ error: 'Администратор не найден' });
+    }
+
+    if (!target_user_id || !text || !author_name) {
+      return res.status(400).json({ error: 'Введите имя автора и текст отзыва' });
+    }
+
+    if (!['seller', 'product'].includes(review_type)) {
+      return res.status(400).json({ error: 'Некорректный тип отзыва' });
+    }
+
+    if (listing_id && service_id) {
+      return res.status(400).json({ error: 'Отзыв можно привязать только к одной публикации' });
+    }
+
+    const targetUser = await User.findById(target_user_id);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'Продавец не найден' });
+    }
+
+    if (listing_id) {
+      const listing = await Listing.findById(listing_id);
+      if (!listing) {
+        return res.status(404).json({ error: 'Товар не найден' });
+      }
+
+      if (listing.user_id !== target_user_id) {
+        return res.status(400).json({ error: 'Этот товар не принадлежит выбранному продавцу' });
+      }
+    }
+
+    if (service_id) {
+      const service = await Service.findById(service_id);
+      if (!service) {
+        return res.status(404).json({ error: 'Услуга не найдена' });
+      }
+
+      if (service.user_id !== target_user_id) {
+        return res.status(400).json({ error: 'Эта услуга не принадлежит выбранному продавцу' });
+      }
+    }
+
+    if (avatar) {
+      const avatarValidation = validateImages([avatar]);
+      if (!avatarValidation.isValid || avatarValidation.images.length !== 1) {
+        return res.status(400).json({ error: 'Загрузите корректную фотографию аватарки' });
+      }
+
+      uploadedAvatarUrls = await uploadImages(avatarValidation.images, 'review');
+    }
+
+    const reviewId = await Review.create({
+      target_user_id,
+      author_user_id: admin.id,
+      listing_id,
+      service_id,
+      review_type,
+      text: String(text).trim(),
+      screenshot_url: '',
+      display_author_name: String(author_name).trim(),
+      display_author_avatar_url: uploadedAvatarUrls[0] || '',
+      is_admin_seeded: true
+    });
+
+    res.json({ success: true, review_id: reviewId });
+  } catch (error) {
+    console.error('Error creating admin seeded review:', error);
+    if (uploadedAvatarUrls.length) {
+      await destroyImages(uploadedAvatarUrls);
+    }
+    res.status(500).json({ error: 'Не удалось добавить отзыв' });
   }
 }
 
@@ -123,5 +236,6 @@ async function deleteReview(req, res) {
 
 module.exports = {
   createReview,
+  createAdminSeededReview,
   deleteReview
 };

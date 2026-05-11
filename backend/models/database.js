@@ -108,9 +108,13 @@ const SQLITE_SCHEMA = [
     target_user_id TEXT NOT NULL,
     author_user_id TEXT NOT NULL,
     listing_id TEXT,
+    service_id TEXT,
     review_type TEXT NOT NULL,
     text TEXT NOT NULL,
     screenshot_url TEXT NOT NULL,
+    display_author_name TEXT,
+    display_author_avatar_url TEXT,
+    is_admin_seeded BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(target_user_id) REFERENCES users(id),
     FOREIGN KEY(author_user_id) REFERENCES users(id),
@@ -222,9 +226,13 @@ const POSTGRES_SCHEMA = [
     target_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     author_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     listing_id TEXT REFERENCES listings(id) ON DELETE SET NULL,
+    service_id TEXT REFERENCES services(id) ON DELETE SET NULL,
     review_type TEXT NOT NULL,
     text TEXT NOT NULL,
     screenshot_url TEXT NOT NULL,
+    display_author_name TEXT,
+    display_author_avatar_url TEXT,
+    is_admin_seeded BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE INDEX IF NOT EXISTS idx_listings_user_id ON listings(user_id)`,
@@ -380,6 +388,10 @@ async function applyMigrations() {
   await ensureColumn('listings', 'archived_notified_at', 'TIMESTAMPTZ');
   await ensureColumn('services', 'expires_at', 'TIMESTAMPTZ');
   await ensureColumn('services', 'archived_notified_at', 'TIMESTAMPTZ');
+  await ensureColumn('reviews', 'service_id', 'TEXT');
+  await ensureColumn('reviews', 'display_author_name', 'TEXT');
+  await ensureColumn('reviews', 'display_author_avatar_url', 'TEXT');
+  await ensureColumn('reviews', 'is_admin_seeded', 'BOOLEAN DEFAULT FALSE');
 
   if (dialect === 'postgres') {
     await pgPool.query(`UPDATE listings SET expires_at = created_at + INTERVAL '30 days' WHERE expires_at IS NULL`);

@@ -97,6 +97,7 @@ html, body, #app {
     display: flex;
     align-items: center;
     gap: 14px;
+    min-width: 0;
 }
 
 .brand-mark {
@@ -119,6 +120,7 @@ html, body, #app {
 .brand-copy {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .brand-title {
@@ -131,8 +133,8 @@ html, body, #app {
     font-size: 12px;
     color: var(--muted-color);
     margin-top: 4px;
-    max-width: 210px;
     line-height: 1.2;
+    white-space: nowrap;
 }
 
 .header-icons {
@@ -258,14 +260,20 @@ html, body, #app {
 }
 
 .modal-close {
-    position: absolute;
+    position: sticky;
     top: 10px;
-    right: 10px;
-    background: none;
+    float: right;
+    z-index: 5;
+    width: 34px;
+    height: 34px;
+    margin: -16px -16px 8px 8px;
+    background: rgba(255, 255, 255, 0.94);
     border: none;
+    border-radius: 50%;
     font-size: 24px;
     cursor: pointer;
     color: #666;
+    box-shadow: var(--shadow-soft);
 }
 
 .modal-close:hover {
@@ -450,10 +458,10 @@ html, body, #app {
     justify-content: center;
     width: 62px;
     height: 62px;
-    border: none;
+    border: 1px solid rgba(139, 92, 246, 0.16);
     border-radius: 22px;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: var(--shadow-soft);
+    background: linear-gradient(135deg, rgba(243, 232, 255, 0.96), rgba(224, 242, 254, 0.96));
+    box-shadow: 0 12px 24px rgba(139, 92, 246, 0.12);
     cursor: pointer;
 }
 
@@ -468,7 +476,7 @@ html, body, #app {
     display: block;
     height: 3px;
     border-radius: 999px;
-    background: var(--secondary-color);
+    background: linear-gradient(90deg, var(--brand-violet), var(--brand-blue));
 }
 
 .filter-lines span::after {
@@ -478,7 +486,7 @@ html, body, #app {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: var(--secondary-color);
+    background: linear-gradient(135deg, var(--brand-lilac), var(--brand-blue));
     transform: translateY(-50%);
 }
 
@@ -518,6 +526,11 @@ html, body, #app {
     scroll-snap-align: start;
 }
 
+.category-showcase-grid .category-tile-all,
+.category-showcase-grid .category-tile-featured {
+    grid-row: 1;
+}
+
 .category-tile {
     position: relative;
     border: none;
@@ -540,6 +553,8 @@ html, body, #app {
 }
 
 .category-tile strong {
+    position: relative;
+    z-index: 2;
     display: block;
     font-size: 16px;
     line-height: 1.1;
@@ -547,14 +562,45 @@ html, body, #app {
 }
 
 .category-tile span {
+    position: relative;
+    z-index: 2;
     display: block;
     font-size: 12px;
     color: rgba(17, 24, 39, 0.62);
 }
 
-.category-tile-icon {
-    font-size: 48px;
-    align-self: end;
+.category-tile-copy {
+    position: relative;
+    z-index: 2;
+    max-width: 72%;
+}
+
+.category-tile-visual {
+    position: absolute;
+    right: -12px;
+    bottom: -16px;
+    z-index: 1;
+    display: flex;
+    width: 62%;
+    max-width: 150px;
+    height: 76%;
+    align-items: flex-end;
+    justify-content: flex-end;
+    pointer-events: none;
+}
+
+.category-tile-visual img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: right bottom;
+    filter: drop-shadow(0 16px 18px rgba(79, 70, 229, 0.16));
+}
+
+.category-tile-all .category-tile-visual {
+    right: -6px;
+    bottom: -12px;
+    opacity: 0.98;
 }
 
 .category-tile.active {
@@ -627,6 +673,16 @@ html, body, #app {
 .promo-banner p {
     color: var(--muted-color);
     line-height: 1.6;
+}
+
+.promo-rules-line {
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.promo-rules-line::-webkit-scrollbar {
+    display: none;
 }
 
 .rules-link {
@@ -765,6 +821,16 @@ html, body, #app {
 .filter-modal-content {
     max-width: 760px;
     padding-top: 22px;
+}
+
+.reset-results-btn {
+    border: 1px solid rgba(139, 92, 246, 0.18);
+    background: var(--brand-gradient-soft);
+    color: var(--secondary-color);
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-weight: 800;
+    cursor: pointer;
 }
 
 .category-explorer-modal {
@@ -1812,8 +1878,16 @@ html, body, #app {
         font-size: 14px;
     }
 
-    .category-tile-icon {
-        font-size: 30px;
+    .category-tile-copy {
+        max-width: 76%;
+    }
+
+    .category-tile-visual {
+        right: -14px;
+        bottom: -18px;
+        width: 64%;
+        max-width: 110px;
+        height: 70%;
     }
 
     .category-explorer-group {

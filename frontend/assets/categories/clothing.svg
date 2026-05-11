@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 140">
+  <defs>
+    <linearGradient id="shoe" x1="34" y1="79" x2="148" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="shirt" x1="104" y1="23" x2="158" y2="85" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f061c7"/>
+      <stop offset="1" stop-color="#93c5fd"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="140" fill="none"/>
+  <path d="M113 35l14-12 14 12 20 10-10 22-12-6v41h-54V61l-12 6-10-22 20-10 14-12 16 12z" fill="url(#shirt)" opacity=".95"/>
+  <path d="M39 85c23 18 49 22 81 13 13-4 27 4 31 17H27c-6 0-10-5-8-11 3-10 10-17 20-19z" fill="url(#shoe)"/>
+  <path d="M58 91l17-20" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".78"/>
+  <path d="M79 98h58" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".5"/>
+</svg>

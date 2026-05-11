@@ -50,7 +50,7 @@
                         <section id="promoBannerSection" class="promo-banner">
                             <div class="promo-copy">
                                 <h2>Покупайте и продавайте по всей Черногории</h2>
-                                <p>Недвижимость, авто, услуги и подработка в привычном формате объявлений. <button type="button" class="rules-link" onclick="openPlatformRulesModal()">Подробнее о правилах платформы</button></p>
+                                <p class="promo-rules-line">Недвижимость, авто, услуги и подработка в привычном формате объявлений. <button type="button" class="rules-link" onclick="openPlatformRulesModal()">Подробнее о правилах платформы</button></p>
                             </div>
                         </section>
 
@@ -133,6 +133,7 @@
                                     <p class="section-kicker">Результаты</p>
                                     <h3 id="searchResultsTitle">Найденные объявления</h3>
                                 </div>
+                                <button id="resetSearchResultsBtn" type="button" class="reset-results-btn hidden" onclick="resetSearchResults()">Сбросить</button>
                             </div>
                             <div id="searchResults" class="items-grid"></div>
                         </section>

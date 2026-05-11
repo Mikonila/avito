@@ -124,7 +124,7 @@ async function sendWelcome(bot, msg) {
 
   await bot.sendMessage(
     chatId,
-    `Добро пожаловать, ${firstName}! 👋\n\n` +
+    `Добро пожаловать, ${firstName}!\n\n` +
       'Это Violet — маркетплейс Черногории. Здесь можно:\n\n' +
       '• продавать и покупать вещи по всей Черногории\n' +
       '• размещать услуги\n' +

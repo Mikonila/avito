@@ -12,6 +12,24 @@ const PROMOTION_PLANS = {
     week: { label: '7 дней', stars: 150, rub: 265 },
     month: { label: '1 месяц', stars: 250, rub: 429 }
 };
+const CATEGORY_IMAGE_MAP = {
+    all: 'assets/categories/all.svg',
+    'cat-1': 'assets/categories/electronics.svg',
+    'cat-2': 'assets/categories/auto.svg',
+    'cat-3': 'assets/categories/realty.svg',
+    'cat-4': 'assets/categories/home.svg',
+    'cat-5': 'assets/categories/clothing.svg',
+    'cat-6': 'assets/categories/hobby.svg',
+    'cat-7': 'assets/categories/kids.svg',
+    'cat-8': 'assets/categories/services.svg',
+    'cat-9': 'assets/categories/pets.svg',
+    'cat-10': 'assets/categories/business.svg',
+    'cat-11': 'assets/categories/work.svg',
+    'cat-12': 'assets/categories/free.svg',
+    'cat-13': 'assets/categories/afisha.svg',
+    'cat-14': 'assets/categories/medicine.svg',
+    fallback: 'assets/categories/other.svg'
+};
 
 let state = {
     user: null,
@@ -117,6 +135,10 @@ function getAuthHeaders(includeJson = true) {
     }
 
     return headers;
+}
+
+function getCategoryImage(categoryId) {
+    return CATEGORY_IMAGE_MAP[categoryId] || CATEGORY_IMAGE_MAP.fallback;
 }
 
 function isAdminUser() {
@@ -396,21 +418,25 @@ function renderCategoryShowcase() {
                 <strong>Все</strong>
                 <span>Открыть все категории и подкатегории</span>
             </div>
-            <div class="category-tile-icon">✨</div>
+            <div class="category-tile-visual">
+                <img src="${getCategoryImage('all')}" alt="" loading="lazy">
+            </div>
         </button>
     `;
 
     const categoryTiles = state.categories.map((category, index) => `
         <button
             type="button"
-            class="category-tile category-tile-${(index % 6) + 1} ${state.filters.categoryId === category.id ? 'active' : ''}"
+            class="category-tile category-tile-${(index % 6) + 1} ${index === 0 ? 'category-tile-featured' : ''} ${state.filters.categoryId === category.id ? 'active' : ''}"
             data-category-tile="${category.id}"
         >
             <div class="category-tile-copy">
                 <strong>${category.name}</strong>
                 <span>${category.subcategories?.length ? `${category.subcategories.length} раздела` : 'Открыть объявления'}</span>
             </div>
-            <div class="category-tile-icon">${category.icon || '📦'}</div>
+            <div class="category-tile-visual">
+                <img src="${getCategoryImage(category.id)}" alt="" loading="lazy">
+            </div>
         </button>
     `).join('');
 
@@ -1120,6 +1146,7 @@ async function performSearch() {
                 : state.filters.query
                     ? `Результаты: ${state.filters.query}`
                     : 'Найденные объявления';
+        document.getElementById('resetSearchResultsBtn')?.classList.toggle('hidden', !state.filters.query);
         renderListings(listings, 'searchResults');
         setSearchViewMode('results');
         closeFiltersModal();
@@ -1128,6 +1155,27 @@ async function performSearch() {
         console.error('Search error:', error);
     }
 }
+
+window.resetSearchResults = function() {
+    state.filters.query = '';
+    const queryInput = document.getElementById('searchTriggerInput');
+
+    if (queryInput) {
+        queryInput.value = '';
+    }
+
+    updateSearchTriggerLabel();
+    updateSearchSubmitVisibility();
+
+    if (state.filters.categoryId || state.filters.cityId || state.filters.minPrice || state.filters.maxPrice || state.filters.subcategoryId || state.filters.sort !== 'default') {
+        performSearch();
+        return;
+    }
+
+    document.getElementById('resetSearchResultsBtn')?.classList.add('hidden');
+    setSearchViewMode('home');
+    loadRandomListings();
+};
 
 async function loadRandomListings() {
     try {

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 140">
+  <defs>
+    <linearGradient id="chair" x1="54" y1="32" x2="140" y2="119" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#dff6ff"/>
+      <stop offset=".5" stop-color="#8bd3ff"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="140" fill="none"/>
+  <path d="M58 40h62c16 0 29 13 29 29v19H83c-17 0-31-14-31-31V46c0-3 3-6 6-6z" fill="url(#chair)"/>
+  <path d="M38 78h91c13 0 23 10 23 23v9H58c-11 0-20-9-20-20V78z" fill="#7c3aed" opacity=".58"/>
+  <path d="M59 110v19M137 110v19" stroke="#475569" stroke-width="7" stroke-linecap="round"/>
+  <path d="M73 62h34" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity=".7"/>
+</svg>
