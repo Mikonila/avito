@@ -700,7 +700,7 @@ html, body, #app {
 
 .promo-banner {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1.15fr) minmax(240px, 0.85fr);
     align-items: center;
     gap: 20px;
     padding: 24px;
@@ -732,25 +732,21 @@ html, body, #app {
 .promo-banner h2 {
     max-width: 100%;
     font-size: clamp(24px, 4vw, 34px);
-    line-height: 1.06;
+    line-height: 1.1;
     margin-bottom: 12px;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
+    text-wrap: balance;
 }
 
 .promo-banner p {
     color: var(--muted-color);
-    line-height: 1.6;
-    overflow-wrap: anywhere;
+    line-height: 1.55;
+    overflow-wrap: normal;
+    word-break: normal;
 }
 
 .promo-rules-line {
-    white-space: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-.promo-rules-line::-webkit-scrollbar {
-    display: none;
+    white-space: normal;
 }
 
 .rules-link {
@@ -780,8 +776,47 @@ html, body, #app {
     position: relative;
     min-height: 220px;
     border-radius: 28px;
-    background: var(--brand-gradient);
+    background:
+        radial-gradient(circle at 18% 22%, rgba(192, 132, 252, 0.25), transparent 24%),
+        radial-gradient(circle at 84% 26%, rgba(103, 199, 255, 0.24), transparent 28%),
+        linear-gradient(135deg, #f6f1ff, #eef8ff);
     overflow: hidden;
+    border: 1px solid rgba(139, 92, 246, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.promo-photo-card {
+    position: absolute;
+    overflow: hidden;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(139, 92, 246, 0.12);
+    box-shadow: 0 18px 32px rgba(139, 92, 246, 0.12);
+}
+
+.promo-photo-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.promo-photo-card-main {
+    inset: 20px 24px 24px 92px;
+}
+
+.promo-photo-card-top {
+    width: 118px;
+    height: 118px;
+    top: 26px;
+    left: 26px;
+}
+
+.promo-photo-card-bottom {
+    width: 132px;
+    height: 132px;
+    right: 18px;
+    bottom: 18px;
 }
 
 .promo-shape {
@@ -2028,6 +2063,26 @@ html, body, #app {
         font-size: 28px;
     }
 
+    .promo-visual {
+        min-height: 190px;
+    }
+
+    .promo-photo-card-main {
+        inset: 18px 20px 20px 86px;
+    }
+
+    .promo-photo-card-top {
+        width: 104px;
+        height: 104px;
+        top: 20px;
+        left: 20px;
+    }
+
+    .promo-photo-card-bottom {
+        width: 118px;
+        height: 118px;
+    }
+
     .items-grid {
         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     }
@@ -2129,10 +2184,33 @@ html, body, #app {
 
     .promo-banner p {
         font-size: 13px;
+        line-height: 1.5;
     }
 
     .promo-visual {
-        min-height: 120px;
+        min-height: 144px;
+    }
+
+    .promo-photo-card {
+        border-radius: 18px;
+    }
+
+    .promo-photo-card-main {
+        inset: 14px 14px 14px 70px;
+    }
+
+    .promo-photo-card-top {
+        width: 82px;
+        height: 82px;
+        top: 14px;
+        left: 14px;
+    }
+
+    .promo-photo-card-bottom {
+        width: 90px;
+        height: 90px;
+        right: 12px;
+        bottom: 12px;
     }
 
     .category-showcase-grid {
