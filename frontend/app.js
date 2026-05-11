@@ -24,7 +24,6 @@ const CATEGORY_IMAGE_MAP = {
     'cat-7': 'assets/categories/kids.svg',
     'cat-8': 'assets/categories/services.svg',
     'cat-9': 'assets/categories/pets.svg',
-    'cat-10': 'assets/categories/business.svg',
     'cat-11': 'assets/categories/work.svg',
     'cat-12': 'assets/categories/free.svg',
     'cat-13': 'assets/categories/afisha.svg',
@@ -533,10 +532,13 @@ function renderCategoryShowcase() {
         </button>
     `;
 
-    const showcaseCategories = [...state.categories];
-    if (showcaseCategories[0]?.id === 'cat-13' && showcaseCategories[1]) {
-        [showcaseCategories[0], showcaseCategories[1]] = [showcaseCategories[1], showcaseCategories[0]];
-    }
+    const showcasePriority = ['cat-11', 'cat-13', 'cat-12'];
+    const showcaseCategories = [
+        ...showcasePriority
+            .map((id) => state.categories.find((category) => category.id === id))
+            .filter(Boolean),
+        ...state.categories.filter((category) => !showcasePriority.includes(category.id))
+    ];
 
     const categoryTiles = showcaseCategories.map((category, index) => `
         <button

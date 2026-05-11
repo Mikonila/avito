@@ -40,22 +40,14 @@ const CATEGORIES = [
     icon: '🛠️',
     subcategories: [
       { id: 'visaran', name: 'Визаран' },
-      { id: 'building', name: 'Строительные работы' },
+      { id: 'building', name: 'Стройка/ремонт' },
       { id: 'cleaning', name: 'Клининг' },
-      { id: 'exchange', name: 'Обмен валюты' }
+      { id: 'education', name: 'Обучение' },
+      { id: 'events', name: 'Специалисты' },
+      { id: 'other', name: 'Персонал' }
     ]
   },
   { id: 'cat-9', name: 'Животные', icon: '🐾' },
-  {
-    id: 'cat-10',
-    name: 'Бизнес',
-    icon: '💼',
-    subcategories: [
-      { id: 'services', name: 'Услуги' },
-      { id: 'accounting', name: 'Бухгалтерия' },
-      { id: 'it', name: 'IT' }
-    ]
-  },
   {
     id: 'cat-11',
     name: 'Работа и подработка',
@@ -80,8 +72,8 @@ const CITIES = [
   { id: 'city-6', name: 'Херцег-Нови' },
   { id: 'city-7', name: 'Цетине' },
   { id: 'city-8', name: 'Никшич' },
-  { id: 'city-9', name: 'Плевля' },
-  { id: 'city-10', name: 'Улцинь' }
+  { id: 'city-9', name: 'Улцинь' },
+  { id: 'city-10', name: 'Остальные города' }
 ];
 
 function getInsertOrIgnoreQuery(tableName) {
