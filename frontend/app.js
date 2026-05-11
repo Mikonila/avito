@@ -53,6 +53,7 @@ let state = {
     editingItem: null,
     editImages: [],
     adminReviewAvatar: null,
+    profileDraft: null,
     viewedProfileId: null,
     promotionListingId: null,
     promotionListingTitle: '',
@@ -258,6 +259,53 @@ async function fetchPublications({ cityId = '', categoryId = '' } = {}) {
 
 function getProfileDisplayName(user) {
     return [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username || 'Пользователь';
+}
+
+function buildProfileInfoRow(label, valueMarkup, fieldKey = '', isOwnProfile = false) {
+    const editButton = isOwnProfile && fieldKey
+        ? `<button type="button" class="profile-edit-btn" onclick="openProfileFieldEditor('${fieldKey}')" aria-label="Изменить ${escapeHtml(label)}">✏</button>`
+        : '';
+
+    return `
+        <div class="profile-info-row">
+            <div class="profile-info-copy">
+                <span class="profile-info-label">${escapeHtml(label)}</span>
+                <div class="profile-info-value">${valueMarkup}</div>
+            </div>
+            ${editButton}
+        </div>
+    `;
+}
+
+function renderProfileInfo(user, isOwnProfile) {
+    const profileData = isOwnProfile ? (state.profileDraft || user) : user;
+    const usernameMarkup = profileData.username ? getUsernameLink(profileData.username) : 'Не указано';
+    const firstName = escapeHtml(profileData.first_name || 'Не указано');
+    const lastName = escapeHtml(profileData.last_name || 'Не указано');
+    const phone = escapeHtml(profileData.phone || 'Не указан');
+    const city = escapeHtml(getCityName(profileData.city));
+    const about = escapeHtml(profileData.about || 'Пользователь пока ничего не рассказал о себе');
+    const avatarMarkup = getAvatarMarkup(profileData.avatar_url, getAvatarInitial(profileData));
+
+    return `
+        <div class="profile-summary-card">
+            <div class="profile-summary-avatar">
+                ${avatarMarkup}
+            </div>
+            <div class="profile-summary-meta">
+                <h3>${escapeHtml(getProfileDisplayName(profileData))}</h3>
+                <div class="profile-summary-subtitle">${profileData.username ? usernameMarkup : 'Профиль пользователя'}</div>
+            </div>
+        </div>
+        <div class="profile-info-list">
+            ${buildProfileInfoRow('Имя пользователя', usernameMarkup, 'username', isOwnProfile)}
+            ${buildProfileInfoRow('Имя', firstName, 'first_name', isOwnProfile)}
+            ${buildProfileInfoRow('Фамилия', lastName, 'last_name', isOwnProfile)}
+            ${buildProfileInfoRow('Телефон', phone, 'phone', isOwnProfile)}
+            ${buildProfileInfoRow('Город', city, 'city', isOwnProfile)}
+            ${buildProfileInfoRow('О себе', about, 'about', isOwnProfile)}
+        </div>
+    `;
 }
 
 function getUsernameLink(username) {
@@ -1539,25 +1587,21 @@ async function showUserProfile(userId) {
 
         const isOwnProfile = state.user?.id === userId;
         const canModerate = state.user?.is_admin === true;
+        state.profileDraft = isOwnProfile
+            ? {
+                first_name: user.first_name || '',
+                last_name: user.last_name || '',
+                username: user.username || '',
+                phone: user.phone || '',
+                city: user.city || '',
+                about: user.about || '',
+                avatar_url: user.avatar_url || ''
+            }
+            : null;
 
-        document.getElementById('profileViewInfo').innerHTML = `
-            <p><strong>Имя пользователя:</strong> ${getUsernameLink(user.username)}</p>
-            <p><strong>Имя:</strong> ${getProfileDisplayName(user)}</p>
-            <p><strong>Телефон:</strong> ${user.phone || 'Не указан'}</p>
-            <p><strong>Город:</strong> ${getCityName(user.city)}</p>
-            <p><strong>О себе:</strong> ${user.about || 'Пользователь пока ничего не рассказал о себе'}</p>
-        `;
-
-        document.getElementById('profileEditForm').classList.toggle('hidden', !isOwnProfile);
+        document.getElementById('profileViewInfo').innerHTML = renderProfileInfo(user, isOwnProfile);
         document.getElementById('profileSaveBtn').classList.toggle('hidden', !isOwnProfile);
         document.getElementById('profileLogoutBtn').classList.toggle('hidden', !isOwnProfile);
-
-        document.getElementById('profileFirstName').value = user.first_name || '';
-        document.getElementById('profileLastName').value = user.last_name || '';
-        document.getElementById('profileUsername').value = user.username || '';
-        document.getElementById('profilePhone').value = user.phone || '';
-        document.getElementById('profileCitySelect').value = user.city ? (state.cities.find((city) => city.name === user.city || city.id === user.city)?.id || '') : '';
-        document.getElementById('profileAbout').value = user.about || '';
 
         renderReviews(user.reviews || [], canModerate);
         document.getElementById('profileModal').classList.remove('hidden');
@@ -1706,19 +1750,49 @@ window.showProfileModal = async function() {
 
 window.closeProfileModal = function() {
     document.getElementById('profileModal').classList.add('hidden');
+    state.profileDraft = null;
+};
+
+window.openProfileFieldEditor = function(fieldKey) {
+    if (!state.profileDraft) {
+        return;
+    }
+
+    const labels = {
+        username: 'имя пользователя',
+        first_name: 'имя',
+        last_name: 'фамилию',
+        phone: 'телефон',
+        city: 'город',
+        about: 'информацию о себе'
+    };
+    const currentValue = state.profileDraft[fieldKey] || '';
+    const nextValue = window.prompt(`Введите ${labels[fieldKey] || 'значение'}`, currentValue);
+
+    if (nextValue === null) {
+        return;
+    }
+
+    state.profileDraft[fieldKey] = nextValue.trim();
+    document.getElementById('profileViewInfo').innerHTML = renderProfileInfo(
+        { ...state.user, ...state.profileDraft },
+        true
+    );
 };
 
 window.updateProfile = async function() {
     try {
-        const cityId = document.getElementById('profileCitySelect').value;
-        const cityName = cityId ? getCityName(cityId) : '';
+        if (!state.profileDraft) {
+            return;
+        }
+
         const payload = {
-            first_name: document.getElementById('profileFirstName').value.trim(),
-            last_name: document.getElementById('profileLastName').value.trim(),
-            username: document.getElementById('profileUsername').value.trim(),
-            phone: document.getElementById('profilePhone').value.trim(),
-            city: cityName,
-            about: document.getElementById('profileAbout').value.trim()
+            first_name: state.profileDraft.first_name || '',
+            last_name: state.profileDraft.last_name || '',
+            username: state.profileDraft.username || '',
+            phone: state.profileDraft.phone || '',
+            city: state.profileDraft.city || '',
+            about: state.profileDraft.about || ''
         };
 
         const response = await fetch(`${API_BASE}/users/profile/${state.user.id}`, {
