@@ -36,6 +36,7 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     overflow-x: hidden;
+    padding-bottom: 96px;
 }
 
 html, body, #app {
@@ -201,27 +202,37 @@ html, body, #app {
 
 .tabs {
     display: flex;
-    background: transparent;
-    position: sticky;
-    top: 75px;
-    z-index: 110;
     overflow-x: auto;
-    max-width: 1240px;
-    margin: 14px auto 0;
-    padding: 0 16px 10px;
     gap: 10px;
 }
 
+.footer-tabs {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    z-index: 140;
+    width: min(1240px, calc(100% - 24px));
+    padding: 10px;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(139, 92, 246, 0.12);
+    border-radius: 24px;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+}
+
 .tab {
-    min-width: max-content;
-    padding: 13px 18px;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 14px 16px;
     border: 1px solid var(--border-color);
     background: rgba(255, 255, 255, 0.88);
-    border-radius: 999px;
+    border-radius: 16px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--muted-color);
+    text-align: center;
     transition: all 0.3s;
 }
 
@@ -235,7 +246,7 @@ html, body, #app {
 .tab-content {
     max-width: 1240px;
     margin: 0 auto;
-    padding: 0 16px 40px;
+    padding: 0 16px 110px;
 }
 
 .tab-pane {
@@ -454,14 +465,14 @@ html, body, #app {
     flex: 1;
     border: none;
     background: transparent;
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text-color);
+    font-size: 14px;
+    font-weight: 400;
+    color: #7b8194;
     font-family: inherit;
 }
 
 .search-trigger-input::placeholder {
-    color: var(--muted-color);
+    color: #a3abbd;
 }
 
 .search-trigger-input:focus {
@@ -786,6 +797,10 @@ html, body, #app {
     display: flex;
     flex-direction: column;
     gap: 14px;
+}
+
+.category-recommendations-title {
+    display: none;
 }
 
 .category-landing.hidden,
@@ -1188,7 +1203,7 @@ html, body, #app {
 }
 
 .item-price {
-    color: var(--secondary-color);
+    color: #67c7ff;
     font-size: 22px;
     font-weight: 800;
     margin-bottom: 12px;
@@ -1224,12 +1239,17 @@ html, body, #app {
     flex: 1 1 30%;
     padding: 12px;
     border: none;
-    background: #eef2ff;
+    background: linear-gradient(135deg, #67c7ff, #8bd9ff);
     border-radius: 12px;
     cursor: pointer;
     font-size: 12px;
     font-weight: 700;
-    color: var(--primary-dark);
+    color: white;
+    box-shadow: 0 10px 20px rgba(103, 199, 255, 0.2);
+}
+
+.item-actions button:hover {
+    filter: brightness(1.03);
 }
 
 .item-actions button.delete {
@@ -1526,6 +1546,24 @@ html, body, #app {
 
 #profileViewInfo strong {
     color: var(--primary-color);
+}
+
+.profile-username-link {
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    padding: 0;
+    background: none;
+    color: var(--primary-dark);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.profile-username-link:hover {
+    color: var(--secondary-color);
 }
 
 .profile-actions {
@@ -1885,6 +1923,10 @@ html, body, #app {
 }
 
 @media (max-width: 480px) {
+    body {
+        padding-bottom: 90px;
+    }
+
     .items-grid {
         grid-template-columns: 1fr 1fr;
         gap: 12px;
@@ -1907,6 +1949,14 @@ html, body, #app {
 
     .brand-title {
         font-size: 18px;
+    }
+
+    .footer-tabs {
+        width: calc(100% - 16px);
+        bottom: 8px;
+        padding: 8px;
+        gap: 8px;
+        border-radius: 20px;
     }
 
     .form-shell,

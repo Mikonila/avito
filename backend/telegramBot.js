@@ -10,6 +10,7 @@ let startupPromise = null;
 let webhookRouteRegistered = false;
 let handlersRegistered = false;
 const PROMOTION_PLANS = {
+  test: { days: 1, stars: 1, label: 'Тест' },
   three_days: { days: 3, stars: 100, label: '3 дня' },
   week: { days: 7, stars: 150, label: '7 дней' },
   month: { days: 30, stars: 250, label: '1 месяц' }

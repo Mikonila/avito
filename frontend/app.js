@@ -8,6 +8,7 @@ const OTHER_SUBCATEGORY = { id: 'other', name: 'Другое' };
 const SUPPORT_LINK = 'https://t.me/helionstudio';
 const SERVICE_PUBLICATION_PLAN = { key: 'month', label: '1 месяц', stars: 100, rub: 182 };
 const PROMOTION_PLANS = {
+    test: { label: 'Тест', stars: 1, rub: 2 },
     three_days: { label: '3 дня', stars: 100, rub: 182 },
     week: { label: '7 дней', stars: 150, rub: 265 },
     month: { label: '1 месяц', stars: 250, rub: 429 }
@@ -259,6 +260,19 @@ function getProfileDisplayName(user) {
     return [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username || 'Пользователь';
 }
 
+function getUsernameLink(username) {
+    if (!username) {
+        return 'Не указано';
+    }
+
+    const safeUsername = String(username).replace(/^@+/, '').trim();
+    if (!safeUsername) {
+        return 'Не указано';
+    }
+
+    return `<button type="button" class="profile-username-link" onclick="openTelegramUsername('${escapeHtml(safeUsername)}')">@${escapeHtml(safeUsername)}</button>`;
+}
+
 function getAvatarInitial(user) {
     const source = String(user?.first_name || user?.username || '').trim();
     if (!source) {
@@ -431,6 +445,21 @@ window.openSupportChat = function() {
     }
 
     window.open(SUPPORT_LINK, '_blank', 'noopener,noreferrer');
+};
+
+window.openTelegramUsername = function(username) {
+    const safeUsername = String(username || '').replace(/^@+/, '').trim();
+    if (!safeUsername) {
+        return;
+    }
+
+    const telegramLink = `https://t.me/${safeUsername}`;
+    if (tg?.openTelegramLink) {
+        tg.openTelegramLink(telegramLink);
+        return;
+    }
+
+    window.open(telegramLink, '_blank', 'noopener,noreferrer');
 };
 
 function renderCategoryShowcase() {
@@ -1488,7 +1517,7 @@ async function showUserProfile(userId) {
         const canModerate = state.user?.is_admin === true;
 
         document.getElementById('profileViewInfo').innerHTML = `
-            <p><strong>Имя пользователя:</strong> ${user.username || 'Не указано'}</p>
+            <p><strong>Имя пользователя:</strong> ${getUsernameLink(user.username)}</p>
             <p><strong>Имя:</strong> ${getProfileDisplayName(user)}</p>
             <p><strong>Телефон:</strong> ${user.phone || 'Не указан'}</p>
             <p><strong>Город:</strong> ${getCityName(user.city)}</p>
@@ -1618,7 +1647,7 @@ async function showSellerProfilePage(userId) {
                 </div>
                 <div>
                     <h3>${getProfileDisplayName(user)}</h3>
-                    <p>${user.username ? `@${user.username}` : 'Username не указан'}</p>
+                    <p>${getUsernameLink(user.username)}</p>
                     <p>${getCityName(user.city)}</p>
                     <p>${user.about || 'Пользователь пока ничего не рассказал о себе'}</p>
                 </div>

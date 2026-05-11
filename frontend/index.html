@@ -38,12 +38,6 @@
                 </div>
             </header>
 
-            <nav class="tabs">
-                <button class="tab active" data-tab="search">Лента</button>
-                <button class="tab" data-tab="listings">Разместить объявление</button>
-                <button class="tab" data-tab="my-items">Мои объявления</button>
-            </nav>
-
             <div class="tab-content">
                 <div id="search" class="tab-pane active">
                     <section class="market-shell">
@@ -81,12 +75,6 @@
                         </div>
 
                         <section id="categoriesShowcaseSection" class="categories-showcase">
-                            <div class="section-divider compact">
-                                <div>
-                                    <p class="section-kicker">Категории</p>
-                                    <h3>Категории</h3>
-                                </div>
-                            </div>
                             <div id="categoryShowcase" class="category-showcase-grid"></div>
                         </section>
 
@@ -94,18 +82,11 @@
                             <div class="category-landing-header">
                                 <button type="button" class="category-back-btn" onclick="closeCategoryLanding()">←</button>
                                 <div>
-                                    <p class="section-kicker">Категория</p>
                                     <h2 id="categoryLandingTitle">Категория</h2>
                                 </div>
                             </div>
                             <div id="categorySubcategoryGrid" class="category-landing-grid"></div>
-
-                            <div class="section-divider compact">
-                                <div>
-                                    <p class="section-kicker">Подборка</p>
-                                    <h3 id="categoryRecommendationsTitle">Рекомендации</h3>
-                                </div>
-                            </div>
+                            <h3 id="categoryRecommendationsTitle" class="category-recommendations-title" aria-hidden="true"></h3>
                             <div id="categoryRecommendations" class="items-grid"></div>
                         </section>
 
@@ -142,7 +123,6 @@
                     <section id="homeRecommendationsBlock">
                         <section class="section-divider">
                             <div>
-                                <p class="section-kicker">Подборка</p>
                                 <h3>Рекомендуемые объявления</h3>
                             </div>
                         </section>
@@ -277,6 +257,12 @@
                     <div id="myItems" class="items-grid"></div>
                 </div>
             </div>
+
+            <nav class="tabs footer-tabs">
+                <button class="tab active" data-tab="search">Лента</button>
+                <button class="tab" data-tab="listings">Разместить объявление</button>
+                <button class="tab" data-tab="my-items">Мои объявления</button>
+            </nav>
         </div>
     </div>
 
