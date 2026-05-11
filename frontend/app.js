@@ -1460,13 +1460,10 @@ function showItemDetails(item) {
         ${item.expires_at ? `<div class="info-text">Активно до ${new Date(item.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
         ${item.is_premium ? `<div class="promotion-status">В первой линии${item.premium_expires_at ? ` до ${new Date(item.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}
         <div class="item-details-description">${item.description || 'Описание отсутствует'}</div>
-        <div class="item-details-contact">
-            <strong>Продавец</strong>
-            <p>Вы можете открыть профиль продавца или оставить отзыв.</p>
-        </div>
         <div class="item-details-actions">
+            <button class="btn btn-primary btn-block" onclick="openSellerChat()">Написать</button>
             <button class="btn btn-secondary btn-block" onclick="showSellerProfile()">Профиль продавца</button>
-            <button class="btn btn-primary btn-block" onclick="openReviewModal()">Оставить отзыв</button>
+            <button class="btn btn-secondary btn-block" onclick="openReviewModal()">Оставить отзыв</button>
             ${adminAction}
         </div>
         <div class="item-reviews-section">
@@ -1498,6 +1495,33 @@ window.showSellerProfile = async function() {
 
     closeItemModal();
     await showSellerProfilePage(state.selectedItem.user_id);
+};
+
+window.openSellerChat = async function() {
+    if (!state.selectedItem?.user_id) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/users/profile/${state.selectedItem.user_id}`, {
+            headers: getAuthHeaders(false)
+        });
+        const user = await response.json();
+
+        if (!response.ok) {
+            throw new Error(user.error || 'Не удалось загрузить профиль продавца');
+        }
+
+        if (!user.username) {
+            alert('У этого продавца не указан username в Telegram.');
+            return;
+        }
+
+        openTelegramUsername(user.username);
+    } catch (error) {
+        console.error('Error opening seller chat:', error);
+        alert(error.message || 'Не удалось открыть чат с продавцом');
+    }
 };
 
 async function showUserProfile(userId) {

@@ -146,13 +146,13 @@ html, body, #app {
 
 .header-post-btn {
     border: none;
-    background: var(--brand-gradient);
-    color: white;
+    background: linear-gradient(135deg, #e3f3ff, #ebe3ff);
+    color: var(--secondary-color);
     border-radius: 999px;
     padding: 12px 18px;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 10px 24px rgba(139, 92, 246, 0.26);
+    box-shadow: 0 10px 24px rgba(139, 92, 246, 0.12);
 }
 
 .icon-btn {
@@ -237,10 +237,10 @@ html, body, #app {
 }
 
 .tab.active {
-    color: white;
-    background: var(--brand-gradient);
+    color: var(--secondary-color);
+    background: linear-gradient(135deg, #e3f3ff, #ebe3ff);
     border-color: transparent;
-    box-shadow: 0 10px 22px rgba(139, 92, 246, 0.18);
+    box-shadow: 0 10px 22px rgba(139, 92, 246, 0.1);
 }
 
 .tab-content {
@@ -332,24 +332,24 @@ html, body, #app {
 }
 
 .btn-primary {
-    background: var(--brand-gradient);
-    color: white;
-    box-shadow: 0 10px 24px rgba(139, 92, 246, 0.24);
+    background: linear-gradient(135deg, #dff1ff, #ebe3ff);
+    color: var(--secondary-color);
+    box-shadow: 0 10px 24px rgba(139, 92, 246, 0.12);
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #7c3aed, #38bdf8);
+    background: linear-gradient(135deg, #d4ebff, #e5d9ff);
     transform: translateY(-2px);
-    box-shadow: 0 14px 28px rgba(103, 199, 255, 0.3);
+    box-shadow: 0 14px 28px rgba(103, 199, 255, 0.16);
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, var(--brand-lilac), var(--brand-pale-blue));
-    color: white;
+    background: linear-gradient(135deg, #edf6ff, #f2ebff);
+    color: #5f5e8f;
 }
 
 .btn-secondary:hover {
-    background: linear-gradient(135deg, #a855f7, #67c7ff);
+    background: linear-gradient(135deg, #e3f1ff, #ede2ff);
 }
 
 .btn-danger {
@@ -591,7 +591,9 @@ html, body, #app {
     position: relative;
     z-index: 2;
     display: block;
+    color: var(--text-color);
     font-size: 16px;
+    font-weight: 500;
     line-height: 1.1;
     margin-bottom: 8px;
 }
@@ -859,7 +861,9 @@ html, body, #app {
 
 .category-landing-tile strong {
     display: block;
+    color: var(--text-color);
     font-size: 15px;
+    font-weight: 500;
     line-height: 1.1;
     margin-bottom: 5px;
 }
@@ -1203,7 +1207,7 @@ html, body, #app {
 }
 
 .item-price {
-    color: #67c7ff;
+    color: #b18ae6;
     font-size: 22px;
     font-weight: 800;
     margin-bottom: 12px;
@@ -1239,17 +1243,17 @@ html, body, #app {
     flex: 1 1 30%;
     padding: 12px;
     border: none;
-    background: linear-gradient(135deg, #67c7ff, #8bd9ff);
+    background: linear-gradient(135deg, #e6f4ff, #efe7ff);
     border-radius: 12px;
     cursor: pointer;
     font-size: 12px;
     font-weight: 700;
-    color: white;
-    box-shadow: 0 10px 20px rgba(103, 199, 255, 0.2);
+    color: var(--secondary-color);
+    box-shadow: 0 10px 20px rgba(103, 199, 255, 0.1);
 }
 
 .item-actions button:hover {
-    filter: brightness(1.03);
+    filter: brightness(0.99);
 }
 
 .item-actions button.delete {
@@ -1522,14 +1526,6 @@ html, body, #app {
     color: #8a5a00;
     font-size: 13px;
     font-weight: 700;
-}
-
-.item-details-contact {
-    background: #f8fafc;
-    padding: 18px;
-    border-radius: 18px;
-    margin-bottom: 20px;
-    border: 1px solid var(--border-color);
 }
 
 /* Profile modal */
