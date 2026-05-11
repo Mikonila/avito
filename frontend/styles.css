@@ -752,8 +752,6 @@ html, body, #app {
 .rules-link {
     display: inline;
     margin-left: 6px;
-    border: none;
-    background: none;
     color: var(--primary-color);
     font-weight: 500;
     font-size: inherit;
@@ -761,6 +759,8 @@ html, body, #app {
     vertical-align: baseline;
     cursor: pointer;
     padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
 }
 
 .category-landing-header h2,
@@ -802,21 +802,7 @@ html, body, #app {
 }
 
 .promo-photo-card-main {
-    inset: 20px 24px 24px 92px;
-}
-
-.promo-photo-card-top {
-    width: 118px;
-    height: 118px;
-    top: 26px;
-    left: 26px;
-}
-
-.promo-photo-card-bottom {
-    width: 132px;
-    height: 132px;
-    right: 18px;
-    bottom: 18px;
+    inset: 18px;
 }
 
 .promo-shape {
@@ -2068,19 +2054,7 @@ html, body, #app {
     }
 
     .promo-photo-card-main {
-        inset: 18px 20px 20px 86px;
-    }
-
-    .promo-photo-card-top {
-        width: 104px;
-        height: 104px;
-        top: 20px;
-        left: 20px;
-    }
-
-    .promo-photo-card-bottom {
-        width: 118px;
-        height: 118px;
+        inset: 16px;
     }
 
     .items-grid {
@@ -2196,21 +2170,7 @@ html, body, #app {
     }
 
     .promo-photo-card-main {
-        inset: 14px 14px 14px 70px;
-    }
-
-    .promo-photo-card-top {
-        width: 82px;
-        height: 82px;
-        top: 14px;
-        left: 14px;
-    }
-
-    .promo-photo-card-bottom {
-        width: 90px;
-        height: 90px;
-        right: 12px;
-        bottom: 12px;
+        inset: 12px;
     }
 
     .category-showcase-grid {
