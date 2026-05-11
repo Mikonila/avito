@@ -7,11 +7,11 @@ const SERVICE_CATEGORY_ID = 'cat-8';
 const OTHER_SUBCATEGORY = { id: 'other', name: 'Другое' };
 const SUPPORT_LINK = 'https://t.me/helionstudio';
 const PROMOTION_PLANS = {
-    test: { label: 'Тест', stars: 1 },
-    day: { label: '1 день', stars: 100 },
-    three_days: { label: '3 дня', stars: 150 },
-    week: { label: '7 дней', stars: 250 },
-    month: { label: 'месяц', stars: 500 }
+    test: { label: 'Тест', stars: 1, rub: 2 },
+    day: { label: '1 день', stars: 100, rub: 182 },
+    three_days: { label: '3 дня', stars: 150, rub: 265 },
+    week: { label: '7 дней', stars: 250, rub: 429 },
+    month: { label: 'месяц', stars: 500, rub: 849 }
 };
 
 let state = {
@@ -747,6 +747,7 @@ function renderPromotionOptions(formType) {
         >
             <strong>${plan.label}</strong>
             <span>${plan.stars} ⭐</span>
+            <small>≈ ${plan.rub} ₽</small>
         </button>
     `).join('');
 }
@@ -767,6 +768,7 @@ function renderPromotionModalPlans() {
         <button type="button" class="promotion-plan-card" onclick="startPromotionPayment('${planKey}')">
             <strong>${plan.label}</strong>
             <span>${plan.stars} ⭐</span>
+            <small>≈ ${plan.rub} ₽</small>
         </button>
     `).join('');
 }

@@ -1264,8 +1264,9 @@ html, body, #app {
 .ad-option-card span {
     flex: 0 0 auto;
     color: var(--accent-color);
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 900;
+    text-align: right;
 }
 
 .empty-state {
@@ -1608,11 +1609,22 @@ html, body, #app {
 .promotion-plan-card strong {
     font-size: 14px;
     line-height: 1.1;
+    background: linear-gradient(135deg, #8b5cf6, #67c7ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .promotion-plan-card span {
     color: var(--accent-color);
     font-size: 15px;
+    line-height: 1;
+}
+
+.promotion-plan-card small {
+    color: var(--muted-color);
+    font-size: 11px;
+    font-weight: 700;
     line-height: 1;
 }
 
