@@ -1,7 +1,7 @@
 const Service = require('../models/Service');
 const User = require('../models/User');
 const { validateImages } = require('../utils/validators');
-const { getRequesterTelegramId } = require('../middleware/auth');
+const { getRequesterTelegramId, isAdminTelegramId } = require('../middleware/auth');
 const { getTelegramBot, PROMOTION_PLANS, SERVICE_PUBLICATION_PLANS } = require('../telegramBot');
 const { destroyImages, uploadImages } = require('../utils/cloudinary');
 const {
@@ -10,6 +10,16 @@ const {
   notifyUserAboutBan,
   requireAdminUser
 } = require('../utils/moderation');
+
+function getMediaValidationOptions(req) {
+  const isAdmin = isAdminTelegramId(getRequesterTelegramId(req));
+
+  return {
+    maxImages: isAdmin ? 10 : 5,
+    maxVideoSizeMb: isAdmin ? 30 : 15,
+    maxTotalMediaSizeMb: isAdmin ? 45 : 25
+  };
+}
 
 async function createServicePublicationInvoiceLink(bot, service, userId, planKey = 'month') {
   const publicationPlan = SERVICE_PUBLICATION_PLANS[planKey];
@@ -53,8 +63,13 @@ async function createService(req, res) {
       publication_plan = ''
     } = req.body;
 
-    if (!user_id || !title || !category_id || !city_id) {
+    if (!user_id || !title || !category_id || !city_id || price === undefined || price === null || price === '') {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const normalizedPrice = Number(price);
+    if (!Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
+      return res.status(400).json({ error: 'Invalid price' });
     }
 
     const author = await ensureUserCanPublish(user_id, res);
@@ -62,13 +77,14 @@ async function createService(req, res) {
       return;
     }
 
-    const imageValidation = validateImages(images);
+    const imageValidation = validateImages(images, getMediaValidationOptions(req));
     if (!imageValidation.isValid) {
       return res.status(400).json({ error: imageValidation.errors.join('. ') });
     }
 
+    const isAdminRequester = isAdminTelegramId(getRequesterTelegramId(req));
     const canAdd = await Service.canAddService(user_id);
-    const requiresPaidPublication = !canAdd;
+    const requiresPaidPublication = !isAdminRequester && !canAdd;
 
     if (requiresPaidPublication && publication_plan !== 'month') {
       return res.status(402).json({ error: 'Для публикации дополнительной услуги нужно оплатить размещение на 1 месяц' });
@@ -88,7 +104,7 @@ async function createService(req, res) {
       category_id,
       subcategory,
       city_id,
-      price,
+      price: normalizedPrice,
       images: JSON.stringify(uploadedImages),
       status: requiresPaidPublication ? 'pending_payment' : 'active',
       is_paid: false
@@ -145,6 +161,11 @@ async function deleteService(req, res) {
 
     if (!user_id) {
       return res.status(400).json({ error: 'user_id is required' });
+    }
+
+    const normalizedPrice = Number(price);
+    if (!title || !category_id || !city_id || !Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const service = await Service.findById(service_id);
@@ -215,7 +236,7 @@ async function updateService(req, res) {
       return;
     }
 
-    const imageValidation = validateImages(images);
+    const imageValidation = validateImages(images, getMediaValidationOptions(req));
     if (!imageValidation.isValid) {
       return res.status(400).json({ error: imageValidation.errors.join('. ') });
     }
@@ -227,7 +248,7 @@ async function updateService(req, res) {
     const updated = await Service.update(service_id, user_id, {
       title,
       description,
-      price,
+      price: normalizedPrice,
       category_id,
       subcategory,
       city_id,
@@ -389,10 +410,46 @@ async function createPromotionInvoice(req, res) {
   }
 }
 
+async function adminActivatePromotion(req, res) {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) {
+      return;
+    }
+
+    const { service_id } = req.params;
+    const { plan } = req.body;
+    const promotionPlan = PROMOTION_PLANS[plan];
+
+    if (!promotionPlan) {
+      return res.status(400).json({ error: 'Неизвестный срок продвижения' });
+    }
+
+    const service = await Service.findById(service_id);
+    if (!service) {
+      return res.status(404).json({ error: 'Услуга не найдена' });
+    }
+
+    const expiresAt = await Service.activatePromotion(service_id, promotionPlan.days);
+    res.json({
+      success: Boolean(expiresAt),
+      expires_at: expiresAt,
+      plan: {
+        key: plan,
+        ...promotionPlan
+      }
+    });
+  } catch (error) {
+    console.error('Error activating service promotion as admin:', error);
+    res.status(500).json({ error: 'Не удалось включить продвижение' });
+  }
+}
+
 module.exports = {
   createPromotionInvoice,
   createPublicationInvoice,
   createService,
+  adminActivatePromotion,
   adminDeleteService,
   getServicesByUser,
   searchServices,

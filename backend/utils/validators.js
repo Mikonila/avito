@@ -4,9 +4,10 @@
  * Утилиты валидации
  */
 
-const MAX_IMAGES_PER_ITEM = 4;
+const MAX_IMAGES_PER_ITEM = 5;
 const MAX_IMAGE_SIZE_MB = 1.5;
-const MAX_TOTAL_IMAGE_SIZE_MB = 5;
+const MAX_VIDEO_SIZE_MB = 15;
+const MAX_TOTAL_MEDIA_SIZE_MB = 25;
 
 function isRemoteImageUrl(value) {
     return typeof value === 'string' && /^https?:\/\//i.test(value);
@@ -14,6 +15,10 @@ function isRemoteImageUrl(value) {
 
 function isBase64Image(value) {
     return typeof value === 'string' && value.startsWith('data:image/');
+}
+
+function isBase64Video(value) {
+    return typeof value === 'string' && value.startsWith('data:video/');
 }
 
 /**
@@ -113,12 +118,15 @@ function getBase64SizeInMb(base64String) {
     return sizeInBytes / (1024 * 1024);
 }
 
-function validateImages(images) {
+function validateImages(images, options = {}) {
     const normalizedImages = normalizeImagesInput(images);
     const errors = [];
+    const maxImages = options.maxImages || MAX_IMAGES_PER_ITEM;
+    const maxVideoSizeMb = options.maxVideoSizeMb || MAX_VIDEO_SIZE_MB;
+    const maxTotalMediaSizeMb = options.maxTotalMediaSizeMb || MAX_TOTAL_MEDIA_SIZE_MB;
 
-    if (normalizedImages.length > MAX_IMAGES_PER_ITEM) {
-        errors.push(`Maximum ${MAX_IMAGES_PER_ITEM} images are allowed`);
+    if (normalizedImages.length > maxImages) {
+        errors.push(`Maximum ${maxImages} images are allowed`);
     }
 
     let totalSizeInMb = 0;
@@ -128,21 +136,28 @@ function validateImages(images) {
             return;
         }
 
-        if (!isBase64Image(image)) {
-            errors.push(`Image ${index + 1} must be a valid image`);
+        const isImage = isBase64Image(image);
+        const isVideo = isBase64Video(image);
+
+        if (!isImage && !isVideo) {
+            errors.push(`Media ${index + 1} must be a valid image or video`);
             return;
         }
 
         const sizeInMb = getBase64SizeInMb(image);
         totalSizeInMb += sizeInMb;
 
-        if (sizeInMb > MAX_IMAGE_SIZE_MB) {
+        if (isImage && sizeInMb > MAX_IMAGE_SIZE_MB) {
             errors.push(`Image ${index + 1} exceeds ${MAX_IMAGE_SIZE_MB} MB`);
+        }
+
+        if (isVideo && sizeInMb > maxVideoSizeMb) {
+            errors.push(`Video ${index + 1} exceeds ${maxVideoSizeMb} MB`);
         }
     });
 
-    if (totalSizeInMb > MAX_TOTAL_IMAGE_SIZE_MB) {
-        errors.push(`Total image payload exceeds ${MAX_TOTAL_IMAGE_SIZE_MB} MB`);
+    if (totalSizeInMb > maxTotalMediaSizeMb) {
+        errors.push(`Total media payload exceeds ${maxTotalMediaSizeMb} MB`);
     }
 
     return {
@@ -156,6 +171,7 @@ module.exports = {
     validateEmail,
     validateImages,
     isBase64Image,
+    isBase64Video,
     isRemoteImageUrl,
     normalizeImagesInput,
     validatePhone,

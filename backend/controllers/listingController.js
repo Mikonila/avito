@@ -1,7 +1,7 @@
 const Listing = require('../models/Listing');
 const User = require('../models/User');
 const { validateImages } = require('../utils/validators');
-const { getRequesterTelegramId } = require('../middleware/auth');
+const { getRequesterTelegramId, isAdminTelegramId } = require('../middleware/auth');
 const { getTelegramBot, PROMOTION_PLANS } = require('../telegramBot');
 const { destroyImages, uploadImages } = require('../utils/cloudinary');
 const {
@@ -11,14 +11,29 @@ const {
   requireAdminUser
 } = require('../utils/moderation');
 
+function getMediaValidationOptions(req) {
+  const isAdmin = isAdminTelegramId(getRequesterTelegramId(req));
+
+  return {
+    maxImages: isAdmin ? 10 : 5,
+    maxVideoSizeMb: isAdmin ? 30 : 15,
+    maxTotalMediaSizeMb: isAdmin ? 45 : 25
+  };
+}
+
 async function createListing(req, res) {
   let newlyUploadedImages = [];
 
   try {
     const { user_id, title, description, category_id, subcategory = '', city_id, price, images } = req.body;
 
-    if (!user_id || !title || !category_id || !city_id || !price) {
+    if (!user_id || !title || !category_id || !city_id || price === undefined || price === null || price === '') {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const normalizedPrice = Number(price);
+    if (!Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
+      return res.status(400).json({ error: 'Invalid price' });
     }
 
     const author = await ensureUserCanPublish(user_id, res);
@@ -26,7 +41,7 @@ async function createListing(req, res) {
       return;
     }
 
-    const imageValidation = validateImages(images);
+    const imageValidation = validateImages(images, getMediaValidationOptions(req));
     if (!imageValidation.isValid) {
       return res.status(400).json({ error: imageValidation.errors.join('. ') });
     }
@@ -40,7 +55,7 @@ async function createListing(req, res) {
       category_id,
       subcategory,
       city_id,
-      price,
+      price: normalizedPrice,
       images: JSON.stringify(uploadedImages)
     });
 
@@ -113,6 +128,11 @@ async function deleteListing(req, res) {
       return res.status(400).json({ error: 'user_id is required' });
     }
 
+    const normalizedPrice = Number(price);
+    if (!title || !category_id || !city_id || !Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
     const listing = await Listing.findById(listing_id);
     const deleted = await Listing.delete(listing_id, user_id);
 
@@ -181,7 +201,7 @@ async function updateListing(req, res) {
       return;
     }
 
-    const imageValidation = validateImages(images);
+    const imageValidation = validateImages(images, getMediaValidationOptions(req));
     if (!imageValidation.isValid) {
       return res.status(400).json({ error: imageValidation.errors.join('. ') });
     }
@@ -193,7 +213,7 @@ async function updateListing(req, res) {
     const updated = await Listing.update(listing_id, user_id, {
       title,
       description,
-      price,
+      price: normalizedPrice,
       category_id,
       subcategory,
       city_id,
@@ -308,8 +328,44 @@ async function createPromotionInvoice(req, res) {
   }
 }
 
+async function adminActivatePromotion(req, res) {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) {
+      return;
+    }
+
+    const { listing_id } = req.params;
+    const { plan } = req.body;
+    const promotionPlan = PROMOTION_PLANS[plan];
+
+    if (!promotionPlan) {
+      return res.status(400).json({ error: 'Неизвестный срок продвижения' });
+    }
+
+    const listing = await Listing.findById(listing_id);
+    if (!listing) {
+      return res.status(404).json({ error: 'Объявление не найдено' });
+    }
+
+    const expiresAt = await Listing.activatePromotion(listing_id, promotionPlan.days);
+    res.json({
+      success: Boolean(expiresAt),
+      expires_at: expiresAt,
+      plan: {
+        key: plan,
+        ...promotionPlan
+      }
+    });
+  } catch (error) {
+    console.error('Error activating listing promotion as admin:', error);
+    res.status(500).json({ error: 'Не удалось включить продвижение' });
+  }
+}
+
 module.exports = {
   createListing,
+  adminActivatePromotion,
   adminDeleteListing,
   createPromotionInvoice,
   getListingsByUser,

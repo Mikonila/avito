@@ -31,6 +31,11 @@ const SQLITE_SCHEMA = [
     name TEXT UNIQUE NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
   `CREATE TABLE IF NOT EXISTS listings (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -156,6 +161,11 @@ const POSTGRES_SCHEMA = [
     id TEXT PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE TABLE IF NOT EXISTS listings (
     id TEXT PRIMARY KEY,
@@ -375,6 +385,7 @@ async function ensureColumn(tableName, columnName, definition) {
 }
 
 async function applyMigrations() {
+  await applySchema(dialect === 'postgres' ? [POSTGRES_SCHEMA[3]] : [SQLITE_SCHEMA[3]]);
   await ensureColumn('users', 'about', 'TEXT');
   await ensureColumn('users', 'avatar_url', 'TEXT');
   await ensureColumn('users', 'is_banned', 'BOOLEAN DEFAULT FALSE');

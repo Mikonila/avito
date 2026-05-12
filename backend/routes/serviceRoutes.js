@@ -5,6 +5,7 @@ const serviceController = require('../controllers/serviceController');
 router.post('/create', serviceController.createService);
 router.get('/user/:user_id', serviceController.getServicesByUser);
 router.get('/search', serviceController.searchServices);
+router.post('/:service_id/promotion/admin', serviceController.adminActivatePromotion);
 router.post('/:service_id/promotion/invoice', serviceController.createPromotionInvoice);
 router.post('/:service_id/publication/invoice', serviceController.createPublicationInvoice);
 router.post('/:service_id/reactivate', serviceController.reactivateService);

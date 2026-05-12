@@ -52,20 +52,36 @@ function isRemoteImageUrl(value) {
   return typeof value === 'string' && /^https?:\/\//i.test(value);
 }
 
+function isCloudinaryUrl(value) {
+  return isRemoteImageUrl(value) && value.includes('/res.cloudinary.com/');
+}
+
 function isBase64Image(value) {
   return typeof value === 'string' && value.startsWith('data:image/');
+}
+
+function isBase64Video(value) {
+  return typeof value === 'string' && value.startsWith('data:video/');
+}
+
+function getResourceType(value) {
+  if (typeof value === 'string' && (value.startsWith('data:video/') || value.includes('/video/upload/'))) {
+    return 'video';
+  }
+
+  return 'image';
 }
 
 function getFolder(entityType) {
   return CLOUDINARY_FOLDERS[entityType] || 'montenegro-marketplace/misc';
 }
 
-async function uploadImage(image, entityType) {
+async function uploadMediaItem(mediaItem, entityType) {
   ensureConfigured();
 
-  const result = await cloudinary.uploader.upload(image, {
+  const result = await cloudinary.uploader.upload(mediaItem, {
     folder: getFolder(entityType),
-    resource_type: 'image'
+    resource_type: 'auto'
   });
 
   return result.secure_url;
@@ -76,15 +92,15 @@ async function uploadImages(images, entityType) {
 
   for (const image of images) {
     if (isRemoteImageUrl(image)) {
-      preparedImages.push(image);
+      preparedImages.push(isCloudinaryUrl(image) ? image : await uploadMediaItem(image, entityType));
       continue;
     }
 
-    if (!isBase64Image(image)) {
-      throw new Error('Unsupported image format. Expected base64 image or URL.');
+    if (!isBase64Image(image) && !isBase64Video(image)) {
+      throw new Error('Unsupported media format. Expected base64 image/video or URL.');
     }
 
-    preparedImages.push(await uploadImage(image, entityType));
+    preparedImages.push(await uploadMediaItem(image, entityType));
   }
 
   return preparedImages;
@@ -134,7 +150,7 @@ async function destroyImage(imageUrl) {
   }
 
   ensureConfigured();
-  await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+  await cloudinary.uploader.destroy(publicId, { resource_type: getResourceType(imageUrl) });
   return true;
 }
 
@@ -151,6 +167,7 @@ async function destroyImages(imageUrls = []) {
 module.exports = {
   destroyImages,
   isBase64Image,
+  isBase64Video,
   isCloudinaryConfigured,
   isRemoteImageUrl,
   uploadImages

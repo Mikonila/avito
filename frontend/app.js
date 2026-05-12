@@ -1,10 +1,15 @@
 const tg = window.Telegram?.WebApp;
-const MAX_IMAGE_COUNT = 4;
+const DEFAULT_MAX_IMAGE_COUNT = 5;
+const ADMIN_MAX_IMAGE_COUNT = 10;
 const MAX_IMAGE_SIZE_BYTES = 1572864;
+const DEFAULT_MAX_VIDEO_SIZE_BYTES = 15 * 1024 * 1024;
+const ADMIN_MAX_VIDEO_SIZE_BYTES = 30 * 1024 * 1024;
+const LISTING_DRAFT_KEY = 'violet_listing_drafts';
+const LISTING_DRAFT_VERSION = 1;
 const FALLBACK_TELEGRAM_ID_KEY = 'fallback_telegram_id';
 const CLOTHING_CATEGORY_ID = 'cat-5';
 const SERVICE_CATEGORY_ID = 'cat-8';
-const OTHER_SUBCATEGORY = { id: 'other', name: 'Другое' };
+const OTHER_SUBCATEGORY = { id: 'other', name: 'Прочее' };
 const SUPPORT_LINK = 'https://t.me/helionstudio';
 const SERVICE_PUBLICATION_PLAN = { key: 'month', label: '1 месяц', stars: 100, rub: 182 };
 const PROMOTION_PLANS = {
@@ -28,8 +33,7 @@ const CATEGORY_IMAGE_MAP = {
     'cat-12': 'assets/categories/free.svg',
     'cat-13': 'assets/categories/afisha.svg',
     'cat-14': 'assets/categories/medicine.svg',
-    fallback: 'assets/categories/other.svg'
-};
+ };
 
 let state = {
     user: null,
@@ -62,6 +66,8 @@ let state = {
         product: '',
         service: ''
     },
+    categoryAutoScrollRaf: null,
+    categoryAutoScrollLastTime: 0,
     filters: {
         categoryId: '',
         subcategoryId: '',
@@ -145,6 +151,37 @@ function getCategoryImage(categoryId) {
 
 function isAdminUser() {
     return state.user?.is_admin === true || state.user?.is_admin === 1;
+}
+
+function getMaxImageCount() {
+    return isAdminUser() ? ADMIN_MAX_IMAGE_COUNT : DEFAULT_MAX_IMAGE_COUNT;
+}
+
+function getMaxVideoSizeBytes() {
+    return isAdminUser() ? ADMIN_MAX_VIDEO_SIZE_BYTES : DEFAULT_MAX_VIDEO_SIZE_BYTES;
+}
+
+function isMediaVideo(value = '') {
+    return typeof value === 'string' && (value.startsWith('data:video/') || value.includes('/video/upload/'));
+}
+
+function isPriceInputFilled(value) {
+    return value !== undefined && value !== null && String(value).trim() !== '';
+}
+
+function formatPrice(value) {
+    const price = Number(value);
+
+    if (Number.isFinite(price) && price === 0) {
+        return 'Бесплатно';
+    }
+
+    return `${value} EUR`;
+}
+
+function getMediaLimitText() {
+    const maxVideoMb = Math.round(getMaxVideoSizeBytes() / (1024 * 1024));
+    return `${getMaxImageCount()} файлов, видео до ${maxVideoMb} МБ`;
 }
 
 function escapeHtml(value = '') {
@@ -524,10 +561,6 @@ function renderCategoryShowcase() {
         >
             <div class="category-tile-copy">
                 <strong>Все</strong>
-                <span>Открыть все категории и подкатегории</span>
-            </div>
-            <div class="category-tile-visual">
-                <img src="${getCategoryImage('all')}" alt="" loading="lazy">
             </div>
         </button>
     `;
@@ -548,10 +581,6 @@ function renderCategoryShowcase() {
         >
             <div class="category-tile-copy">
                 <strong>${category.name}</strong>
-                <span>${category.subcategories?.length ? `${category.subcategories.length} раздела` : 'Открыть объявления'}</span>
-            </div>
-            <div class="category-tile-visual">
-                <img src="${getCategoryImage(category.id)}" alt="" loading="lazy">
             </div>
         </button>
     `).join('');
@@ -568,6 +597,43 @@ function renderCategoryShowcase() {
             openCategoryLanding(button.dataset.categoryTile);
         });
     });
+
+    startCategoryAutoScroll();
+}
+
+function startCategoryAutoScroll() {
+    const container = document.getElementById('categoryShowcase');
+
+    if (!container) {
+        return;
+    }
+
+    if (state.categoryAutoScrollRaf) {
+        cancelAnimationFrame(state.categoryAutoScrollRaf);
+    }
+
+    state.categoryAutoScrollLastTime = 0;
+
+    const scroll = (timestamp) => {
+        if (!state.categoryAutoScrollLastTime) {
+            state.categoryAutoScrollLastTime = timestamp;
+        }
+
+        const delta = timestamp - state.categoryAutoScrollLastTime;
+        state.categoryAutoScrollLastTime = timestamp;
+
+        if (container.scrollWidth > container.clientWidth) {
+            container.scrollLeft += delta * 0.018;
+
+            if (container.scrollLeft + container.clientWidth >= container.scrollWidth - 1) {
+                container.scrollLeft = 0;
+            }
+        }
+
+        state.categoryAutoScrollRaf = requestAnimationFrame(scroll);
+    };
+
+    state.categoryAutoScrollRaf = requestAnimationFrame(scroll);
 }
 
 function renderCategoryExplorer() {
@@ -897,6 +963,7 @@ function renderPromotionOptions(formType) {
 window.selectPromotionPlan = function(formType, planKey) {
     state.selectedPromotionPlans[formType] = state.selectedPromotionPlans[formType] === planKey ? '' : planKey;
     renderPromotionOptions(formType);
+    saveListingDrafts();
 };
 
 function renderPromotionModalPlans() {
@@ -995,6 +1062,9 @@ function attachEventListeners() {
     document.getElementById('serviceImageInput').addEventListener('change', (e) => handleImageSelect(e, 'serviceImages'));
     document.getElementById('reviewScreenshotInput').addEventListener('change', handleReviewScreenshotSelect);
     document.getElementById('adminSeedReviewAvatarInput').addEventListener('change', handleAdminReviewAvatarSelect);
+
+    attachListingDraftListeners();
+    restoreListingDrafts();
 }
 
 function switchTab(tabName) {
@@ -1033,21 +1103,177 @@ function switchListingType(type) {
     if (type === 'service') {
         refreshServicePublicationRequirement();
     }
+
+    saveListingDrafts();
+}
+
+function getListingForm(formType) {
+    return document.querySelector(`#${formType}Form .listing-form`);
+}
+
+function getListingFormFields(formType) {
+    const form = getListingForm(formType);
+
+    if (!form) {
+        return null;
+    }
+
+    const selects = form.querySelectorAll('select');
+    return {
+        form,
+        title: form.querySelector('input[type="text"]'),
+        description: form.querySelector('textarea'),
+        category: selects[0],
+        subcategory: getSubcategorySelect(formType),
+        city: selects[2],
+        price: form.querySelector('input[type="number"]')
+    };
+}
+
+function getActiveListingType() {
+    return document.querySelector('.listing-type.active')?.dataset.type || 'product';
+}
+
+function readListingDraftForm(formType) {
+    const fields = getListingFormFields(formType);
+
+    if (!fields) {
+        return {};
+    }
+
+    return {
+        title: fields.title?.value || '',
+        description: fields.description?.value || '',
+        category_id: fields.category?.value || '',
+        subcategory: fields.subcategory?.value || '',
+        city_id: fields.city?.value || '',
+        price: fields.price?.value || '',
+        promotion_plan: state.selectedPromotionPlans[formType] || ''
+    };
+}
+
+function hasListingDraftContent(draft) {
+    return Object.values(draft).some((value) => String(value || '').trim());
+}
+
+function saveListingDrafts() {
+    const drafts = {
+        version: LISTING_DRAFT_VERSION,
+        activeType: getActiveListingType(),
+        product: readListingDraftForm('product'),
+        service: readListingDraftForm('service')
+    };
+
+    if (!hasListingDraftContent(drafts.product) && !hasListingDraftContent(drafts.service)) {
+        localStorage.removeItem(LISTING_DRAFT_KEY);
+        return;
+    }
+
+    localStorage.setItem(LISTING_DRAFT_KEY, JSON.stringify(drafts));
+}
+
+function getSavedListingDrafts() {
+    try {
+        const drafts = JSON.parse(localStorage.getItem(LISTING_DRAFT_KEY) || 'null');
+        return drafts?.version === LISTING_DRAFT_VERSION ? drafts : null;
+    } catch (error) {
+        localStorage.removeItem(LISTING_DRAFT_KEY);
+        return null;
+    }
+}
+
+function applyListingDraft(formType, draft) {
+    if (!draft) {
+        return;
+    }
+
+    const fields = getListingFormFields(formType);
+
+    if (!fields) {
+        return;
+    }
+
+    if (fields.title) fields.title.value = draft.title || '';
+    if (fields.description) fields.description.value = draft.description || '';
+    if (fields.category) fields.category.value = draft.category_id || '';
+    populateSubcategorySelect(formType);
+    if (fields.subcategory) fields.subcategory.value = draft.subcategory || '';
+    if (fields.city) fields.city.value = draft.city_id || '';
+    if (fields.price) fields.price.value = draft.price || '';
+
+    state.selectedPromotionPlans[formType] = draft.promotion_plan || '';
+    renderPromotionOptions(formType);
+}
+
+function restoreListingDrafts() {
+    const drafts = getSavedListingDrafts();
+
+    if (!drafts) {
+        return;
+    }
+
+    applyListingDraft('product', drafts.product);
+    applyListingDraft('service', drafts.service);
+
+    if (['product', 'service'].includes(drafts.activeType)) {
+        switchListingType(drafts.activeType);
+    }
+}
+
+function clearListingDraft(formType) {
+    const drafts = getSavedListingDrafts();
+
+    if (!drafts) {
+        return;
+    }
+
+    drafts[formType] = {};
+
+    if (!hasListingDraftContent(drafts.product || {}) && !hasListingDraftContent(drafts.service || {})) {
+        localStorage.removeItem(LISTING_DRAFT_KEY);
+        return;
+    }
+
+    localStorage.setItem(LISTING_DRAFT_KEY, JSON.stringify(drafts));
+}
+
+function attachListingDraftListeners() {
+    ['product', 'service'].forEach((formType) => {
+        const fields = getListingFormFields(formType);
+
+        if (!fields) {
+            return;
+        }
+
+        fields.form.addEventListener('input', saveListingDrafts);
+        fields.form.addEventListener('change', saveListingDrafts);
+    });
 }
 
 function handleImageSelect(e, type) {
     const files = Array.from(e.target.files);
     state[type] = state[type] || [];
+    const maxImageCount = getMaxImageCount();
 
-    if (state[type].length + files.length > MAX_IMAGE_COUNT) {
-        alert(`Можно добавить не более ${MAX_IMAGE_COUNT} фотографий`);
+    if (state[type].length + files.length > maxImageCount) {
+        alert(`Можно добавить не более ${maxImageCount} фотографий`);
         e.target.value = '';
         return;
     }
 
     files.forEach((file) => {
-        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+            alert('Можно загрузить только фото или видео');
+            return;
+        }
+
+        if (file.type.startsWith('image/') && file.size > MAX_IMAGE_SIZE_BYTES) {
             alert('Каждая фотография должна быть меньше 1.5 МБ');
+            return;
+        }
+
+        if (file.type.startsWith('video/') && file.size > getMaxVideoSizeBytes()) {
+            alert(`Видео должно быть меньше ${Math.round(getMaxVideoSizeBytes() / (1024 * 1024))} МБ`);
             return;
         }
 
@@ -1130,7 +1356,9 @@ function renderImagePreview(type) {
         const div = document.createElement('div');
         div.className = 'image-preview-item';
         div.innerHTML = `
-            <img src="${image}" alt="preview">
+            ${isMediaVideo(image)
+                ? `<video src="${image}" muted playsinline controls></video>`
+                : `<img src="${image}" alt="preview">`}
             <button type="button" onclick="removeImage('${type}', ${index})">✕</button>
         `;
         preview.appendChild(div);
@@ -1240,6 +1468,7 @@ async function handleListingSubmit(e, formIndex) {
             populateSubcategorySelect('service');
             state.selectedPromotionPlans[formType] = '';
             renderPromotionOptions(formType);
+            clearListingDraft(formType);
             await refreshServicePublicationRequirement();
 
             if (result.payment_required && result.invoice_link) {
@@ -1406,7 +1635,7 @@ function renderListings(listings, containerId) {
         card.className = 'item-card';
         card.onclick = () => showItemDetails(item);
         const image = item.images && item.images[0] ? item.images[0] : '📦';
-        const isImage = typeof image === 'string' && (image.startsWith('data:') || image.startsWith('http'));
+        const isMedia = typeof image === 'string' && (image.startsWith('data:') || image.startsWith('http'));
         const categoryName = getCategoryName(item.category_id);
         const subcategoryName = getSubcategoryName(item.category_id, item.subcategory);
         const badgeText = subcategoryName || categoryName;
@@ -1425,14 +1654,18 @@ function renderListings(listings, containerId) {
                 <div class="item-badge">${badgeText}</div>
                 ${promotionBadge}
                 <div class="item-image">
-                    ${isImage ? `<img src="${image}" alt="${escapeHtml(item.title)}">` : `<span>${image}</span>`}
+                    ${isMedia
+                        ? isMediaVideo(image)
+                            ? `<video src="${image}" muted playsinline></video>`
+                            : `<img src="${image}" alt="${escapeHtml(item.title)}">`
+                        : `<span>${image}</span>`}
                 </div>
             </div>
             <div class="item-info">
                 ${statusBadge}
                 <div class="item-category-line">${categoryName}</div>
                 <div class="item-title">${escapeHtml(item.title)}</div>
-                <div class="item-price">${item.price} EUR</div>
+            <div class="item-price">${formatPrice(item.price)}</div>
                 <div class="item-meta-row">
                     <div class="item-meta">${getCityName(item.city_id || item.city)}</div>
                     <div class="item-date">${item.created_at ? new Date(item.created_at).toLocaleDateString('ru-RU') : ''}</div>
@@ -1481,7 +1714,9 @@ function showItemDetails(item) {
 
     const gallery = item.images && item.images.length > 0 ? `
         <div class="item-details-gallery">
-            ${item.images.map((img) => `<img src="${img}" alt="${item.title}">`).join('')}
+            ${item.images.map((media) => isMediaVideo(media)
+                ? `<video src="${media}" controls playsinline></video>`
+                : `<img src="${media}" alt="${escapeHtml(item.title)}">`).join('')}
         </div>
     ` : '';
     const adminAction = isAdminUser()
@@ -1506,7 +1741,7 @@ function showItemDetails(item) {
             <span>${new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
         </div>
         ${gallery}
-        <div class="item-details-price">${item.price} EUR</div>
+        <div class="item-details-price">${formatPrice(item.price)}</div>
         ${item.expires_at ? `<div class="info-text">Активно до ${new Date(item.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
         ${item.is_premium ? `<div class="promotion-status">В первой линии${item.premium_expires_at ? ` до ${new Date(item.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}
         <div class="item-details-description">${item.description || 'Описание отсутствует'}</div>
@@ -1851,12 +2086,41 @@ window.closePromotionModal = function() {
 };
 
 function openInvoiceLink(invoiceLink, callback) {
-    if (tg?.openInvoice) {
-        tg.openInvoice(invoiceLink, callback);
+    const safeInvoiceLink = String(invoiceLink || '').trim();
+
+    if (!safeInvoiceLink) {
+        alert('Не удалось открыть счет: ссылка на оплату не получена');
+        if (callback) {
+            callback('failed');
+        }
         return;
     }
 
-    window.open(invoiceLink, '_blank', 'noopener,noreferrer');
+    const handleStatus = (status) => {
+        if (status === 'failed') {
+            alert('Telegram не смог открыть оплату. Попробуйте еще раз или обновите приложение.');
+        }
+
+        if (callback) {
+            callback(status);
+        }
+    };
+
+    if (tg?.openInvoice) {
+        try {
+            tg.openInvoice(safeInvoiceLink, handleStatus);
+            return;
+        } catch (error) {
+            console.error('Telegram openInvoice failed:', error);
+        }
+    }
+
+    if (tg?.openTelegramLink) {
+        tg.openTelegramLink(safeInvoiceLink);
+    } else {
+        window.open(safeInvoiceLink, '_blank', 'noopener,noreferrer');
+    }
+
     if (callback) {
         callback('opened');
     }

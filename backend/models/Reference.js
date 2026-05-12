@@ -44,7 +44,8 @@ const CATEGORIES = [
       { id: 'cleaning', name: 'Клининг' },
       { id: 'education', name: 'Обучение' },
       { id: 'events', name: 'Специалисты' },
-      { id: 'other', name: 'Персонал' }
+      { id: 'other', name: 'Персонал' },
+      { id: 'misc', name: 'Прочее' }
     ]
   },
   { id: 'cat-9', name: 'Животные', icon: '🐾' },
@@ -60,7 +61,6 @@ const CATEGORIES = [
   },
   { id: 'cat-12', name: 'Бесплатно', icon: '⚙️' },
   { id: 'cat-14', name: 'Медицина', icon: '🏥' },
-  { id: 'cat-other', name: 'Другое', icon: '📦' }
 ];
 
 const CITIES = [

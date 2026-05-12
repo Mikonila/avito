@@ -8,7 +8,7 @@ let botInstance = null;
 let botMode = 'disabled';
 let startupPromise = null;
 let webhookRouteRegistered = false;
-let handlersRegistered = false;
+const botsWithRegisteredHandlers = new WeakSet();
 const PROMOTION_PLANS = {
   test: { days: 1, stars: 1, label: 'Тест' },
   three_days: { days: 3, stars: 100, label: '3 дня' },
@@ -20,7 +20,13 @@ const SERVICE_PUBLICATION_PLANS = {
 };
 
 function getWebAppUrl() {
-  return process.env.WEBAPP_URL || 'https://your-domain.com';
+  const webAppUrl = process.env.WEBAPP_URL || 'https://your-domain.com';
+
+  if (/^https?:\/\//i.test(webAppUrl)) {
+    return webAppUrl;
+  }
+
+  return `https://${webAppUrl}`;
 }
 
 function getSupportUsername() {
@@ -194,12 +200,13 @@ async function forwardUserMessageToAdmin(bot, msg) {
 }
 
 function registerHandlers(bot) {
-  if (handlersRegistered) {
+  if (botsWithRegisteredHandlers.has(bot)) {
     return;
   }
 
   bot.on('message', async (msg) => {
     const text = msg.text || '';
+    console.log(`Telegram message handler received: chat=${msg.chat?.id || 'unknown'} text=${text || '[non-text]'}`);
 
     if (msg.successful_payment) {
       return;
@@ -314,7 +321,7 @@ function registerHandlers(bot) {
     }
   });
 
-  handlersRegistered = true;
+  botsWithRegisteredHandlers.add(bot);
 }
 
 function resolveMode(requestedMode, app) {
@@ -349,6 +356,11 @@ function registerWebhookRoute(app) {
         res.sendStatus(503);
         return;
       }
+
+      const updateId = req.body?.update_id || 'unknown';
+      const message = req.body?.message;
+      const command = message?.text?.trim()?.split(/\s+/)[0] || '';
+      console.log(`Telegram webhook update received: ${updateId}${command ? ` ${command}` : ''}`);
 
       await botInstance.processUpdate(req.body);
       res.sendStatus(200);
@@ -421,7 +433,6 @@ async function startTelegramBot(options = {}) {
     startupPromise = null;
     botInstance = null;
     botMode = 'disabled';
-    handlersRegistered = false;
     throw error;
   });
 
@@ -444,7 +455,6 @@ async function stopTelegramBot() {
   botInstance = null;
   botMode = 'disabled';
   startupPromise = null;
-  handlersRegistered = false;
 }
 
 function getTelegramBotStatus() {
