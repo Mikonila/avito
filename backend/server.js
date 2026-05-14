@@ -33,7 +33,7 @@ app.use('/api/reference', referenceRoutes);
 
 app.get('/api/health', async (req, res) => {
   const database = await healthCheck();
-  const telegramBot = getTelegramBotStatus();
+  const telegramBot = await getTelegramBotStatus();
   const statusCode = database.ok ? 200 : 503;
 
   res.status(statusCode).json({

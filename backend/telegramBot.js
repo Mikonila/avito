@@ -9,6 +9,13 @@ let botMode = 'disabled';
 let startupPromise = null;
 let webhookRouteRegistered = false;
 const botsWithRegisteredHandlers = new WeakSet();
+const botDiagnostics = {
+  lastWebhookUpdateAt: null,
+  lastProcessedUpdateAt: null,
+  lastProcessedUpdateType: null,
+  lastError: null,
+  webhookUrl: null
+};
 const PROMOTION_PLANS = {
   test: { days: 1, stars: 1, label: 'Тест' },
   three_days: { days: 3, stars: 100, label: '3 дня' },
@@ -205,6 +212,8 @@ function registerHandlers(bot) {
   }
 
   bot.on('message', async (msg) => {
+    botDiagnostics.lastProcessedUpdateAt = new Date().toISOString();
+    botDiagnostics.lastProcessedUpdateType = 'message';
     const text = msg.text || '';
     console.log(`Telegram message handler received: chat=${msg.chat?.id || 'unknown'} text=${text || '[non-text]'}`);
 
@@ -237,6 +246,7 @@ function registerHandlers(bot) {
 
       await forwardUserMessageToAdmin(bot, msg);
     } catch (error) {
+      botDiagnostics.lastError = error.message;
       console.error('Error handling Telegram message:', error);
       await bot.sendMessage(
         msg.chat.id,
@@ -246,10 +256,13 @@ function registerHandlers(bot) {
   });
 
   bot.on('polling_error', (error) => {
+    botDiagnostics.lastError = error.message;
     console.error('Telegram polling error:', error.message);
   });
 
   bot.on('pre_checkout_query', async (query) => {
+    botDiagnostics.lastProcessedUpdateAt = new Date().toISOString();
+    botDiagnostics.lastProcessedUpdateType = 'pre_checkout_query';
     const promotion = parsePromotionPayload(query.invoice_payload);
     const servicePublication = parseServicePublicationPayload(query.invoice_payload);
 
@@ -264,6 +277,8 @@ function registerHandlers(bot) {
   });
 
   bot.on('successful_payment', async (msg) => {
+    botDiagnostics.lastProcessedUpdateAt = new Date().toISOString();
+    botDiagnostics.lastProcessedUpdateType = 'successful_payment';
     try {
       const payment = msg.successful_payment;
       const promotion = parsePromotionPayload(payment?.invoice_payload);
@@ -317,6 +332,7 @@ function registerHandlers(bot) {
           `Активно до: ${new Date(expiresAt).toLocaleDateString('ru-RU')}`
       );
     } catch (error) {
+      botDiagnostics.lastError = error.message;
       console.error('Error processing successful payment:', error);
     }
   });
@@ -358,13 +374,16 @@ function registerWebhookRoute(app) {
       }
 
       const updateId = req.body?.update_id || 'unknown';
+      const updateType = Object.keys(req.body || {}).find((key) => key !== 'update_id') || 'unknown';
+      botDiagnostics.lastWebhookUpdateAt = new Date().toISOString();
       const message = req.body?.message;
       const command = message?.text?.trim()?.split(/\s+/)[0] || '';
-      console.log(`Telegram webhook update received: ${updateId}${command ? ` ${command}` : ''}`);
+      console.log(`Telegram webhook update received: ${updateId} type=${updateType}${command ? ` ${command}` : ''}`);
 
       await botInstance.processUpdate(req.body);
       res.sendStatus(200);
     } catch (error) {
+      botDiagnostics.lastError = error.message;
       console.error('Telegram webhook error:', error);
       res.sendStatus(500);
     }
@@ -418,13 +437,25 @@ async function startTelegramBot(options = {}) {
       registerWebhookRoute(options.app);
 
       const webhookUrl = new URL(WEBHOOK_PATH, `${getWebAppUrl().replace(/\/$/, '')}/`).toString();
+      botDiagnostics.webhookUrl = webhookUrl;
       await botInstance.setWebHook(webhookUrl, {
         drop_pending_updates: true
       });
+      const webhookInfo = await botInstance.getWebHookInfo().catch((error) => {
+        botDiagnostics.lastError = error.message;
+        return null;
+      });
       botMode = 'webhook';
       console.log(`Telegram bot started in webhook mode: ${webhookUrl}`);
+      if (webhookInfo) {
+        console.log(
+          `Telegram webhook info: pending=${webhookInfo.pending_update_count || 0}` +
+          `${webhookInfo.last_error_message ? ` last_error=${webhookInfo.last_error_message}` : ''}`
+        );
+      }
     } else {
       await botInstance.deleteWebHook({ drop_pending_updates: true }).catch((error) => {
+        botDiagnostics.lastError = error.message;
         console.warn('Failed to delete Telegram webhook before polling:', error.message);
       });
       await botInstance.startPolling({ restart: true });
@@ -462,11 +493,30 @@ async function stopTelegramBot() {
   startupPromise = null;
 }
 
-function getTelegramBotStatus() {
+async function getTelegramBotStatus() {
+  const webhookInfo = botInstance
+    ? await botInstance.getWebHookInfo().catch((error) => {
+        botDiagnostics.lastError = error.message;
+        return null;
+      })
+    : null;
+
   return {
     enabled: Boolean(botInstance),
     mode: botMode,
-    webhookPath: botMode === 'webhook' ? WEBHOOK_PATH : null
+    webhookPath: botMode === 'webhook' ? WEBHOOK_PATH : null,
+    diagnostics: {
+      ...botDiagnostics,
+      webhookInfo: webhookInfo
+        ? {
+            url: webhookInfo.url || '',
+            pending_update_count: webhookInfo.pending_update_count || 0,
+            last_error_date: webhookInfo.last_error_date || null,
+            last_error_message: webhookInfo.last_error_message || '',
+            max_connections: webhookInfo.max_connections || null
+          }
+        : null
+    }
   };
 }
 

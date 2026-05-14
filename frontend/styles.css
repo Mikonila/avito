@@ -764,9 +764,9 @@ html, body, #app {
 }
 
 .promo-banner p {
-    font-size: 22px;
+    font-size: 16px;
     color: var(--muted-color);
-    line-height: 1.25;
+    line-height: 1.45;
     overflow-wrap: normal;
     word-break: normal;
 }
@@ -2182,8 +2182,8 @@ html, body, #app {
     }
 
     .promo-banner p {
-        font-size: 20px;
-        line-height: 1.25;
+        font-size: 16px;
+        line-height: 1.45;
     }
 
     .promo-visual {
@@ -2277,12 +2277,11 @@ html, body, #app {
     }
 }
 
-/* Final UI overrides for compact scrolling categories, uniform content text, and a full-width footer. */
+/* Final UI overrides for compact scrolling categories, restrained text, and a full-width footer. */
 :root {
-    --content-text-size: 20px;
+    --content-text-size: 16px;
 }
 
-.promo-banner h2,
 .promo-banner p,
 .section-divider h3,
 .category-recommendations-title,
@@ -2294,32 +2293,31 @@ html, body, #app {
 .category-landing-tile strong,
 .category-landing-tile span,
 .section-kicker,
-.item-category-line,
-.item-title,
-.item-price,
 .item-meta,
 .item-date,
-.item-details h2,
-.item-details-price,
 .item-details-description,
 .item-details-meta span,
 .info-text,
-.profile-summary-meta h3,
 .profile-summary-subtitle,
 .profile-info-label,
 .profile-info-value,
 .profile-reviews h3,
-.seller-profile-card h3,
 .seller-profile-card p,
 .review-author-name,
 .review-meta,
 .review-text,
-.brand-title,
-.brand-subtitle,
-.form-shell h3,
-.modal-content h2 {
+.form-shell h3 {
     font-size: var(--content-text-size) !important;
-    line-height: 1.25 !important;
+    line-height: 1.4 !important;
+}
+
+.promo-banner h2,
+.item-details h2,
+.modal-content h2,
+.profile-summary-meta h3,
+.seller-profile-card h3 {
+    font-size: 22px !important;
+    line-height: 1.2 !important;
 }
 
 .category-showcase-grid {
@@ -2382,11 +2380,23 @@ body {
     overflow: visible !important;
 }
 
+.footer-tabs::after {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: -40px;
+    height: 40px;
+    background: #ffffff;
+    pointer-events: none;
+}
+
 .footer-tabs .tab,
 .footer-tabs .tab.active {
     height: 100% !important;
     border-radius: 0 !important;
     background: transparent !important;
+    background-image: none !important;
     border: none !important;
     box-shadow: none !important;
 }
