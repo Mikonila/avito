@@ -401,13 +401,13 @@ async function startTelegramBot(options = {}) {
       mode === 'polling'
         ? {
             polling: {
+              autoStart: false,
               interval: 300,
               params: { timeout: 10 }
             }
           }
-        : {}
+        : { polling: false }
     );
-
     registerHandlers(botInstance);
 
     if (mode === 'webhook') {
@@ -418,11 +418,16 @@ async function startTelegramBot(options = {}) {
       registerWebhookRoute(options.app);
 
       const webhookUrl = new URL(WEBHOOK_PATH, `${getWebAppUrl().replace(/\/$/, '')}/`).toString();
-      await botInstance.setWebHook(webhookUrl);
+      await botInstance.setWebHook(webhookUrl, {
+        drop_pending_updates: true
+      });
       botMode = 'webhook';
       console.log(`Telegram bot started in webhook mode: ${webhookUrl}`);
     } else {
-      await botInstance.deleteWebHook().catch(() => {});
+      await botInstance.deleteWebHook({ drop_pending_updates: true }).catch((error) => {
+        console.warn('Failed to delete Telegram webhook before polling:', error.message);
+      });
+      await botInstance.startPolling({ restart: true });
       botMode = 'polling';
       console.log('Telegram bot started in polling mode');
     }
@@ -449,7 +454,7 @@ async function stopTelegramBot() {
   }
 
   if (botMode === 'webhook') {
-    await botInstance.deleteWebHook().catch(() => {});
+    console.log('Telegram webhook left registered on shutdown');
   }
 
   botInstance = null;
