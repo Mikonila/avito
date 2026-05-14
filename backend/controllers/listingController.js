@@ -21,11 +21,15 @@ function getMediaValidationOptions(req) {
   };
 }
 
+function normalizePriceType(value) {
+  return ['from', 'to'].includes(value) ? value : '';
+}
+
 async function createListing(req, res) {
   let newlyUploadedImages = [];
 
   try {
-    const { user_id, title, description, category_id, subcategory = '', city_id, price, images } = req.body;
+    const { user_id, title, description, category_id, subcategory = '', city_id, price, price_type = '', images } = req.body;
 
     if (!user_id || !title || !category_id || !city_id || price === undefined || price === null || price === '') {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -56,6 +60,7 @@ async function createListing(req, res) {
       subcategory,
       city_id,
       price: normalizedPrice,
+      price_type: normalizePriceType(price_type),
       images: JSON.stringify(uploadedImages)
     });
 
@@ -128,11 +133,6 @@ async function deleteListing(req, res) {
       return res.status(400).json({ error: 'user_id is required' });
     }
 
-    const normalizedPrice = Number(price);
-    if (!title || !category_id || !city_id || !Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
     const listing = await Listing.findById(listing_id);
     const deleted = await Listing.delete(listing_id, user_id);
 
@@ -190,7 +190,7 @@ async function updateListing(req, res) {
 
   try {
     const { listing_id } = req.params;
-    const { user_id, title, description, price, category_id, subcategory = '', city_id, images } = req.body;
+    const { user_id, title, description, price, price_type = '', category_id, subcategory = '', city_id, images } = req.body;
 
     if (!user_id) {
       return res.status(400).json({ error: 'user_id is required' });
@@ -199,6 +199,11 @@ async function updateListing(req, res) {
     const author = await ensureUserCanPublish(user_id, res);
     if (!author) {
       return;
+    }
+
+    const normalizedPrice = Number(price);
+    if (!title || !category_id || !city_id || !Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
     const imageValidation = validateImages(images, getMediaValidationOptions(req));
@@ -214,6 +219,7 @@ async function updateListing(req, res) {
       title,
       description,
       price: normalizedPrice,
+      price_type: normalizePriceType(price_type),
       category_id,
       subcategory,
       city_id,

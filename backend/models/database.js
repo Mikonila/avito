@@ -45,6 +45,7 @@ const SQLITE_SCHEMA = [
     subcategory TEXT,
     city_id TEXT NOT NULL,
     price REAL NOT NULL,
+    price_type TEXT,
     images TEXT,
     status TEXT DEFAULT 'active',
     views INTEGER DEFAULT 0,
@@ -67,6 +68,7 @@ const SQLITE_SCHEMA = [
     subcategory TEXT,
     city_id TEXT NOT NULL,
     price REAL NOT NULL,
+    price_type TEXT,
     images TEXT,
     status TEXT DEFAULT 'active',
     service_count INTEGER DEFAULT 0,
@@ -176,6 +178,7 @@ const POSTGRES_SCHEMA = [
     subcategory TEXT,
     city_id TEXT NOT NULL REFERENCES cities(id),
     price REAL NOT NULL,
+    price_type TEXT,
     images TEXT,
     status TEXT DEFAULT 'active',
     views INTEGER DEFAULT 0,
@@ -195,6 +198,7 @@ const POSTGRES_SCHEMA = [
     subcategory TEXT,
     city_id TEXT NOT NULL REFERENCES cities(id),
     price REAL NOT NULL,
+    price_type TEXT,
     images TEXT,
     status TEXT DEFAULT 'active',
     service_count INTEGER DEFAULT 0,
@@ -392,7 +396,9 @@ async function applyMigrations() {
   await ensureColumn('users', 'banned_at', 'TIMESTAMPTZ');
   await ensureColumn('users', 'ban_reason', 'TEXT');
   await ensureColumn('listings', 'subcategory', 'TEXT');
+  await ensureColumn('listings', 'price_type', 'TEXT');
   await ensureColumn('services', 'subcategory', 'TEXT');
+  await ensureColumn('services', 'price_type', 'TEXT');
   await ensureColumn('services', 'is_premium', 'BOOLEAN DEFAULT FALSE');
   await ensureColumn('services', 'premium_expires_at', 'TIMESTAMPTZ');
   await ensureColumn('listings', 'expires_at', 'TIMESTAMPTZ');

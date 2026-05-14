@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Review = require('../models/Review');
 const { getRequesterTelegramId, isAdminTelegramId } = require('../middleware/auth');
+const { getTelegramBot } = require('../telegramBot');
 
 function serializeUser(user) {
   if (!user) {
@@ -13,21 +14,42 @@ function serializeUser(user) {
   };
 }
 
+async function getTelegramProfileAbout(telegramId) {
+  if (!/^\d+$/.test(String(telegramId || ''))) {
+    return '';
+  }
+
+  const bot = getTelegramBot();
+  if (!bot) {
+    return '';
+  }
+
+  try {
+    const chat = await bot.getChat(telegramId);
+    return chat?.bio || '';
+  } catch (error) {
+    console.warn(`Unable to load Telegram profile bio for ${telegramId}: ${error.message}`);
+    return '';
+  }
+}
+
 async function register(req, res) {
   try {
-    const { telegram_id, first_name = '', last_name = '', username = '', avatar_url = '' } = req.body;
+    const { telegram_id, first_name = '', last_name = '', username = '', avatar_url = '', about = '' } = req.body;
 
     if (!telegram_id) {
       return res.status(400).json({ error: 'Не передан Telegram ID' });
     }
 
+    const telegramAbout = await getTelegramProfileAbout(telegram_id) || about;
     const existingUser = await User.findByTelegramId(telegram_id);
     if (existingUser) {
       const syncedUser = await User.fillMissingFromTelegram(existingUser.id, {
         first_name,
         last_name,
         username,
-        avatar_url
+        avatar_url,
+        about: telegramAbout
       });
       return res.json(serializeUser(syncedUser));
     }
@@ -36,7 +58,8 @@ async function register(req, res) {
       first_name,
       last_name,
       username,
-      avatar_url
+      avatar_url,
+      about: telegramAbout
     });
 
     res.json(serializeUser(newUser));

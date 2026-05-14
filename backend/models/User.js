@@ -36,7 +36,7 @@ class User {
       avatar_url: userData.avatar_url || currentUser.avatar_url || '',
       phone: currentUser.phone || '',
       city: currentUser.city || '',
-      about: currentUser.about || ''
+      about: userData.about || currentUser.about || ''
     };
 
     await db.run(
@@ -45,9 +45,10 @@ class User {
            last_name = $2,
            username = $3,
            avatar_url = $4,
+           about = $5,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5`,
-      [nextUser.first_name, nextUser.last_name, nextUser.username, nextUser.avatar_url, user_id]
+       WHERE id = $6`,
+      [nextUser.first_name, nextUser.last_name, nextUser.username, nextUser.avatar_url, nextUser.about, user_id]
     );
 
     return User.findById(user_id);

@@ -169,14 +169,24 @@ function isPriceInputFilled(value) {
     return value !== undefined && value !== null && String(value).trim() !== '';
 }
 
-function formatPrice(value) {
+function formatPrice(value, priceType = '') {
     const price = Number(value);
 
     if (Number.isFinite(price) && price === 0) {
         return 'Бесплатно';
     }
 
-    return `${value} EUR`;
+    const priceText = `${value} €`;
+
+    if (priceType === 'from') {
+        return `от ${priceText}`;
+    }
+
+    if (priceType === 'to') {
+        return `до ${priceText}`;
+    }
+
+    return priceText;
 }
 
 function getMediaLimitText() {
@@ -201,7 +211,8 @@ function getTelegramPayload() {
         first_name: telegramUser?.first_name || '',
         last_name: telegramUser?.last_name || '',
         username: telegramUser?.username || '',
-        avatar_url: telegramUser?.photo_url || ''
+        avatar_url: telegramUser?.photo_url || '',
+        about: telegramUser?.bio || ''
     };
 }
 
@@ -424,7 +435,7 @@ function setSearchViewMode(mode) {
     state.activeSearchView = mode;
 
     document.getElementById('promoBannerSection')?.classList.toggle('hidden', mode !== 'home');
-    document.getElementById('categoriesShowcaseSection')?.classList.toggle('hidden', mode !== 'home');
+    document.getElementById('categoriesShowcaseSection')?.classList.toggle('hidden', !['home', 'category'].includes(mode));
     document.getElementById('homeRecommendationsBlock')?.classList.toggle('hidden', mode !== 'home');
     document.getElementById('categoryLandingSection')?.classList.toggle('hidden', mode !== 'category');
     document.getElementById('sellerProfileSection')?.classList.toggle('hidden', mode !== 'seller');
@@ -623,7 +634,7 @@ function startCategoryAutoScroll() {
         state.categoryAutoScrollLastTime = timestamp;
 
         if (container.scrollWidth > container.clientWidth) {
-            container.scrollLeft += delta * 0.018;
+            container.scrollLeft += delta * 0.026;
 
             if (container.scrollLeft + container.clientWidth >= container.scrollWidth - 1) {
                 container.scrollLeft = 0;
@@ -1060,9 +1071,11 @@ function attachEventListeners() {
 
     document.getElementById('imageInput').addEventListener('change', (e) => handleImageSelect(e, 'images'));
     document.getElementById('serviceImageInput').addEventListener('change', (e) => handleImageSelect(e, 'serviceImages'));
+    document.getElementById('editImageInput').addEventListener('change', (e) => handleImageSelect(e, 'editImages'));
     document.getElementById('reviewScreenshotInput').addEventListener('change', handleReviewScreenshotSelect);
     document.getElementById('adminSeedReviewAvatarInput').addEventListener('change', handleAdminReviewAvatarSelect);
 
+    attachPriceTypeListeners();
     attachListingDraftListeners();
     restoreListingDrafts();
 }
@@ -1134,6 +1147,34 @@ function getActiveListingType() {
     return document.querySelector('.listing-type.active')?.dataset.type || 'product';
 }
 
+function getPriceType(formType) {
+    return document.querySelector(`[data-price-type-group="${formType}"] input:checked`)?.value || '';
+}
+
+function setPriceType(formType, value = '') {
+    document.querySelectorAll(`[data-price-type-group="${formType}"] input`).forEach((input) => {
+        input.checked = input.value === value;
+    });
+}
+
+function attachPriceTypeListeners() {
+    document.querySelectorAll('[data-price-type-group]').forEach((group) => {
+        group.querySelectorAll('input').forEach((input) => {
+            input.addEventListener('change', () => {
+                if (input.checked) {
+                    group.querySelectorAll('input').forEach((otherInput) => {
+                        if (otherInput !== input) {
+                            otherInput.checked = false;
+                        }
+                    });
+                }
+
+                saveListingDrafts();
+            });
+        });
+    });
+}
+
 function readListingDraftForm(formType) {
     const fields = getListingFormFields(formType);
 
@@ -1148,6 +1189,7 @@ function readListingDraftForm(formType) {
         subcategory: fields.subcategory?.value || '',
         city_id: fields.city?.value || '',
         price: fields.price?.value || '',
+        price_type: getPriceType(formType),
         promotion_plan: state.selectedPromotionPlans[formType] || ''
     };
 }
@@ -1200,6 +1242,7 @@ function applyListingDraft(formType, draft) {
     if (fields.subcategory) fields.subcategory.value = draft.subcategory || '';
     if (fields.city) fields.city.value = draft.city_id || '';
     if (fields.price) fields.price.value = draft.price || '';
+    setPriceType(formType, draft.price_type || '');
 
     state.selectedPromotionPlans[formType] = draft.promotion_plan || '';
     renderPromotionOptions(formType);
@@ -1262,17 +1305,19 @@ function handleImageSelect(e, type) {
     }
 
     files.forEach((file) => {
+        const isEditMedia = type === 'editImages';
+
         if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
             alert('Можно загрузить только фото или видео');
             return;
         }
 
-        if (file.type.startsWith('image/') && file.size > MAX_IMAGE_SIZE_BYTES) {
+        if (file.type.startsWith('image/') && file.size > MAX_IMAGE_SIZE_BYTES && !isEditMedia) {
             alert('Каждая фотография должна быть меньше 1.5 МБ');
             return;
         }
 
-        if (file.type.startsWith('video/') && file.size > getMaxVideoSizeBytes()) {
+        if (file.type.startsWith('video/') && file.size > getMaxVideoSizeBytes() && !isEditMedia) {
             alert(`Видео должно быть меньше ${Math.round(getMaxVideoSizeBytes() / (1024 * 1024))} МБ`);
             return;
         }
@@ -1434,6 +1479,7 @@ async function handleListingSubmit(e, formIndex) {
             subcategory,
             city_id: cityId,
             price: parseFloat(price),
+            price_type: getPriceType(formType),
             images: state.images
         };
 
@@ -1467,6 +1513,7 @@ async function handleListingSubmit(e, formIndex) {
             populateSubcategorySelect('product');
             populateSubcategorySelect('service');
             state.selectedPromotionPlans[formType] = '';
+            setPriceType(formType, '');
             renderPromotionOptions(formType);
             clearListingDraft(formType);
             await refreshServicePublicationRequirement();
@@ -1665,7 +1712,7 @@ function renderListings(listings, containerId) {
                 ${statusBadge}
                 <div class="item-category-line">${categoryName}</div>
                 <div class="item-title">${escapeHtml(item.title)}</div>
-            <div class="item-price">${formatPrice(item.price)}</div>
+            <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
                 <div class="item-meta-row">
                     <div class="item-meta">${getCityName(item.city_id || item.city)}</div>
                     <div class="item-date">${item.created_at ? new Date(item.created_at).toLocaleDateString('ru-RU') : ''}</div>
@@ -1741,7 +1788,7 @@ function showItemDetails(item) {
             <span>${new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
         </div>
         ${gallery}
-        <div class="item-details-price">${formatPrice(item.price)}</div>
+        <div class="item-details-price">${formatPrice(item.price, item.price_type)}</div>
         ${item.expires_at ? `<div class="info-text">Активно до ${new Date(item.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
         ${item.is_premium ? `<div class="promotion-status">В первой линии${item.premium_expires_at ? ` до ${new Date(item.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}
         <div class="item-details-description">${item.description || 'Описание отсутствует'}</div>
@@ -2571,6 +2618,7 @@ window.editItem = function(itemId, itemType = 'listing') {
     document.getElementById('editSubcategory').value = item.subcategory || '';
     document.getElementById('editCity').value = item.city_id || '';
     document.getElementById('editPrice').value = item.price || '';
+    setPriceType('edit', item.price_type || '');
     renderImagePreview('editImages');
     document.getElementById('editItemModal').classList.remove('hidden');
 };
@@ -2601,10 +2649,11 @@ async function handleEditItemSubmit(event) {
         subcategory: document.getElementById('editSubcategory').value,
         city_id: document.getElementById('editCity').value,
         price: parseFloat(document.getElementById('editPrice').value),
+        price_type: getPriceType('edit'),
         images: state.editImages
     };
 
-    if (!payload.title || !payload.category_id || !payload.city_id || !payload.price) {
+    if (!payload.title || !payload.category_id || !payload.city_id || !Number.isFinite(payload.price)) {
         alert('Пожалуйста, заполните обязательные поля');
         return;
     }

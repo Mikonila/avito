@@ -213,6 +213,7 @@ html, body, #app {
     bottom: 0;
     z-index: 140;
     width: 100%;
+    min-height: calc(64px + env(safe-area-inset-bottom));
     padding: 8px max(12px, calc((100% - 1240px) / 2 + 16px)) calc(8px + env(safe-area-inset-bottom));
     transform: none;
     background: rgba(255, 255, 255, 0.92);
@@ -243,7 +244,7 @@ html, body, #app {
     position: relative;
     border: none;
     background: transparent;
-    border-radius: 18px;
+    border-radius: 0;
     box-shadow: none;
 }
 
@@ -262,7 +263,7 @@ html, body, #app {
     color: var(--secondary-color);
     background: linear-gradient(135deg, #e3f3ff, #ebe3ff);
     border-color: transparent;
-    box-shadow: 0 10px 22px rgba(139, 92, 246, 0.1);
+    box-shadow: none;
 }
 
 .footer-tabs .tab.active::before {
@@ -430,6 +431,35 @@ html, body, #app {
     min-height: 100px;
 }
 
+.price-type-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.form-group .price-type-options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    margin: 0;
+    padding: 9px 12px;
+    border: 1px solid rgba(139, 92, 246, 0.16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.86);
+    color: var(--muted-color);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.price-type-options input {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    accent-color: var(--brand-violet);
+}
+
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -579,9 +609,13 @@ html, body, #app {
     display: flex;
     gap: 0;
     overflow-x: auto;
+    overflow-y: hidden;
+    height: 46px;
+    max-height: 46px;
     padding: 2px 0 8px;
-    scroll-snap-type: x proximity;
+    scroll-snap-type: none;
     scrollbar-width: none;
+    align-items: stretch;
 }
 
 .category-showcase-grid::-webkit-scrollbar {
@@ -597,7 +631,9 @@ html, body, #app {
     flex: 0 0 auto;
     border: 1px solid rgba(139, 92, 246, 0.16);
     border-radius: 0;
-    min-height: 44px;
+    height: 38px;
+    min-height: 38px;
+    max-height: 38px;
     padding: 0 18px;
     display: inline-flex;
     align-items: center;
@@ -641,7 +677,7 @@ html, body, #app {
     display: block;
     color: var(--text-color);
     font-size: 13px;
-    font-weight: 800;
+    font-weight: 400;
     line-height: 1;
     white-space: nowrap;
 }
@@ -720,16 +756,17 @@ html, body, #app {
 
 .promo-banner h2 {
     max-width: 100%;
-    font-size: clamp(24px, 4vw, 34px);
-    line-height: 1.1;
+    font-size: 22px;
+    line-height: 1.25;
     margin-bottom: 12px;
     overflow-wrap: normal;
     text-wrap: balance;
 }
 
 .promo-banner p {
+    font-size: 22px;
     color: var(--muted-color);
-    line-height: 1.55;
+    line-height: 1.25;
     overflow-wrap: normal;
     word-break: normal;
 }
@@ -843,6 +880,11 @@ html, body, #app {
     gap: 14px;
 }
 
+.category-landing .category-landing-header,
+.category-landing .category-recommendations-title {
+    display: none;
+}
+
 .category-landing-header h2 {
     font-size: 34px;
     line-height: 1.05;
@@ -890,7 +932,7 @@ html, body, #app {
     display: block;
     color: var(--text-color);
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 400;
     line-height: 1.1;
     margin-bottom: 5px;
 }
@@ -2008,7 +2050,9 @@ html, body, #app {
     .category-tile-10,
     .category-tile-11,
     .category-tile-12 {
-        min-height: 42px;
+        height: 38px;
+        min-height: 38px;
+        max-height: 38px;
         padding: 0 14px;
     }
 
@@ -2028,13 +2072,9 @@ html, body, #app {
         font-size: 28px;
     }
 
-    .promo-banner h2 {
-        font-size: 28px;
-    }
-
     .promo-visual {
-        min-height: 190px;
-        height: 190px;
+        min-height: 230px;
+        height: 230px;
     }
 
     .promo-visual-image {
@@ -2118,11 +2158,11 @@ html, body, #app {
     }
 
     .footer-tabs {
-        width: calc(100% - 16px);
-        bottom: 8px;
-        padding: 8px;
-        gap: 8px;
-        border-radius: 20px;
+        width: 100%;
+        bottom: 0;
+        padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+        gap: 0;
+        border-radius: 0;
     }
 
     .form-shell,
@@ -2136,19 +2176,19 @@ html, body, #app {
     }
 
     .promo-banner h2 {
-        font-size: 22px;
-        line-height: 1.1;
+        font-size: 20px;
+        line-height: 1.25;
         margin-bottom: 10px;
     }
 
     .promo-banner p {
-        font-size: 13px;
-        line-height: 1.5;
+        font-size: 20px;
+        line-height: 1.25;
     }
 
     .promo-visual {
-        min-height: 144px;
-        height: 144px;
+        min-height: 220px;
+        height: 220px;
     }
 
     .promo-visual-image {
@@ -2156,21 +2196,23 @@ html, body, #app {
     }
 
     .category-showcase-grid {
-        gap: 10px;
+        gap: 0;
     }
 
     .category-tile {
-        padding: 12px;
-        border-radius: 16px;
-        min-height: 104px;
+        height: 38px;
+        min-height: 38px;
+        max-height: 38px;
+        padding: 0 14px;
+        border-radius: 0;
     }
 
     .category-tile strong {
-        font-size: 14px;
+        font-size: 13px;
     }
 
     .category-tile-copy {
-        max-width: 66%;
+        max-width: none;
     }
 
     .category-tile-visual {
@@ -2233,4 +2275,122 @@ html, body, #app {
         border-radius: 14px;
         font-size: 13px;
     }
+}
+
+/* Final UI overrides for compact scrolling categories, uniform content text, and a full-width footer. */
+:root {
+    --content-text-size: 20px;
+}
+
+.promo-banner h2,
+.promo-banner p,
+.section-divider h3,
+.category-recommendations-title,
+.category-landing-header h2,
+.category-explorer-group-header h3,
+.category-explorer-group-header p,
+.category-explorer-card span,
+.category-explorer-card small,
+.category-landing-tile strong,
+.category-landing-tile span,
+.section-kicker,
+.item-category-line,
+.item-title,
+.item-price,
+.item-meta,
+.item-date,
+.item-details h2,
+.item-details-price,
+.item-details-description,
+.item-details-meta span,
+.info-text,
+.profile-summary-meta h3,
+.profile-summary-subtitle,
+.profile-info-label,
+.profile-info-value,
+.profile-reviews h3,
+.seller-profile-card h3,
+.seller-profile-card p,
+.review-author-name,
+.review-meta,
+.review-text,
+.brand-title,
+.brand-subtitle,
+.form-shell h3,
+.modal-content h2 {
+    font-size: var(--content-text-size) !important;
+    line-height: 1.25 !important;
+}
+
+.category-showcase-grid {
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    scroll-snap-type: none !important;
+}
+
+.category-tile,
+.category-tile-all,
+.category-tile-1,
+.category-tile-2,
+.category-tile-3,
+.category-tile-4,
+.category-tile-5,
+.category-tile-6,
+.category-tile-7,
+.category-tile-8,
+.category-tile-9,
+.category-tile-10,
+.category-tile-11,
+.category-tile-12 {
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    padding: 0 14px !important;
+}
+
+.category-tile strong {
+    font-size: 13px !important;
+    line-height: 1 !important;
+    font-weight: 400 !important;
+}
+
+body {
+    padding-bottom: calc(78px + env(safe-area-inset-bottom)) !important;
+}
+
+.footer-tabs {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    min-width: 100vw !important;
+    min-height: calc(72px + env(safe-area-inset-bottom)) !important;
+    margin: 0 !important;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom)) !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-top: 1px solid rgba(139, 92, 246, 0.16) !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    transform: none !important;
+    overflow: visible !important;
+}
+
+.footer-tabs .tab,
+.footer-tabs .tab.active {
+    height: 100% !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.footer-tabs .tab.active {
+    color: var(--secondary-color) !important;
 }

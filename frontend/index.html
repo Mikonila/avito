@@ -168,8 +168,12 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>Цена (EUR)</label>
+                                <label>Цена (€)</label>
                                 <input type="number" placeholder="0.00" step="0.01" required>
+                                <div class="price-type-options" data-price-type-group="product">
+                                    <label><input type="checkbox" value="from"> Начальная цена</label>
+                                    <label><input type="checkbox" value="to"> Конечная цена</label>
+                                </div>
                             </div>
                             <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('imageInput').click()">+ Добавить фотографии</button>
                             <input type="file" id="imageInput" accept="image/*" multiple style="display:none;">
@@ -212,8 +216,12 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>Цена услуги (EUR)</label>
+                                <label>Цена услуги (€)</label>
                                 <input type="number" placeholder="0.00" step="0.01" required>
+                                <div class="price-type-options" data-price-type-group="service">
+                                    <label><input type="checkbox" value="from"> Начальная цена</label>
+                                    <label><input type="checkbox" value="to"> Конечная цена</label>
+                                </div>
                             </div>
                             <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('serviceImageInput').click()">+ Добавить фотографии</button>
                             <input type="file" id="serviceImageInput" accept="image/*" multiple style="display:none;">
@@ -350,9 +358,15 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Цена (EUR)</label>
+                    <label>Цена (€)</label>
                     <input type="number" id="editPrice" step="0.01" required>
+                    <div class="price-type-options" data-price-type-group="edit">
+                        <label><input type="checkbox" value="from"> Начальная цена</label>
+                        <label><input type="checkbox" value="to"> Конечная цена</label>
+                    </div>
                 </div>
+                <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('editImageInput').click()">+ Добавить фотографии</button>
+                <input type="file" id="editImageInput" accept="image/*,video/*" multiple style="display:none;">
                 <div id="editImagePreview" class="image-preview"></div>
                 <button type="submit" class="btn btn-primary btn-block">Сохранить изменения</button>
             </form>
