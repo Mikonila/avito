@@ -1,6 +1,20 @@
 const db = require('./database');
 
 const CATEGORIES = [
+  {
+    id: 'cat-8',
+    name: 'Услуги',
+    icon: '🛠️',
+    subcategories: [
+      { id: 'visaran', name: 'Визаран' },
+      { id: 'building', name: 'Стройка/ремонт' },
+      { id: 'cleaning', name: 'Клининг' },
+      { id: 'education', name: 'Обучение' },
+      { id: 'events', name: 'Специалисты' },
+      { id: 'other', name: 'Персонал' },
+      { id: 'misc', name: 'Прочее' }
+    ]
+  },
   { id: 'cat-13', name: 'Афиша', icon: '🎭' },
   { id: 'cat-1', name: 'Электроника', icon: '💻' },
   {
@@ -34,20 +48,6 @@ const CATEGORIES = [
   },
   { id: 'cat-6', name: 'Хобби и отдых', icon: '🎣' },
   { id: 'cat-7', name: 'Детское', icon: '🧸' },
-  {
-    id: 'cat-8',
-    name: 'Услуги',
-    icon: '🛠️',
-    subcategories: [
-      { id: 'visaran', name: 'Визаран' },
-      { id: 'building', name: 'Стройка/ремонт' },
-      { id: 'cleaning', name: 'Клининг' },
-      { id: 'education', name: 'Обучение' },
-      { id: 'events', name: 'Специалисты' },
-      { id: 'other', name: 'Персонал' },
-      { id: 'misc', name: 'Прочее' }
-    ]
-  },
   { id: 'cat-9', name: 'Животные', icon: '🐾' },
   {
     id: 'cat-11',

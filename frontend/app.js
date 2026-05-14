@@ -12,8 +12,15 @@ const SERVICE_CATEGORY_ID = 'cat-8';
 const OTHER_SUBCATEGORY = { id: 'other', name: 'Прочее' };
 const SUPPORT_LINK = 'https://t.me/helionstudio';
 const SERVICE_PUBLICATION_PLAN = { key: 'month', label: '1 месяц', stars: 100, rub: 182 };
+const CATEGORY_SHOWCASE_LABELS = {
+    'cat-1': 'Техника',
+    'cat-3': 'Недвиж.',
+    'cat-4': 'Дом',
+    'cat-5': 'Одежда',
+    'cat-6': 'Хобби',
+    'cat-11': 'Работа'
+};
 const PROMOTION_PLANS = {
-    test: { label: 'Тест', stars: 1, rub: 2 },
     three_days: { label: '3 дня', stars: 100, rub: 182 },
     week: { label: '7 дней', stars: 150, rub: 265 },
     month: { label: '1 месяц', stars: 250, rub: 429 }
@@ -247,6 +254,10 @@ function getListingSubcategoryName(categoryId, subcategoryId) {
     }
 
     return subcategoryName;
+}
+
+function getShowcaseCategoryLabel(category) {
+    return CATEGORY_SHOWCASE_LABELS[category.id] || category.name;
 }
 
 function normalizePublication(item, type) {
@@ -587,7 +598,7 @@ function renderCategoryShowcase() {
         </button>
     `;
 
-    const showcasePriority = ['cat-11', 'cat-13', 'cat-12'];
+    const showcasePriority = [SERVICE_CATEGORY_ID, 'cat-11', 'cat-13', 'cat-12'];
     const showcaseCategories = [
         ...showcasePriority
             .map((id) => state.categories.find((category) => category.id === id))
@@ -600,9 +611,11 @@ function renderCategoryShowcase() {
             type="button"
             class="category-tile category-tile-${(index % 6) + 1} ${state.filters.categoryId === category.id ? 'active' : ''}"
             data-category-tile="${category.id}"
+            title="${escapeHtml(category.name)}"
+            aria-label="${escapeHtml(category.name)}"
         >
             <div class="category-tile-copy">
-                <strong>${category.name}</strong>
+                <strong>${escapeHtml(getShowcaseCategoryLabel(category))}</strong>
             </div>
         </button>
     `).join('');
@@ -612,7 +625,7 @@ function renderCategoryShowcase() {
     container.querySelectorAll('[data-category-tile]').forEach((button) => {
         button.addEventListener('click', () => {
             if (button.dataset.categoryTile === 'all') {
-                openCategoryExplorerModal();
+                showAllListingsFromCategories();
                 return;
             }
 
@@ -624,38 +637,23 @@ function renderCategoryShowcase() {
 }
 
 function startCategoryAutoScroll() {
-    const container = document.getElementById('categoryShowcase');
-
-    if (!container) {
-        return;
-    }
-
     if (state.categoryAutoScrollRaf) {
         cancelAnimationFrame(state.categoryAutoScrollRaf);
+        state.categoryAutoScrollRaf = null;
     }
-
     state.categoryAutoScrollLastTime = 0;
+}
 
-    const scroll = (timestamp) => {
-        if (!state.categoryAutoScrollLastTime) {
-            state.categoryAutoScrollLastTime = timestamp;
-        }
+async function showAllListingsFromCategories() {
+    state.activeCategoryId = '';
+    state.lastCategoryId = '';
+    state.filters.categoryId = '';
+    state.filters.subcategoryId = '';
 
-        const delta = timestamp - state.categoryAutoScrollLastTime;
-        state.categoryAutoScrollLastTime = timestamp;
-
-        if (container.scrollWidth > container.clientWidth) {
-            container.scrollLeft += delta * 0.026;
-
-            if (container.scrollLeft + container.clientWidth >= container.scrollWidth - 1) {
-                container.scrollLeft = 0;
-            }
-        }
-
-        state.categoryAutoScrollRaf = requestAnimationFrame(scroll);
-    };
-
-    state.categoryAutoScrollRaf = requestAnimationFrame(scroll);
+    syncFilterUi();
+    setSearchViewMode('home');
+    switchTab('search');
+    await loadRandomListings();
 }
 
 function renderCategoryExplorer() {
@@ -1719,7 +1717,6 @@ function renderListings(listings, containerId) {
             </div>
             <div class="item-info">
                 ${statusBadge}
-                <div class="item-category-line">${categoryName}</div>
                 <div class="item-title">${escapeHtml(item.title)}</div>
                 <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
                 <div class="item-meta-row">

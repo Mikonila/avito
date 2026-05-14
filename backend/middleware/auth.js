@@ -25,12 +25,16 @@ function getRequesterTelegramId(req) {
     ).trim();
 }
 
+function getAdminTelegramIds() {
+    const rawValue = process.env.ADMIN_TELEGRAM_IDS || process.env.ADMIN_TELEGRAM_ID || '';
+    return String(rawValue)
+        .split(/[,\s]+/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+}
+
 function isAdminTelegramId(telegramId) {
-    return Boolean(
-        telegramId &&
-        process.env.ADMIN_TELEGRAM_ID &&
-        String(telegramId) === String(process.env.ADMIN_TELEGRAM_ID)
-    );
+    return Boolean(telegramId && getAdminTelegramIds().includes(String(telegramId).trim()));
 }
 
 function requireAdmin(req, res, next) {
@@ -75,6 +79,7 @@ function requestLogger(req, res, next) {
 module.exports = {
     authMiddleware,
     errorHandler,
+    getAdminTelegramIds,
     getRequesterTelegramId,
     isAdminTelegramId,
     requireAdmin,

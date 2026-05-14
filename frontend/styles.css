@@ -1149,8 +1149,11 @@ html, body, #app {
 
 .item-card {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     background: var(--surface-color);
-    border-radius: 18px;
+    border-radius: 10px;
     overflow: hidden;
     box-shadow: var(--shadow-soft);
     border: 1px solid rgba(229, 231, 235, 0.92);
@@ -1188,7 +1191,7 @@ html, body, #app {
 
 .item-card-media {
     position: relative;
-    padding: 8px 8px 0;
+    padding: 5px 5px 0;
 }
 
 .item-badge {
@@ -1248,7 +1251,7 @@ html, body, #app {
     justify-content: center;
     font-size: 40px;
     overflow: hidden;
-    border-radius: 14px;
+    border-radius: 8px;
 }
 
 .item-image img,
@@ -1259,7 +1262,10 @@ html, body, #app {
 }
 
 .item-info {
-    padding: 10px 12px 12px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 8px 8px 9px;
 }
 
 .item-category-line {
@@ -1283,6 +1289,7 @@ html, body, #app {
     color: transparent;
     font-size: 20px;
     font-weight: 800;
+    margin-top: auto;
     margin-bottom: 8px;
 }
 
@@ -2277,7 +2284,7 @@ html, body, #app {
     }
 }
 
-/* Final UI overrides for compact scrolling categories, restrained text, and a full-width footer. */
+/* Final UI overrides for compact categories, restrained text, and a full-width footer. */
 :root {
     --content-text-size: 16px;
 }
@@ -2321,13 +2328,14 @@ html, body, #app {
 }
 
 .category-showcase-grid {
-    height: 46px !important;
-    min-height: 46px !important;
-    max-height: 46px !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    flex-wrap: nowrap !important;
-    align-items: stretch !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 2px 0 10px !important;
     scroll-snap-type: none !important;
 }
 
@@ -2345,16 +2353,64 @@ html, body, #app {
 .category-tile-10,
 .category-tile-11,
 .category-tile-12 {
-    height: 38px !important;
-    min-height: 38px !important;
-    max-height: 38px !important;
-    padding: 0 14px !important;
+    flex: initial !important;
+    height: 30px !important;
+    min-width: 0 !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    width: 100% !important;
+    padding: 0 6px !important;
+    border: 1px solid rgba(139, 92, 246, 0.14) !important;
+    border-radius: 11px !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    background: rgba(255, 255, 255, 0.88) !important;
+}
+
+.category-tile::before {
+    display: none !important;
+}
+
+.category-tile:first-child,
+.category-tile:last-child {
+    border-radius: 11px !important;
+}
+
+.category-tile + .category-tile {
+    border-left: 1px solid rgba(139, 92, 246, 0.14) !important;
+}
+
+.category-tile.active {
+    background: linear-gradient(135deg, rgba(103, 199, 255, 0.24), rgba(139, 92, 246, 0.18)) !important;
+    border-color: rgba(139, 92, 246, 0.32) !important;
+}
+
+.category-tile-all,
+.category-tile-all.active {
+    background: var(--brand-gradient) !important;
+    border-color: transparent !important;
 }
 
 .category-tile strong {
-    font-size: 13px !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 12px !important;
     line-height: 1 !important;
     font-weight: 400 !important;
+}
+
+@media (min-width: 390px) {
+    .category-showcase-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (min-width: 720px) {
+    .category-showcase-grid {
+        grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    }
 }
 
 body {

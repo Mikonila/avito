@@ -1,6 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const Listing = require('./models/Listing');
 const Service = require('./models/Service');
+const { getAdminTelegramIds } = require('./middleware/auth');
 
 const WEBHOOK_PATH = '/api/telegram/webhook';
 
@@ -17,7 +18,6 @@ const botDiagnostics = {
   webhookUrl: null
 };
 const PROMOTION_PLANS = {
-  test: { days: 1, stars: 1, label: 'Тест' },
   three_days: { days: 3, stars: 100, label: '3 дня' },
   week: { days: 7, stars: 150, label: '7 дней' },
   month: { days: 30, stars: 250, label: '1 месяц' }
@@ -42,10 +42,6 @@ function getSupportUsername() {
 
 function getSupportTelegramLink() {
   return `https://t.me/${getSupportUsername()}`;
-}
-
-function getAdminTelegramId() {
-  return process.env.ADMIN_TELEGRAM_ID ? String(process.env.ADMIN_TELEGRAM_ID) : '';
 }
 
 function parsePromotionPayload(payload) {
@@ -115,7 +111,7 @@ function buildWelcomeKeyboard() {
     inline_keyboard: [
       [
         {
-          text: '🏪 Открыть маркетплейс',
+          text: 'Открыть маркетплейс',
           web_app: { url: getWebAppUrl() }
         }
       ]
@@ -175,10 +171,10 @@ async function sendHelp(bot, msg) {
 }
 
 async function forwardUserMessageToAdmin(bot, msg) {
-  const adminId = getAdminTelegramId();
+  const adminIds = getAdminTelegramIds();
 
-  if (!adminId) {
-    console.warn('ADMIN_TELEGRAM_ID is not set. User message was not forwarded.');
+  if (adminIds.length === 0) {
+    console.warn('ADMIN_TELEGRAM_ID/ADMIN_TELEGRAM_IDS is not set. User message was not forwarded.');
     await bot.sendMessage(
       msg.chat.id,
       `Сообщение не удалось передать автоматически. Напишите напрямую: @${getSupportUsername()}`
@@ -186,21 +182,32 @@ async function forwardUserMessageToAdmin(bot, msg) {
     return;
   }
 
-  await bot.sendMessage(adminId, buildSenderInfo(msg));
+  let delivered = false;
+  let lastForwardError = null;
 
-  try {
-    if (typeof bot.copyMessage === 'function') {
-      await bot.copyMessage(adminId, msg.chat.id, msg.message_id);
-    } else {
-      await bot.forwardMessage(adminId, msg.chat.id, msg.message_id);
+  for (const adminId of adminIds) {
+    try {
+      await bot.sendMessage(adminId, buildSenderInfo(msg));
+
+      if (typeof bot.copyMessage === 'function') {
+        await bot.copyMessage(adminId, msg.chat.id, msg.message_id);
+      } else {
+        await bot.forwardMessage(adminId, msg.chat.id, msg.message_id);
+      }
+
+      delivered = true;
+    } catch (forwardError) {
+      lastForwardError = forwardError;
+      console.error(`Failed to relay user message to admin ${adminId}:`, forwardError.message);
+      await bot.sendMessage(
+        adminId,
+        `Не удалось переслать сообщение автоматически. Chat ID: ${msg.chat?.id || 'не указан'}`
+      ).catch(() => {});
     }
-  } catch (forwardError) {
-    console.error('Failed to relay user message to admin:', forwardError.message);
-    await bot.sendMessage(
-      adminId,
-      `Не удалось переслать сообщение автоматически. Chat ID: ${msg.chat?.id || 'не указан'}`
-    ).catch(() => {});
-    throw forwardError;
+  }
+
+  if (!delivered) {
+    throw lastForwardError || new Error('Failed to relay user message to admins');
   }
 
   await bot.sendMessage(msg.chat.id, 'Сообщение передано администратору.');
