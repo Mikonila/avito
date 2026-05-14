@@ -238,6 +238,17 @@ function getSubcategoryName(categoryId, subcategoryId) {
     return category?.subcategories?.find((item) => item.id === subcategoryId)?.name || subcategoryId;
 }
 
+function getListingSubcategoryName(categoryId, subcategoryId) {
+    const subcategoryName = getSubcategoryName(categoryId, subcategoryId);
+    const normalizedName = String(subcategoryName).trim().toLowerCase();
+
+    if (['прочее', 'другое', 'other', 'misc'].includes(normalizedName)) {
+        return '';
+    }
+
+    return subcategoryName;
+}
+
 function normalizePublication(item, type) {
     return {
         ...item,
@@ -815,7 +826,6 @@ function renderCategoryLandingTiles(category) {
                 onclick="selectCategoryLandingSubcategory('')"
             >
                 <strong>Все объявления</strong>
-                <span>${category.name}</span>
             </button>
         `,
         ...subcategories.map((subcategory) => `
@@ -825,7 +835,6 @@ function renderCategoryLandingTiles(category) {
                 onclick="selectCategoryLandingSubcategory('${subcategory.id}')"
             >
                 <strong>${subcategory.name}</strong>
-                <span>${category.name}</span>
             </button>
         `)
     ];
@@ -1684,7 +1693,7 @@ function renderListings(listings, containerId) {
         const image = item.images && item.images[0] ? item.images[0] : '📦';
         const isMedia = typeof image === 'string' && (image.startsWith('data:') || image.startsWith('http'));
         const categoryName = getCategoryName(item.category_id);
-        const subcategoryName = getSubcategoryName(item.category_id, item.subcategory);
+        const subcategoryName = getListingSubcategoryName(item.category_id, item.subcategory);
         const badgeText = subcategoryName || categoryName;
         const itemType = item.item_type || 'listing';
         const promotionBadge = item.is_premium
@@ -1712,10 +1721,9 @@ function renderListings(listings, containerId) {
                 ${statusBadge}
                 <div class="item-category-line">${categoryName}</div>
                 <div class="item-title">${escapeHtml(item.title)}</div>
-            <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
+                <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
                 <div class="item-meta-row">
                     <div class="item-meta">${getCityName(item.city_id || item.city)}</div>
-                    <div class="item-date">${item.created_at ? new Date(item.created_at).toLocaleDateString('ru-RU') : ''}</div>
                 </div>
             </div>
         `;
@@ -1757,7 +1765,7 @@ function showItemDetails(item) {
     const modal = document.getElementById('itemModal');
     const content = document.getElementById('itemContent');
     const categoryName = getCategoryName(item.category_id);
-    const subcategoryName = getSubcategoryName(item.category_id, item.subcategory);
+    const subcategoryName = getListingSubcategoryName(item.category_id, item.subcategory);
 
     const gallery = item.images && item.images.length > 0 ? `
         <div class="item-details-gallery">

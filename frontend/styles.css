@@ -2404,3 +2404,20 @@ body {
 .footer-tabs .tab.active {
     color: var(--secondary-color) !important;
 }
+
+.item-meta-row {
+    display: block !important;
+}
+
+.item-meta {
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+}
+
+.category-landing-tile strong {
+    margin-bottom: 0 !important;
+}
+
+.category-landing-tile span {
+    display: none !important;
+}
