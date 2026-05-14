@@ -1279,6 +1279,8 @@ html, body, #app {
     overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
+    color: #374151;
+    font-family: 'SF Pro Text', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-weight: 400;
     font-size: 15px;
     margin-bottom: 7px;
@@ -2292,6 +2294,15 @@ html, body, #app {
     --content-text-size: 16px;
 }
 
+.tab-content {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+}
+
+.items-grid {
+    gap: 8px !important;
+}
+
 .promo-banner p,
 .section-divider h3,
 .category-recommendations-title,
@@ -2459,6 +2470,17 @@ html, body, #app {
     .category-tile-11,
     .category-tile-12 {
         padding: 0 12px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .tab-content {
+        padding-left: 7px !important;
+        padding-right: 7px !important;
+    }
+
+    .items-grid {
+        gap: 7px !important;
     }
 }
 
