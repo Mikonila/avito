@@ -1275,11 +1275,14 @@ html, body, #app {
 }
 
 .item-title {
-    font-weight: 700;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    font-weight: 400;
     font-size: 15px;
     margin-bottom: 7px;
     line-height: 1.35;
-    min-height: 40px;
 }
 
 .item-price {
@@ -2328,14 +2331,20 @@ html, body, #app {
 }
 
 .category-showcase-grid {
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 6px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    column-gap: 0 !important;
+    row-gap: 3px !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
     overflow: visible !important;
-    padding: 2px 0 10px !important;
+    padding: 7px 8px !important;
+    align-items: center !important;
+    border: 1px solid rgba(139, 92, 246, 0.12) !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    box-shadow: 0 8px 22px rgba(139, 92, 246, 0.06) !important;
     scroll-snap-type: none !important;
 }
 
@@ -2354,40 +2363,59 @@ html, body, #app {
 .category-tile-11,
 .category-tile-12 {
     flex: initial !important;
-    height: 30px !important;
+    height: 26px !important;
     min-width: 0 !important;
-    min-height: 30px !important;
-    max-height: 30px !important;
-    width: 100% !important;
-    padding: 0 6px !important;
-    border: 1px solid rgba(139, 92, 246, 0.14) !important;
-    border-radius: 11px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    width: auto !important;
+    padding: 0 10px !important;
+    border: none !important;
+    border-radius: 0 !important;
     justify-content: center !important;
-    overflow: hidden !important;
-    background: rgba(255, 255, 255, 0.88) !important;
+    overflow: visible !important;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
-.category-tile::before {
+.category-tile::before,
+.category-tile + .category-tile::before {
+    display: none !important;
+}
+
+.category-tile::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 8px !important;
+    right: 0 !important;
+    width: 1px !important;
+    height: 10px !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, rgba(139, 92, 246, 0), rgba(139, 92, 246, 0.28), rgba(103, 199, 255, 0)) !important;
+    pointer-events: none !important;
+}
+
+.category-tile:last-child::after {
     display: none !important;
 }
 
 .category-tile:first-child,
 .category-tile:last-child {
-    border-radius: 11px !important;
+    border-radius: 0 !important;
 }
 
 .category-tile + .category-tile {
-    border-left: 1px solid rgba(139, 92, 246, 0.14) !important;
+    border-left: none !important;
 }
 
 .category-tile.active {
-    background: linear-gradient(135deg, rgba(103, 199, 255, 0.24), rgba(139, 92, 246, 0.18)) !important;
-    border-color: rgba(139, 92, 246, 0.32) !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: inset 0 -2px 0 rgba(139, 92, 246, 0.55) !important;
 }
 
 .category-tile-all,
 .category-tile-all.active {
-    background: var(--brand-gradient) !important;
+    background: transparent !important;
     border-color: transparent !important;
 }
 
@@ -2401,15 +2429,36 @@ html, body, #app {
     font-weight: 400 !important;
 }
 
-@media (min-width: 390px) {
-    .category-showcase-grid {
-        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    }
+.category-tile.active strong,
+.category-tile-all.active strong {
+    color: var(--secondary-color) !important;
+    font-weight: 500 !important;
 }
 
-@media (min-width: 720px) {
+.category-tile-all strong {
+    color: var(--text-color) !important;
+}
+
+@media (min-width: 390px) {
     .category-showcase-grid {
-        grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+        padding: 8px 10px !important;
+    }
+
+    .category-tile,
+    .category-tile-all,
+    .category-tile-1,
+    .category-tile-2,
+    .category-tile-3,
+    .category-tile-4,
+    .category-tile-5,
+    .category-tile-6,
+    .category-tile-7,
+    .category-tile-8,
+    .category-tile-9,
+    .category-tile-10,
+    .category-tile-11,
+    .category-tile-12 {
+        padding: 0 12px !important;
     }
 }
 
