@@ -3,8 +3,44 @@ const Review = require('../models/Review');
 const Service = require('../models/Service');
 const User = require('../models/User');
 const { getRequesterTelegramId, isAdminTelegramId } = require('../middleware/auth');
+const { getTelegramBot } = require('../telegramBot');
 const { destroyImages, uploadImages } = require('../utils/cloudinary');
 const { validateImages } = require('../utils/validators');
+
+function getReviewAuthorName(user) {
+  const fullName = [user?.first_name, user?.last_name]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  return fullName || user?.username || 'Пользователь';
+}
+
+async function notifySellerAboutReview(targetUser, author, publicationTitle = '') {
+  const bot = getTelegramBot();
+
+  if (!bot || !targetUser?.telegram_id) {
+    return;
+  }
+
+  const lines = [
+    'Вам оставили новый отзыв.',
+    '',
+    `От: ${getReviewAuthorName(author)}`
+  ];
+
+  if (publicationTitle) {
+    lines.push(`Объявление: ${publicationTitle}`);
+  }
+
+  lines.push('', 'Откройте приложение, чтобы посмотреть отзыв.');
+
+  try {
+    await bot.sendMessage(targetUser.telegram_id, lines.join('\n'));
+  } catch (error) {
+    console.error('Error notifying seller about review:', error.message);
+  }
+}
 
 async function createReview(req, res) {
   let uploadedScreenshotUrls = [];
@@ -55,6 +91,8 @@ async function createReview(req, res) {
       return res.status(400).json({ error: 'Отзыв можно привязать только к одной публикации' });
     }
 
+    let publicationTitle = '';
+
     if (listing_id) {
       const listing = await Listing.findById(listing_id);
       if (!listing) {
@@ -64,6 +102,8 @@ async function createReview(req, res) {
       if (listing.user_id !== target_user_id) {
         return res.status(400).json({ error: 'Этот товар не принадлежит выбранному продавцу' });
       }
+
+      publicationTitle = listing.title || '';
     }
 
     if (service_id) {
@@ -75,6 +115,8 @@ async function createReview(req, res) {
       if (service.user_id !== target_user_id) {
         return res.status(400).json({ error: 'Эта услуга не принадлежит выбранному продавцу' });
       }
+
+      publicationTitle = service.title || '';
     }
 
     const screenshotValidation = validateImages(screenshot ? [screenshot] : []);
@@ -93,6 +135,8 @@ async function createReview(req, res) {
       text: String(text).trim(),
       screenshot_url: uploadedScreenshotUrls[0]
     });
+
+    await notifySellerAboutReview(targetUser, requester, publicationTitle);
 
     res.json({ success: true, review_id: reviewId });
   } catch (error) {

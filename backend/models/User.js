@@ -93,6 +93,26 @@ class User {
 
     return result.changes > 0;
   }
+
+  static async unbanByIdentifier(identifier) {
+    const normalizedIdentifier = String(identifier || '').trim();
+
+    if (!normalizedIdentifier) {
+      return false;
+    }
+
+    const result = await db.run(
+      `UPDATE users
+       SET is_banned = $1,
+           banned_at = NULL,
+           ban_reason = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 OR telegram_id = $2`,
+      [false, normalizedIdentifier]
+    );
+
+    return result.changes > 0;
+  }
 }
 
 module.exports = User;

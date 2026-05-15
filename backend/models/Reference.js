@@ -15,6 +15,7 @@ const CATEGORIES = [
       { id: 'misc', name: 'Прочее' }
     ]
   },
+  { id: 'cat-15', name: 'Вакансии', icon: '💼' },
   { id: 'cat-13', name: 'Афиша', icon: '🎭' },
   { id: 'cat-1', name: 'Электроника', icon: '💻' },
   {

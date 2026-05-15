@@ -13,12 +13,13 @@ const OTHER_SUBCATEGORY = { id: 'other', name: 'Прочее' };
 const SUPPORT_LINK = 'https://t.me/helionstudio';
 const SERVICE_PUBLICATION_PLAN = { key: 'month', label: '1 месяц', stars: 100, rub: 182 };
 const CATEGORY_SHOWCASE_LABELS = {
-    'cat-1': 'Техника',
-    'cat-3': 'Недвиж.',
-    'cat-4': 'Дом',
+    'cat-1': 'Мебель и техника',
+    'cat-3': 'Недвижимость',
+    'cat-4': 'Всё для дома',
     'cat-5': 'Одежда',
     'cat-6': 'Хобби',
-    'cat-11': 'Работа'
+    'cat-11': 'Работа',
+    'cat-15': 'Вакансии'
 };
 const PROMOTION_PLANS = {
     three_days: { label: '3 дня', stars: 100, rub: 182 },
@@ -40,6 +41,7 @@ const CATEGORY_IMAGE_MAP = {
     'cat-12': 'assets/categories/free.svg',
     'cat-13': 'assets/categories/afisha.svg',
     'cat-14': 'assets/categories/medicine.svg',
+    'cat-15': 'assets/categories/work.svg',
  };
 
 let state = {
@@ -177,6 +179,10 @@ function isPriceInputFilled(value) {
 }
 
 function formatPrice(value, priceType = '') {
+    if (priceType === 'request' || !isPriceInputFilled(value)) {
+        return 'По запросу';
+    }
+
     const price = Number(value);
 
     if (Number.isFinite(price) && price === 0) {
@@ -598,7 +604,7 @@ function renderCategoryShowcase() {
         </button>
     `;
 
-    const showcasePriority = [SERVICE_CATEGORY_ID, 'cat-11', 'cat-13', 'cat-12'];
+    const showcasePriority = [SERVICE_CATEGORY_ID, 'cat-15', 'cat-11', 'cat-13', 'cat-12'];
     const showcaseCategories = [
         ...showcasePriority
             .map((id) => state.categories.find((category) => category.id === id))
@@ -1158,6 +1164,17 @@ function getPriceType(formType) {
     return document.querySelector(`[data-price-type-group="${formType}"] input:checked`)?.value || '';
 }
 
+function getPricePayload(value, formType) {
+    if (!isPriceInputFilled(value)) {
+        return { price: 0, price_type: 'request' };
+    }
+
+    return {
+        price: Number(value),
+        price_type: getPriceType(formType)
+    };
+}
+
 function setPriceType(formType, value = '') {
     document.querySelectorAll(`[data-price-type-group="${formType}"] input`).forEach((input) => {
         input.checked = input.value === value;
@@ -1465,8 +1482,14 @@ async function handleListingSubmit(e, formIndex) {
         return;
     }
 
-    if (!title || !categoryId || !cityId || !price) {
+    if (!title || !categoryId || !cityId) {
         alert('Пожалуйста, заполните обязательные поля');
+        return;
+    }
+
+    const pricePayload = getPricePayload(price, formType);
+    if (!Number.isFinite(pricePayload.price) || pricePayload.price < 0) {
+        alert('Укажите корректную цену');
         return;
     }
 
@@ -1485,8 +1508,8 @@ async function handleListingSubmit(e, formIndex) {
             category_id: categoryId,
             subcategory,
             city_id: cityId,
-            price: parseFloat(price),
-            price_type: getPriceType(formType),
+            price: pricePayload.price,
+            price_type: pricePayload.price_type,
             images: state.images
         };
 
@@ -1688,8 +1711,9 @@ function renderListings(listings, containerId) {
         const card = document.createElement('div');
         card.className = 'item-card';
         card.onclick = () => showItemDetails(item);
-        const image = item.images && item.images[0] ? item.images[0] : '📦';
-        const isMedia = typeof image === 'string' && (image.startsWith('data:') || image.startsWith('http'));
+        const hasImage = Boolean(item.images && item.images[0]);
+        const image = hasImage ? item.images[0] : '';
+        const isMedia = hasImage && typeof image === 'string' && (image.startsWith('data:') || image.startsWith('http'));
         const categoryName = getCategoryName(item.category_id);
         const subcategoryName = getListingSubcategoryName(item.category_id, item.subcategory);
         const badgeText = subcategoryName || categoryName;
@@ -1707,12 +1731,12 @@ function renderListings(listings, containerId) {
             <div class="item-card-media">
                 <div class="item-badge">${badgeText}</div>
                 ${promotionBadge}
-                <div class="item-image">
+                <div class="item-image ${isMedia ? '' : 'item-image-empty'}">
                     ${isMedia
                         ? isMediaVideo(image)
                             ? `<video src="${image}" muted playsinline></video>`
                             : `<img src="${image}" alt="${escapeHtml(item.title)}">`
-                        : `<span>${image}</span>`}
+                        : ''}
                 </div>
             </div>
             <div class="item-info">
@@ -1763,12 +1787,13 @@ function showItemDetails(item) {
     const content = document.getElementById('itemContent');
     const categoryName = getCategoryName(item.category_id);
     const subcategoryName = getListingSubcategoryName(item.category_id, item.subcategory);
+    const isOwner = String(item.user_id || '') === String(state.user?.id || '');
 
     const gallery = item.images && item.images.length > 0 ? `
         <div class="item-details-gallery">
             ${item.images.map((media) => isMediaVideo(media)
                 ? `<video src="${media}" controls playsinline></video>`
-                : `<img src="${media}" alt="${escapeHtml(item.title)}">`).join('')}
+                : `<button type="button" class="item-details-media-button" data-fullscreen-media="${escapeHtml(media)}"><img src="${media}" alt="${escapeHtml(item.title)}"></button>`).join('')}
         </div>
     ` : '';
     const adminAction = isAdminUser()
@@ -1794,22 +1819,16 @@ function showItemDetails(item) {
         </div>
         ${gallery}
         <div class="item-details-price">${formatPrice(item.price, item.price_type)}</div>
-        ${item.expires_at ? `<div class="info-text">Активно до ${new Date(item.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
+        ${isOwner && item.expires_at ? `<div class="info-text">Активно до ${new Date(item.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
         ${item.is_premium ? `<div class="promotion-status">В первой линии${item.premium_expires_at ? ` до ${new Date(item.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}
-        <div class="item-details-description">${item.description || 'Описание отсутствует'}</div>
+        <div class="item-details-description">${escapeHtml(item.description || 'Описание отсутствует')}</div>
         <div class="item-details-actions">
-            <button class="btn btn-primary btn-block" onclick="openSellerChat()">Написать</button>
-            <button class="btn btn-secondary btn-block" onclick="showSellerProfile()">Профиль продавца</button>
-            <button class="btn btn-secondary btn-block" onclick="openReviewModal()">Оставить отзыв</button>
+            <button class="btn btn-primary btn-block item-details-contact-btn" onclick="openSellerChat()">Написать</button>
+            <button class="btn btn-secondary btn-block item-details-profile-btn" onclick="showSellerProfile()">Профиль продавца</button>
+            <button class="btn btn-secondary btn-block item-details-review-btn" onclick="openReviewModal()">Оставить отзыв</button>
             ${adminAction}
         </div>
         <div class="item-reviews-section">
-            <div class="section-divider compact">
-                <div>
-                    <p class="section-kicker">Отзывы</p>
-                    <h3>Отзывы по объявлению</h3>
-                </div>
-            </div>
             <div id="itemReviewsList" class="reviews-list">
                 <p class="info-text">Загрузка отзывов...</p>
             </div>
@@ -1818,8 +1837,43 @@ function showItemDetails(item) {
     `;
 
     modal.classList.remove('hidden');
+    content.querySelectorAll('[data-fullscreen-media]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            openMediaPreview(button.dataset.fullscreenMedia);
+        });
+    });
     loadItemReviews(item);
 }
+
+window.openMediaPreview = function(src) {
+    const modal = document.getElementById('mediaPreviewModal');
+    const image = document.getElementById('mediaPreviewImage');
+
+    if (!modal || !image || !src) {
+        return;
+    }
+
+    image.src = src;
+    modal.classList.remove('hidden');
+    document.body.classList.add('media-preview-open');
+};
+
+window.closeMediaPreview = function(event) {
+    if (event && event.currentTarget !== event.target) {
+        return;
+    }
+
+    const modal = document.getElementById('mediaPreviewModal');
+    const image = document.getElementById('mediaPreviewImage');
+
+    if (image) {
+        image.removeAttribute('src');
+    }
+
+    modal?.classList.add('hidden');
+    document.body.classList.remove('media-preview-open');
+};
 
 window.closeItemModal = function() {
     document.getElementById('itemModal').classList.add('hidden');
@@ -2622,8 +2676,8 @@ window.editItem = function(itemId, itemType = 'listing') {
     updateEditSubcategorySelect();
     document.getElementById('editSubcategory').value = item.subcategory || '';
     document.getElementById('editCity').value = item.city_id || '';
-    document.getElementById('editPrice').value = item.price || '';
-    setPriceType('edit', item.price_type || '');
+    document.getElementById('editPrice').value = item.price_type === 'request' ? '' : item.price ?? '';
+    setPriceType('edit', item.price_type === 'request' ? '' : item.price_type || '');
     renderImagePreview('editImages');
     document.getElementById('editItemModal').classList.remove('hidden');
 };
@@ -2646,6 +2700,7 @@ async function handleEditItemSubmit(event) {
         ? `/services/${state.editingItem.id}`
         : `/listings/${state.editingItem.id}`;
 
+    const pricePayload = getPricePayload(document.getElementById('editPrice').value, 'edit');
     const payload = {
         user_id: state.user.id,
         title: document.getElementById('editTitle').value.trim(),
@@ -2653,13 +2708,18 @@ async function handleEditItemSubmit(event) {
         category_id: document.getElementById('editCategory').value,
         subcategory: document.getElementById('editSubcategory').value,
         city_id: document.getElementById('editCity').value,
-        price: parseFloat(document.getElementById('editPrice').value),
-        price_type: getPriceType('edit'),
+        price: pricePayload.price,
+        price_type: pricePayload.price_type,
         images: state.editImages
     };
 
-    if (!payload.title || !payload.category_id || !payload.city_id || !Number.isFinite(payload.price)) {
+    if (!payload.title || !payload.category_id || !payload.city_id) {
         alert('Пожалуйста, заполните обязательные поля');
+        return;
+    }
+
+    if (!Number.isFinite(payload.price) || payload.price < 0) {
+        alert('Укажите корректную цену');
         return;
     }
 

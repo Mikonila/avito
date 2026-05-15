@@ -5,7 +5,8 @@ const DEFAULT_HERO_AD = {
   title: 'Покупайте и продавайте по всей Черногории',
   description: 'Недвижимость, авто, услуги и подработка',
   details: 'в привычном формате объявлений.',
-  image_url: 'assets/montenegro-hero.png'
+  image_url: 'assets/montenegro-hero.png',
+  is_custom: false
 };
 
 async function getCategories_(req, res) {

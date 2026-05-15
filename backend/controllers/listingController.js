@@ -22,7 +22,16 @@ function getMediaValidationOptions(req) {
 }
 
 function normalizePriceType(value) {
-  return ['from', 'to'].includes(value) ? value : '';
+  return ['from', 'to', 'request'].includes(value) ? value : '';
+}
+
+function normalizePriceValue(price, priceType) {
+  if (priceType === 'request' && (price === undefined || price === null || price === '')) {
+    return 0;
+  }
+
+  const normalizedPrice = Number(price);
+  return Number.isFinite(normalizedPrice) && normalizedPrice >= 0 ? normalizedPrice : null;
 }
 
 async function createListing(req, res) {
@@ -31,12 +40,13 @@ async function createListing(req, res) {
   try {
     const { user_id, title, description, category_id, subcategory = '', city_id, price, price_type = '', images } = req.body;
 
-    if (!user_id || !title || !category_id || !city_id || price === undefined || price === null || price === '') {
+    if (!user_id || !title || !category_id || !city_id) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const normalizedPrice = Number(price);
-    if (!Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
+    const normalizedPriceType = normalizePriceType(price_type);
+    const normalizedPrice = normalizePriceValue(price, normalizedPriceType);
+    if (normalizedPrice === null) {
       return res.status(400).json({ error: 'Invalid price' });
     }
 
@@ -60,7 +70,7 @@ async function createListing(req, res) {
       subcategory,
       city_id,
       price: normalizedPrice,
-      price_type: normalizePriceType(price_type),
+      price_type: normalizedPriceType,
       images: JSON.stringify(uploadedImages)
     });
 
@@ -201,8 +211,9 @@ async function updateListing(req, res) {
       return;
     }
 
-    const normalizedPrice = Number(price);
-    if (!title || !category_id || !city_id || !Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
+    const normalizedPriceType = normalizePriceType(price_type);
+    const normalizedPrice = normalizePriceValue(price, normalizedPriceType);
+    if (!title || !category_id || !city_id || normalizedPrice === null) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -219,7 +230,7 @@ async function updateListing(req, res) {
       title,
       description,
       price: normalizedPrice,
-      price_type: normalizePriceType(price_type),
+      price_type: normalizedPriceType,
       category_id,
       subcategory,
       city_id,

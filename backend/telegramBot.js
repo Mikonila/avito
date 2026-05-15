@@ -1,7 +1,10 @@
 const TelegramBot = require('node-telegram-bot-api');
 const Listing = require('./models/Listing');
 const Service = require('./models/Service');
-const { getAdminTelegramIds } = require('./middleware/auth');
+const User = require('./models/User');
+const AppSettings = require('./models/AppSettings');
+const { getAdminTelegramIds, isAdminTelegramId } = require('./middleware/auth');
+const { isCloudinaryConfigured, uploadImages } = require('./utils/cloudinary');
 
 const WEBHOOK_PATH = '/api/telegram/webhook';
 
@@ -10,6 +13,7 @@ let botMode = 'disabled';
 let startupPromise = null;
 let webhookRouteRegistered = false;
 const botsWithRegisteredHandlers = new WeakSet();
+const adminAdSessions = new Map();
 const botDiagnostics = {
   lastWebhookUpdateAt: null,
   lastProcessedUpdateAt: null,
@@ -25,6 +29,7 @@ const PROMOTION_PLANS = {
 const SERVICE_PUBLICATION_PLANS = {
   month: { days: 30, stars: 100, label: '1 месяц' }
 };
+const HERO_AD_SETTING_KEY = 'hero_ad';
 
 function getWebAppUrl() {
   const webAppUrl = process.env.WEBAPP_URL || 'https://your-domain.com';
@@ -42,6 +47,10 @@ function getSupportUsername() {
 
 function getSupportTelegramLink() {
   return `https://t.me/${getSupportUsername()}`;
+}
+
+function isAdminMessage(msg) {
+  return isAdminTelegramId(msg.from?.id);
 }
 
 function parsePromotionPayload(payload) {
@@ -161,13 +170,159 @@ async function sendSupport(bot, msg) {
 }
 
 async function sendHelp(bot, msg) {
+  const adminHelp = isAdminMessage(msg)
+    ? '\n\nКоманды администратора:\n' +
+      '/unban <id> - разбанить пользователя по ID или Telegram ID\n' +
+      '/ad_create - создать рекламу в верхнем блоке\n' +
+      '/ad_reset - вернуть стандартный верхний блок\n' +
+      '/cancel - отменить текущее действие'
+    : '';
+
   await bot.sendMessage(
     msg.chat.id,
     'Справка по Violet\n\n' +
       '/start - открыть приложение\n' +
       '/support - написать в поддержку\n\n' +
-      'Обычные сообщения в этот чат будут переданы администратору.'
+      'Обычные сообщения в этот чат будут переданы администратору.' +
+      adminHelp
   );
+}
+
+async function downloadTelegramPhotoAsDataUrl(bot, fileId) {
+  const fileUrl = await bot.getFileLink(fileId);
+  const response = await fetch(fileUrl);
+
+  if (!response.ok) {
+    throw new Error(`Не удалось скачать фото из Telegram: ${response.status}`);
+  }
+
+  const contentType = response.headers.get('content-type') || 'image/jpeg';
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return `data:${contentType};base64,${buffer.toString('base64')}`;
+}
+
+async function saveHeroAdFromTelegramPhoto(bot, session, fileId) {
+  const dataUrl = await downloadTelegramPhotoAsDataUrl(bot, fileId);
+  const imageUrl = isCloudinaryConfigured()
+    ? (await uploadImages([dataUrl], 'hero'))[0]
+    : dataUrl;
+
+  return AppSettings.set(HERO_AD_SETTING_KEY, {
+    title: session.title,
+    description: session.description,
+    image_url: imageUrl,
+    is_custom: true,
+    updated_at: new Date().toISOString()
+  });
+}
+
+async function handleUnbanCommand(bot, msg, args) {
+  if (!isAdminMessage(msg)) {
+    await bot.sendMessage(msg.chat.id, 'Команда доступна только администратору.');
+    return;
+  }
+
+  const identifier = args[0];
+
+  if (!identifier) {
+    await bot.sendMessage(msg.chat.id, 'Укажите ID: /unban <id>');
+    return;
+  }
+
+  const wasUnbanned = await User.unbanByIdentifier(identifier);
+  await bot.sendMessage(
+    msg.chat.id,
+    wasUnbanned
+      ? `Пользователь ${identifier} разбанен.`
+      : `Пользователь ${identifier} не найден или уже не забанен.`
+  );
+}
+
+async function startHeroAdCreation(bot, msg) {
+  if (!isAdminMessage(msg)) {
+    await bot.sendMessage(msg.chat.id, 'Команда доступна только администратору.');
+    return;
+  }
+
+  adminAdSessions.set(String(msg.chat.id), { step: 'title' });
+  await bot.sendMessage(msg.chat.id, 'Введите заголовок рекламного блока. Для отмены: /cancel');
+}
+
+async function resetHeroAd(bot, msg) {
+  if (!isAdminMessage(msg)) {
+    await bot.sendMessage(msg.chat.id, 'Команда доступна только администратору.');
+    return;
+  }
+
+  await AppSettings.set(HERO_AD_SETTING_KEY, null);
+  adminAdSessions.delete(String(msg.chat.id));
+  await bot.sendMessage(msg.chat.id, 'Рекламный блок сброшен. Вернулся стандартный блок.');
+}
+
+async function handleHeroAdSession(bot, msg) {
+  const chatId = String(msg.chat.id);
+  const session = adminAdSessions.get(chatId);
+
+  if (!session) {
+    return false;
+  }
+
+  if (!isAdminMessage(msg)) {
+    adminAdSessions.delete(chatId);
+    await bot.sendMessage(msg.chat.id, 'Действие отменено: нет прав администратора.');
+    return true;
+  }
+
+  const text = (msg.text || '').trim();
+
+  if (text === '/cancel') {
+    adminAdSessions.delete(chatId);
+    await bot.sendMessage(msg.chat.id, 'Создание рекламы отменено.');
+    return true;
+  }
+
+  if (session.step === 'title') {
+    if (!text || text.startsWith('/')) {
+      await bot.sendMessage(msg.chat.id, 'Введите заголовок текстом.');
+      return true;
+    }
+
+    session.title = text.slice(0, 120);
+    session.step = 'description';
+    adminAdSessions.set(chatId, session);
+    await bot.sendMessage(msg.chat.id, 'Теперь введите описание рекламного блока.');
+    return true;
+  }
+
+  if (session.step === 'description') {
+    if (!text || text.startsWith('/')) {
+      await bot.sendMessage(msg.chat.id, 'Введите описание текстом.');
+      return true;
+    }
+
+    session.description = text.slice(0, 500);
+    session.step = 'photo';
+    adminAdSessions.set(chatId, session);
+    await bot.sendMessage(msg.chat.id, 'Отправьте фото для рекламного блока.');
+    return true;
+  }
+
+  if (session.step === 'photo') {
+    const photo = Array.isArray(msg.photo) ? msg.photo[msg.photo.length - 1] : null;
+
+    if (!photo?.file_id) {
+      await bot.sendMessage(msg.chat.id, 'Нужно отправить фото. Для отмены: /cancel');
+      return true;
+    }
+
+    await saveHeroAdFromTelegramPhoto(bot, session, photo.file_id);
+    adminAdSessions.delete(chatId);
+    await bot.sendMessage(msg.chat.id, 'Реклама обновлена и появится в верхнем блоке приложения.');
+    return true;
+  }
+
+  adminAdSessions.delete(chatId);
+  return false;
 }
 
 async function forwardUserMessageToAdmin(bot, msg) {
@@ -228,9 +383,15 @@ function registerHandlers(bot) {
       return;
     }
 
-    const command = text.trim().split(/\s+/)[0].split('@')[0].toLowerCase();
+    const textParts = text.trim().split(/\s+/).filter(Boolean);
+    const command = (textParts[0] || '').split('@')[0].toLowerCase();
+    const commandArgs = textParts.slice(1);
 
     try {
+      if (await handleHeroAdSession(bot, msg)) {
+        return;
+      }
+
       if (command === '/start') {
         await sendWelcome(bot, msg);
         return;
@@ -243,6 +404,26 @@ function registerHandlers(bot) {
 
       if (command === '/support') {
         await sendSupport(bot, msg);
+        return;
+      }
+
+      if (command === '/unban' || command === '/разбан') {
+        await handleUnbanCommand(bot, msg, commandArgs);
+        return;
+      }
+
+      if (command === '/ad_create' || command === '/create_ad' || command === '/реклама') {
+        await startHeroAdCreation(bot, msg);
+        return;
+      }
+
+      if (command === '/ad_reset' || command === '/reset_ad' || command === '/сброс_рекламы') {
+        await resetHeroAd(bot, msg);
+        return;
+      }
+
+      if (command === '/cancel') {
+        await bot.sendMessage(msg.chat.id, 'Нет активного действия для отмены.');
         return;
       }
 

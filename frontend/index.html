@@ -163,7 +163,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Цена (€)</label>
-                                <input type="number" placeholder="0.00" step="0.01" required>
+                                <input type="number" placeholder="По запросу" step="0.01">
                                 <div class="price-type-options" data-price-type-group="product">
                                     <label><input type="checkbox" value="from"> Начальная цена</label>
                                     <label><input type="checkbox" value="to"> Конечная цена</label>
@@ -211,7 +211,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Цена услуги (€)</label>
-                                <input type="number" placeholder="0.00" step="0.01" required>
+                                <input type="number" placeholder="По запросу" step="0.01">
                                 <div class="price-type-options" data-price-type-group="service">
                                     <label><input type="checkbox" value="from"> Начальная цена</label>
                                     <label><input type="checkbox" value="to"> Конечная цена</label>
@@ -314,11 +314,10 @@
                 <textarea id="reviewText" placeholder="Опишите ваш опыт" maxlength="1000"></textarea>
             </div>
             <div class="form-group">
-                <label>Скриншот переписки:</label>
+                <label>Скриншот переписки, подтверждающий ваши слова (виден только админу):</label>
                 <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('reviewScreenshotInput').click()">+ Прикрепить скриншот</button>
                 <input type="file" id="reviewScreenshotInput" accept="image/*" style="display:none;">
                 <div id="reviewScreenshotPreview" class="image-preview"></div>
-                <p class="info-text">Скриншот виден только администраторам.</p>
             </div>
             <button class="btn btn-primary btn-block" onclick="submitReview()">Отправить отзыв</button>
         </div>
@@ -353,7 +352,7 @@
                 </div>
                 <div class="form-group">
                     <label>Цена (€)</label>
-                    <input type="number" id="editPrice" step="0.01" required>
+                    <input type="number" id="editPrice" step="0.01" placeholder="По запросу">
                     <div class="price-type-options" data-price-type-group="edit">
                         <label><input type="checkbox" value="from"> Начальная цена</label>
                         <label><input type="checkbox" value="to"> Конечная цена</label>
@@ -481,6 +480,11 @@
             </div>
             <div id="categoryExplorerContent" class="category-explorer-content"></div>
         </div>
+    </div>
+
+    <div id="mediaPreviewModal" class="media-preview-modal hidden" onclick="closeMediaPreview(event)">
+        <button type="button" class="media-preview-close" onclick="closeMediaPreview()" aria-label="Закрыть">✕</button>
+        <img id="mediaPreviewImage" alt="Фото объявления">
     </div>
 
     <script src="app.js"></script>
