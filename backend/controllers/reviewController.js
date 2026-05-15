@@ -52,6 +52,7 @@ async function createReview(req, res) {
       listing_id = null,
       service_id = null,
       review_type,
+      rating = 5,
       text,
       screenshot
     } = req.body;
@@ -67,6 +68,11 @@ async function createReview(req, res) {
 
     if (!['seller', 'product'].includes(review_type)) {
       return res.status(400).json({ error: 'Некорректный тип отзыва' });
+    }
+
+    const normalizedRating = Number(rating);
+    if (!Number.isInteger(normalizedRating) || normalizedRating < 1 || normalizedRating > 5) {
+      return res.status(400).json({ error: 'Выберите оценку от 1 до 5' });
     }
 
     if (user_id === target_user_id) {
@@ -132,6 +138,7 @@ async function createReview(req, res) {
       listing_id,
       service_id,
       review_type,
+      rating: normalizedRating,
       text: String(text).trim(),
       screenshot_url: uploadedScreenshotUrls[0]
     });
@@ -157,6 +164,7 @@ async function createAdminSeededReview(req, res) {
       listing_id = null,
       service_id = null,
       review_type = 'product',
+      rating = 5,
       text,
       author_name,
       avatar
@@ -178,6 +186,11 @@ async function createAdminSeededReview(req, res) {
 
     if (!['seller', 'product'].includes(review_type)) {
       return res.status(400).json({ error: 'Некорректный тип отзыва' });
+    }
+
+    const normalizedRating = Number(rating);
+    if (!Number.isInteger(normalizedRating) || normalizedRating < 1 || normalizedRating > 5) {
+      return res.status(400).json({ error: 'Выберите оценку от 1 до 5' });
     }
 
     if (listing_id && service_id) {
@@ -226,6 +239,7 @@ async function createAdminSeededReview(req, res) {
       listing_id,
       service_id,
       review_type,
+      rating: normalizedRating,
       text: String(text).trim(),
       screenshot_url: '',
       display_author_name: String(author_name).trim(),

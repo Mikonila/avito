@@ -38,14 +38,18 @@ function withParsedPublication(row) {
 }
 
 async function getLikeCount(itemType, itemId) {
-  const row = await db.get(
+  const likesRow = await db.get(
     `SELECT COUNT(*) AS count
      FROM publication_likes
      WHERE item_type = $1 AND item_id = $2`,
     [itemType, itemId]
   );
+  const tableName = getTableName(itemType);
+  const boostRow = tableName
+    ? await db.get(`SELECT COALESCE(like_boost, 0) AS like_boost FROM ${tableName} WHERE id = $1`, [itemId])
+    : null;
 
-  return Number(row?.count || 0);
+  return Number(likesRow?.count || 0) + Number(boostRow?.like_boost || 0);
 }
 
 class PublicationLike {
@@ -93,7 +97,7 @@ class PublicationLike {
       `SELECT listings.*,
               likes.created_at AS liked_at,
               'listing' AS item_type,
-              COALESCE(like_counts.like_count, 0) AS like_count
+              COALESCE(like_counts.like_count, 0) + COALESCE(listings.like_boost, 0) AS like_count
        FROM publication_likes likes
        JOIN listings ON listings.id = likes.item_id
        LEFT JOIN (
@@ -112,7 +116,7 @@ class PublicationLike {
       `SELECT services.*,
               likes.created_at AS liked_at,
               'service' AS item_type,
-              COALESCE(like_counts.like_count, 0) AS like_count
+              COALESCE(like_counts.like_count, 0) + COALESCE(services.like_boost, 0) AS like_count
        FROM publication_likes likes
        JOIN services ON services.id = likes.item_id
        LEFT JOIN (
@@ -130,6 +134,31 @@ class PublicationLike {
     return [...listingRows, ...serviceRows]
       .map(withParsedPublication)
       .sort((a, b) => new Date(b.liked_at || 0) - new Date(a.liked_at || 0));
+  }
+
+  static async boost(itemType, itemId, amount) {
+    const tableName = getTableName(itemType);
+    const normalizedAmount = Number(amount);
+
+    if (!tableName || !itemId || !Number.isInteger(normalizedAmount) || normalizedAmount < 1) {
+      return null;
+    }
+
+    const result = await db.run(
+      `UPDATE ${tableName}
+       SET like_boost = COALESCE(like_boost, 0) + $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2`,
+      [normalizedAmount, itemId]
+    );
+
+    if (!result.changes) {
+      return null;
+    }
+
+    return {
+      like_count: await getLikeCount(itemType, itemId)
+    };
   }
 }
 

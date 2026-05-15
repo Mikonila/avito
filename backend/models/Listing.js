@@ -39,6 +39,24 @@ function getLikeCountJoin() {
   `;
 }
 
+function getReviewStatsJoin() {
+  return `
+    LEFT JOIN (
+      SELECT listing_id, AVG(rating) AS rating_average, COUNT(*) AS rating_count
+      FROM reviews
+      WHERE review_type = 'product' AND listing_id IS NOT NULL
+      GROUP BY listing_id
+    ) review_stats ON review_stats.listing_id = listings.id
+  `;
+}
+
+function getListingSelect() {
+  return `listings.*,
+          COALESCE(like_counts.like_count, 0) + COALESCE(listings.like_boost, 0) AS like_count,
+          COALESCE(review_stats.rating_average, 0) AS rating_average,
+          COALESCE(review_stats.rating_count, 0) AS rating_count`;
+}
+
 class Listing {
   static async create(user_id, data) {
     const id = uuidv4();
@@ -56,9 +74,10 @@ class Listing {
 
   static async findById(id) {
     const row = await db.get(
-      `SELECT listings.*, COALESCE(like_counts.like_count, 0) AS like_count
+      `SELECT ${getListingSelect()}
        FROM listings
        ${getLikeCountJoin()}
+       ${getReviewStatsJoin()}
        WHERE listings.id = $1`,
       [id]
     );
@@ -67,9 +86,10 @@ class Listing {
 
   static async findByUserId(user_id) {
     const rows = await db.all(
-      `SELECT listings.*, COALESCE(like_counts.like_count, 0) AS like_count
+      `SELECT ${getListingSelect()}
        FROM listings
        ${getLikeCountJoin()}
+       ${getReviewStatsJoin()}
        WHERE listings.user_id = $1
        ORDER BY listings.created_at DESC`,
       [user_id]
@@ -79,9 +99,10 @@ class Listing {
   }
 
   static async findByCityAndCategory(city_id, category_id) {
-    let query = `SELECT listings.*, COALESCE(like_counts.like_count, 0) AS like_count
+    let query = `SELECT ${getListingSelect()}
       FROM listings
       ${getLikeCountJoin()}
+      ${getReviewStatsJoin()}
       WHERE listings.status = 'active'`;
     const params = [];
 
@@ -109,9 +130,10 @@ class Listing {
 
   static async getRandomListings(limit = 20) {
     const rows = await db.all(
-      `SELECT listings.*, COALESCE(like_counts.like_count, 0) AS like_count
+      `SELECT ${getListingSelect()}
        FROM listings
        ${getLikeCountJoin()}
+       ${getReviewStatsJoin()}
        WHERE listings.status = 'active'
        ORDER BY
          CASE

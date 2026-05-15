@@ -49,6 +49,7 @@ const SQLITE_SCHEMA = [
     images TEXT,
     status TEXT DEFAULT 'active',
     views INTEGER DEFAULT 0,
+    like_boost INTEGER DEFAULT 0,
     is_premium BOOLEAN DEFAULT 0,
     premium_expires_at DATETIME,
     expires_at DATETIME,
@@ -73,6 +74,7 @@ const SQLITE_SCHEMA = [
     status TEXT DEFAULT 'active',
     service_count INTEGER DEFAULT 0,
     max_free_services INTEGER DEFAULT 1,
+    like_boost INTEGER DEFAULT 0,
     is_paid BOOLEAN DEFAULT 0,
     is_premium BOOLEAN DEFAULT 0,
     premium_expires_at DATETIME,
@@ -117,6 +119,7 @@ const SQLITE_SCHEMA = [
     listing_id TEXT,
     service_id TEXT,
     review_type TEXT NOT NULL,
+    rating INTEGER DEFAULT 5,
     text TEXT NOT NULL,
     screenshot_url TEXT NOT NULL,
     display_author_name TEXT,
@@ -193,6 +196,7 @@ const POSTGRES_SCHEMA = [
     images TEXT,
     status TEXT DEFAULT 'active',
     views INTEGER DEFAULT 0,
+    like_boost INTEGER DEFAULT 0,
     is_premium BOOLEAN DEFAULT FALSE,
     premium_expires_at TIMESTAMPTZ,
     expires_at TIMESTAMPTZ,
@@ -214,6 +218,7 @@ const POSTGRES_SCHEMA = [
     status TEXT DEFAULT 'active',
     service_count INTEGER DEFAULT 0,
     max_free_services INTEGER DEFAULT 1,
+    like_boost INTEGER DEFAULT 0,
     is_paid BOOLEAN DEFAULT FALSE,
     is_premium BOOLEAN DEFAULT FALSE,
     premium_expires_at TIMESTAMPTZ,
@@ -253,6 +258,7 @@ const POSTGRES_SCHEMA = [
     listing_id TEXT REFERENCES listings(id) ON DELETE SET NULL,
     service_id TEXT REFERENCES services(id) ON DELETE SET NULL,
     review_type TEXT NOT NULL,
+    rating INTEGER DEFAULT 5,
     text TEXT NOT NULL,
     screenshot_url TEXT NOT NULL,
     display_author_name TEXT,
@@ -418,8 +424,10 @@ async function applyMigrations() {
   await ensureColumn('users', 'ban_reason', 'TEXT');
   await ensureColumn('listings', 'subcategory', 'TEXT');
   await ensureColumn('listings', 'price_type', 'TEXT');
+  await ensureColumn('listings', 'like_boost', 'INTEGER DEFAULT 0');
   await ensureColumn('services', 'subcategory', 'TEXT');
   await ensureColumn('services', 'price_type', 'TEXT');
+  await ensureColumn('services', 'like_boost', 'INTEGER DEFAULT 0');
   await ensureColumn('services', 'is_premium', 'BOOLEAN DEFAULT FALSE');
   await ensureColumn('services', 'premium_expires_at', 'TIMESTAMPTZ');
   await ensureColumn('listings', 'expires_at', 'TIMESTAMPTZ');
@@ -427,6 +435,7 @@ async function applyMigrations() {
   await ensureColumn('services', 'expires_at', 'TIMESTAMPTZ');
   await ensureColumn('services', 'archived_notified_at', 'TIMESTAMPTZ');
   await ensureColumn('reviews', 'service_id', 'TEXT');
+  await ensureColumn('reviews', 'rating', 'INTEGER DEFAULT 5');
   await ensureColumn('reviews', 'display_author_name', 'TEXT');
   await ensureColumn('reviews', 'display_author_avatar_url', 'TEXT');
   await ensureColumn('reviews', 'is_admin_seeded', 'BOOLEAN DEFAULT FALSE');

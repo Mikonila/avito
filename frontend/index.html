@@ -334,6 +334,16 @@
                 </select>
             </div>
             <div class="form-group">
+                <label>Оценка:</label>
+                <select id="reviewRating">
+                    <option value="5">★★★★★ 5</option>
+                    <option value="4">★★★★☆ 4</option>
+                    <option value="3">★★★☆☆ 3</option>
+                    <option value="2">★★☆☆☆ 2</option>
+                    <option value="1">★☆☆☆☆ 1</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label>Текст отзыва:</label>
                 <textarea id="reviewText" placeholder="Опишите ваш опыт" maxlength="1000"></textarea>
             </div>
@@ -406,6 +416,7 @@
             <p id="adminModerationInfo" class="info-text"></p>
             <div class="moderation-actions">
                 <button type="button" class="btn btn-primary btn-block" onclick="openAdminSeedReviewModal()">Добавить отзыв</button>
+                <button type="button" class="btn btn-secondary btn-block" onclick="adminBoostSelectedItemLikes()">Добавить лайки</button>
                 <button type="button" class="btn btn-danger btn-block" onclick="adminDeleteSelectedItem(false)">Удалить</button>
                 <button type="button" class="btn btn-danger btn-block" onclick="adminDeleteSelectedItem(true)">Удалить и забанить пользователя</button>
             </div>
@@ -424,6 +435,16 @@
             <div class="form-group">
                 <label>Текст отзыва</label>
                 <textarea id="adminSeedReviewText" placeholder="Введите текст отзыва" maxlength="1000" lang="ru" inputmode="text"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Оценка</label>
+                <select id="adminSeedReviewRating">
+                    <option value="5">★★★★★ 5</option>
+                    <option value="4">★★★★☆ 4</option>
+                    <option value="3">★★★☆☆ 3</option>
+                    <option value="2">★★☆☆☆ 2</option>
+                    <option value="1">★☆☆☆☆ 1</option>
+                </select>
             </div>
             <div class="form-group">
                 <label>Аватарка автора</label>

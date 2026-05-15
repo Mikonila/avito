@@ -1,6 +1,6 @@
 const PublicationLike = require('../models/PublicationLike');
 const User = require('../models/User');
-const { getRequesterTelegramId } = require('../middleware/auth');
+const { getRequesterTelegramId, isAdminTelegramId } = require('../middleware/auth');
 
 async function requireRequester(req, res, userId) {
   const requesterTelegramId = getRequesterTelegramId(req);
@@ -59,7 +59,30 @@ async function getUserLikes(req, res) {
   }
 }
 
+async function boostLikes(req, res) {
+  try {
+    const requesterTelegramId = getRequesterTelegramId(req);
+
+    if (!requesterTelegramId || !isAdminTelegramId(requesterTelegramId)) {
+      return res.status(403).json({ error: 'Доступно только администратору' });
+    }
+
+    const { item_type, item_id, amount } = req.body;
+    const result = await PublicationLike.boost(item_type, item_id, amount);
+
+    if (!result) {
+      return res.status(400).json({ error: 'Не удалось добавить лайки' });
+    }
+
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error boosting publication likes:', error);
+    res.status(500).json({ error: 'Не удалось добавить лайки' });
+  }
+}
+
 module.exports = {
+  boostLikes,
   getUserLikes,
   toggleLike
 };

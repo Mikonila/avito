@@ -218,6 +218,59 @@ function escapeHtml(value = '') {
         .replace(/'/g, '&#39;');
 }
 
+function formatMultilineText(value = '') {
+    return escapeHtml(value).replace(/\r?\n/g, '<br>');
+}
+
+function getRatingValue(value) {
+    const rating = Number(value || 0);
+    return Number.isFinite(rating) ? rating : 0;
+}
+
+function getRatingStars(value) {
+    const rating = Math.round(getRatingValue(value));
+    return '★★★★★'.slice(0, rating) + '☆☆☆☆☆'.slice(0, Math.max(0, 5 - rating));
+}
+
+function getAverageRating(reviews = []) {
+    const ratedReviews = reviews.filter((review) => Number(review.rating) > 0);
+
+    if (!ratedReviews.length) {
+        return { average: 0, count: 0 };
+    }
+
+    const total = ratedReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0);
+    return {
+        average: total / ratedReviews.length,
+        count: ratedReviews.length
+    };
+}
+
+function renderRatingSummary(average, count, emptyText = 'Пока нет оценок') {
+    if (!count) {
+        return `<div class="rating-summary muted">${emptyText}</div>`;
+    }
+
+    return `
+        <div class="rating-summary">
+            <span>${getRatingStars(average)}</span>
+            <strong>${average.toFixed(1)}</strong>
+            <small>${count}</small>
+        </div>
+    `;
+}
+
+function renderItemRating(item) {
+    const count = Number(item.rating_count || 0);
+    const average = Number(item.rating_average || 0);
+
+    if (!count) {
+        return '';
+    }
+
+    return `<div class="item-rating">${getRatingStars(average)} <span>${average.toFixed(1)}</span></div>`;
+}
+
 function getTelegramPayload() {
     const telegramUser = getTelegramUser();
 
@@ -1827,9 +1880,10 @@ function renderListings(listings, containerId) {
                         : ''}
                 </div>
             </div>
-            <div class="item-info">
+        <div class="item-info">
                 ${statusBadge}
                 <div class="item-title">${escapeHtml(item.title)}</div>
+                ${renderItemRating(item)}
                 <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
                 <div class="item-meta-row">
                     <div class="item-meta">${getCityName(item.city_id || item.city)}</div>
@@ -1990,9 +2044,10 @@ function showItemDetails(item) {
         <div class="item-details-meta">
             <span>${getCityName(item.city_id || item.city)}</span>
             <span>${new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
+            <span>${formatPrice(item.price, item.price_type)}</span>
         </div>
         ${gallery}
-        <div class="item-details-price">${formatPrice(item.price, item.price_type)}</div>
+        ${renderItemRating(item)}
         <button
             type="button"
             class="item-details-like ${liked ? 'active' : ''}"
@@ -2006,7 +2061,7 @@ function showItemDetails(item) {
         </button>
         ${isOwner && item.expires_at ? `<div class="info-text">Активно до ${new Date(item.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
         ${item.is_premium ? `<div class="promotion-status">В первой линии${item.premium_expires_at ? ` до ${new Date(item.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}
-        <div class="item-details-description">${escapeHtml(item.description || 'Описание отсутствует')}</div>
+        <div class="item-details-description">${formatMultilineText(item.description || 'Описание отсутствует')}</div>
         <div class="item-details-actions">
             <button class="btn btn-primary btn-block item-details-contact-btn" onclick="openSellerChat()">Написать</button>
             <button class="btn btn-secondary btn-block item-details-profile-btn" onclick="showSellerProfile()">Профиль продавца</button>
@@ -2131,7 +2186,7 @@ async function showUserProfile(userId) {
         document.getElementById('profileSaveBtn').classList.toggle('hidden', !isOwnProfile);
         document.getElementById('profileLogoutBtn').classList.toggle('hidden', !isOwnProfile);
 
-        renderReviews(user.reviews || [], canModerate);
+        renderReviews((user.reviews || []).filter((review) => review.review_type === 'seller'), canModerate);
         document.getElementById('profileModal').classList.remove('hidden');
     } catch (error) {
         console.error('Error loading profile:', error);
@@ -2162,6 +2217,7 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
 
         return `
             <div class="review-card">
+                ${deleteButton}
                 <div class="review-header">
                     <div class="review-author-block">
                         <div class="review-avatar">
@@ -2169,16 +2225,16 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
                         </div>
                         <div>
                             ${authorName}
+                            <div class="review-rating">${getRatingStars(review.rating)} <span>${Number(review.rating || 5).toFixed(0)}</span></div>
                             <div class="review-meta">${typeLabel}${review.listing_title ? ` • ${escapeHtml(review.listing_title)}` : ''} • ${new Date(review.created_at).toLocaleDateString('ru-RU')}</div>
                         </div>
                     </div>
                     <div class="review-actions">
                         ${screenshotLink}
                         ${authorProfileButton}
-                        ${deleteButton}
                     </div>
                 </div>
-                <p class="review-text">${escapeHtml(review.text)}</p>
+                <p class="review-text">${formatMultilineText(review.text)}</p>
             </div>
         `;
     }).join('');
@@ -2191,7 +2247,8 @@ function renderReviews(reviews, canModerate, containerId = 'profileReviews', emp
         return;
     }
 
-    container.innerHTML = renderReviewsMarkup(reviews, canModerate, emptyText);
+    const rating = getAverageRating(reviews);
+    container.innerHTML = renderRatingSummary(rating.average, rating.count) + renderReviewsMarkup(reviews, canModerate, emptyText);
 }
 
 async function loadItemReviews(item) {
@@ -2211,7 +2268,10 @@ async function loadItemReviews(item) {
             throw new Error(user.error || 'Не удалось загрузить отзывы');
         }
 
-        const itemReviews = (user.reviews || []).filter((review) => review.listing_id === item.id || review.service_id === item.id);
+        const itemReviews = (user.reviews || []).filter((review) => {
+            const belongsToItem = review.listing_id === item.id || review.service_id === item.id;
+            return belongsToItem && review.review_type === 'product';
+        });
         renderReviews(itemReviews, state.user?.is_admin === true, 'itemReviewsList', 'По этому объявлению пока нет отзывов.');
     } catch (error) {
         console.error('Error loading item reviews:', error);
@@ -2245,12 +2305,12 @@ async function showSellerProfilePage(userId) {
                     <h3>${getProfileDisplayName(user)}</h3>
                     <p>${getUsernameLink(user.username)}</p>
                     <p>${getCityName(user.city)}</p>
-                    <p>${user.about || 'Пользователь пока ничего не рассказал о себе'}</p>
+                    <p>${formatMultilineText(user.about || 'Пользователь пока ничего не рассказал о себе')}</p>
                 </div>
             </div>
         `;
 
-        renderReviews(user.reviews || [], canModerate, 'sellerProfileReviews');
+        renderReviews((user.reviews || []).filter((review) => review.review_type === 'seller'), canModerate, 'sellerProfileReviews');
         setSearchViewMode('seller');
         switchTab('search');
     } catch (error) {
@@ -2356,6 +2416,7 @@ window.openReviewModal = function() {
 
     document.getElementById('reviewTargetInfo').textContent = `Отзыв будет привязан к продавцу и товару: ${state.selectedItem.title}`;
     document.getElementById('reviewType').value = 'seller';
+    document.getElementById('reviewRating').value = '5';
     document.getElementById('reviewText').value = '';
     state.reviewScreenshot = null;
     renderImagePreview('reviewScreenshot');
@@ -2466,6 +2527,7 @@ window.closeReviewModal = function() {
 
 window.submitReview = async function() {
     const reviewType = document.getElementById('reviewType').value;
+    const reviewRating = Number(document.getElementById('reviewRating').value || 5);
     const reviewText = document.getElementById('reviewText').value.trim();
 
     if (!state.selectedItem) {
@@ -2494,6 +2556,7 @@ window.submitReview = async function() {
                 listing_id: state.selectedItem.item_type === 'service' ? null : state.selectedItem.id,
                 service_id: state.selectedItem.item_type === 'service' ? state.selectedItem.id : null,
                 review_type: reviewType,
+                rating: reviewRating,
                 text: reviewText,
                 screenshot: state.reviewScreenshot
             })
@@ -2679,6 +2742,49 @@ window.closeAdminModerationModal = function() {
     state.adminModerationItem = null;
 };
 
+window.adminBoostSelectedItemLikes = async function() {
+    const item = state.adminModerationItem || state.selectedItem;
+
+    if (!isAdminUser() || !item) {
+        return;
+    }
+
+    const rawAmount = window.prompt('Сколько лайков добавить?', '10');
+    if (rawAmount === null) {
+        return;
+    }
+
+    const amount = Number(rawAmount);
+    if (!Number.isInteger(amount) || amount < 1) {
+        alert('Введите целое число больше нуля');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/likes/boost`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                item_id: item.id,
+                item_type: item.item_type || 'listing',
+                amount
+            })
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Не удалось добавить лайки');
+        }
+
+        alert(`Лайки добавлены. Сейчас: ${result.like_count}`);
+        closeAdminModerationModal();
+        await refreshListingsAfterModeration();
+    } catch (error) {
+        console.error('Error boosting likes:', error);
+        alert(error.message || 'Ошибка при добавлении лайков');
+    }
+};
+
 window.openAdminSeedReviewModal = function() {
     if (!isAdminUser()) {
         return;
@@ -2702,6 +2808,7 @@ window.openAdminSeedReviewModal = function() {
         `Отзыв будет добавлен к публикации «${state.adminModerationItem.title}».`;
     document.getElementById('adminSeedReviewName').value = '';
     document.getElementById('adminSeedReviewText').value = '';
+    document.getElementById('adminSeedReviewRating').value = '5';
     renderImagePreview('adminReviewAvatar');
     document.getElementById('adminModerationModal').classList.add('hidden');
     document.getElementById('adminSeedReviewModal').classList.remove('hidden');
@@ -2717,6 +2824,7 @@ window.submitAdminSeedReview = async function() {
     const item = state.adminModerationItem;
     const authorName = document.getElementById('adminSeedReviewName').value.trim();
     const reviewText = document.getElementById('adminSeedReviewText').value.trim();
+    const reviewRating = Number(document.getElementById('adminSeedReviewRating').value || 5);
 
     if (!item) {
         alert('Сначала выберите объявление');
@@ -2742,6 +2850,7 @@ window.submitAdminSeedReview = async function() {
                 listing_id: item.item_type === 'service' ? null : item.id,
                 service_id: item.item_type === 'service' ? item.id : null,
                 review_type: 'product',
+                rating: reviewRating,
                 author_name: authorName,
                 text: reviewText,
                 avatar: state.adminReviewAvatar

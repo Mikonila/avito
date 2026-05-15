@@ -39,6 +39,24 @@ function getLikeCountJoin() {
   `;
 }
 
+function getReviewStatsJoin() {
+  return `
+    LEFT JOIN (
+      SELECT service_id, AVG(rating) AS rating_average, COUNT(*) AS rating_count
+      FROM reviews
+      WHERE review_type = 'product' AND service_id IS NOT NULL
+      GROUP BY service_id
+    ) review_stats ON review_stats.service_id = services.id
+  `;
+}
+
+function getServiceSelect() {
+  return `services.*,
+          COALESCE(like_counts.like_count, 0) + COALESCE(services.like_boost, 0) AS like_count,
+          COALESCE(review_stats.rating_average, 0) AS rating_average,
+          COALESCE(review_stats.rating_count, 0) AS rating_count`;
+}
+
 class Service {
   static async create(user_id, data) {
     const id = uuidv4();
@@ -67,9 +85,10 @@ class Service {
 
   static async findByUserId(user_id) {
     const rows = await db.all(
-      `SELECT services.*, COALESCE(like_counts.like_count, 0) AS like_count
+      `SELECT ${getServiceSelect()}
        FROM services
        ${getLikeCountJoin()}
+       ${getReviewStatsJoin()}
        WHERE services.user_id = $1
        ORDER BY services.created_at DESC`,
       [user_id]
@@ -80,9 +99,10 @@ class Service {
 
   static async findById(id) {
     const row = await db.get(
-      `SELECT services.*, COALESCE(like_counts.like_count, 0) AS like_count
+      `SELECT ${getServiceSelect()}
        FROM services
        ${getLikeCountJoin()}
+       ${getReviewStatsJoin()}
        WHERE services.id = $1`,
       [id]
     );
@@ -90,9 +110,10 @@ class Service {
   }
 
   static async findByCityAndCategory(city_id, category_id) {
-    let query = `SELECT services.*, COALESCE(like_counts.like_count, 0) AS like_count
+    let query = `SELECT ${getServiceSelect()}
       FROM services
       ${getLikeCountJoin()}
+      ${getReviewStatsJoin()}
       WHERE services.status = 'active'`;
     const params = [];
 
