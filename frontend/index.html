@@ -128,7 +128,9 @@
                     </section>
                 </div>
 
-                <div id="listings" class="tab-pane hidden">
+                <div id="listings" class="modal hidden">
+                    <div class="modal-content modal-large create-listing-modal-content">
+                    <button type="button" class="modal-close" onclick="closeCreateListingModal()">×</button>
                     <div class="listings-tabs">
                         <button class="listing-type active" data-type="product">Товар</button>
                         <button class="listing-type" data-type="service">Услуга</button>
@@ -256,16 +258,38 @@
                         <button type="button" class="btn btn-primary btn-block" onclick="openSupportChat()">Связаться с админом</button>
                         </div>
                     </div>
+                    </div>
                 </div>
 
                 <div id="my-items" class="tab-pane hidden">
-                    <div id="myItems" class="items-grid"></div>
+                    <div class="my-items-header">
+                        <div>
+                            <strong>Мои объявления</strong>
+                            <span>Ваши публикации и сохраненные объявления</span>
+                        </div>
+                        <button type="button" id="openCreateListingBtn" class="create-item-button" aria-label="Создать объявление">+</button>
+                    </div>
+
+                    <section class="my-items-section">
+                        <div class="my-items-section-title">
+                            <strong>Опубликованные</strong>
+                            <span id="myItemsCount">0</span>
+                        </div>
+                        <div id="myItems" class="items-grid items-row"></div>
+                    </section>
+
+                    <section class="my-items-section">
+                        <div class="my-items-section-title">
+                            <strong>Сохраненные</strong>
+                            <span id="savedItemsCount">0</span>
+                        </div>
+                        <div id="savedItems" class="items-grid items-row"></div>
+                    </section>
                 </div>
             </div>
 
             <nav class="tabs footer-tabs">
                 <button class="tab active" data-tab="search">Лента</button>
-                <button class="tab" data-tab="listings">Разместить объявление</button>
                 <button class="tab" data-tab="my-items">Мои объявления</button>
             </nav>
         </div>

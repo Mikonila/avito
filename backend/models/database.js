@@ -127,12 +127,23 @@ const SQLITE_SCHEMA = [
     FOREIGN KEY(author_user_id) REFERENCES users(id),
     FOREIGN KEY(listing_id) REFERENCES listings(id)
   )`,
+  `CREATE TABLE IF NOT EXISTS publication_likes (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    item_type TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, item_type, item_id),
+    FOREIGN KEY(user_id) REFERENCES users(id)
+  )`,
   `CREATE INDEX IF NOT EXISTS idx_listings_user_id ON listings(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_status_city_category ON listings(status, city_id, category_id)`,
   `CREATE INDEX IF NOT EXISTS idx_services_user_id ON services(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_services_status_city_category ON services(status, city_id, category_id)`,
   `CREATE INDEX IF NOT EXISTS idx_reviews_target_user_id ON reviews(target_user_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_reviews_listing_id ON reviews(listing_id)`
+  `CREATE INDEX IF NOT EXISTS idx_reviews_listing_id ON reviews(listing_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_publication_likes_user_id ON publication_likes(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_publication_likes_item ON publication_likes(item_type, item_id)`
 ];
 
 const POSTGRES_SCHEMA = [
@@ -249,12 +260,22 @@ const POSTGRES_SCHEMA = [
     is_admin_seeded BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS publication_likes (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_type TEXT NOT NULL,
+    item_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, item_type, item_id)
+  )`,
   `CREATE INDEX IF NOT EXISTS idx_listings_user_id ON listings(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_status_city_category ON listings(status, city_id, category_id)`,
   `CREATE INDEX IF NOT EXISTS idx_services_user_id ON services(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_services_status_city_category ON services(status, city_id, category_id)`,
   `CREATE INDEX IF NOT EXISTS idx_reviews_target_user_id ON reviews(target_user_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_reviews_listing_id ON reviews(listing_id)`
+  `CREATE INDEX IF NOT EXISTS idx_reviews_listing_id ON reviews(listing_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_publication_likes_user_id ON publication_likes(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_publication_likes_item ON publication_likes(item_type, item_id)`
 ];
 
 let dialect = null;

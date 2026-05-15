@@ -51,6 +51,8 @@ let state = {
     currentListings: [],
     homeListings: [],
     myItems: [],
+    savedItems: [],
+    likedItemKeys: new Set(),
     currentServices: [],
     activeSearchView: 'home',
     activeCategoryId: '',
@@ -108,7 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         state.user = user;
-        showMainApp();
+        await showMainApp();
         attachEventListeners();
     } catch (error) {
         console.error('Initialization error:', error);
@@ -270,8 +272,28 @@ function normalizePublication(item, type) {
     return {
         ...item,
         item_type: type,
-        source_type: type
+        source_type: type,
+        like_count: Number(item.like_count || 0)
     };
+}
+
+function getItemKey(itemType, itemId) {
+    return `${itemType}:${itemId}`;
+}
+
+function getPublicationKey(item) {
+    return getItemKey(item.item_type || 'listing', item.id);
+}
+
+function isItemLiked(item) {
+    return state.likedItemKeys.has(getPublicationKey(item));
+}
+
+function markLikedItems(items) {
+    return items.map((item) => ({
+        ...item,
+        liked_by_me: isItemLiked(item)
+    }));
 }
 
 function sortPublications(items, preferredCategoryId = '') {
@@ -554,10 +576,11 @@ function populateSelects() {
     updateSearchSubmitVisibility();
 }
 
-function showMainApp() {
+async function showMainApp() {
     document.getElementById('mainApp').classList.remove('hidden');
     updateProfileButtonAvatar();
     setSearchViewMode('home');
+    await loadSavedItems(false);
     loadRandomListings();
 }
 
@@ -1035,7 +1058,8 @@ function attachEventListeners() {
     document.getElementById('searchSubmitInlineBtn').addEventListener('click', performSearch);
     document.getElementById('profileBtn').addEventListener('click', showProfileModal);
     document.getElementById('openFiltersBtn').addEventListener('click', openFiltersModal);
-    document.querySelector('[data-tab-jump="listings"]').addEventListener('click', () => switchTab('listings'));
+    document.querySelector('[data-tab-jump="listings"]').addEventListener('click', openCreateListingModal);
+    document.getElementById('openCreateListingBtn')?.addEventListener('click', openCreateListingModal);
 
     document.querySelectorAll('.listing-type').forEach((btn) => {
         btn.addEventListener('click', () => switchListingType(btn.dataset.type));
@@ -1109,10 +1133,16 @@ function switchTab(tabName) {
         loadMyItems();
     }
 
-    if (tabName === 'listings') {
-        refreshServicePublicationRequirement();
-    }
 }
+
+function openCreateListingModal() {
+    document.getElementById('listings')?.classList.remove('hidden');
+    refreshServicePublicationRequirement();
+}
+
+window.closeCreateListingModal = function() {
+    document.getElementById('listings')?.classList.add('hidden');
+};
 
 function switchListingType(type) {
     document.querySelectorAll('.listing-type').forEach((btn) => btn.classList.remove('active'));
@@ -1547,6 +1577,10 @@ async function handleListingSubmit(e, formIndex) {
             renderPromotionOptions(formType);
             clearListingDraft(formType);
             await refreshServicePublicationRequirement();
+            closeCreateListingModal();
+            switchTab('my-items');
+            await loadMyItems();
+            await loadRandomListings();
 
             if (result.payment_required && result.invoice_link) {
                 openInvoiceLink(result.invoice_link, async (status) => {
@@ -1679,9 +1713,10 @@ function applyListingFilters(listings) {
 
 async function loadMyItems() {
     try {
-        const [listingsRes, servicesRes] = await Promise.all([
+        const [listingsRes, servicesRes, savedItems] = await Promise.all([
             fetch(`${API_BASE}/listings/user/${state.user.id}`),
-            fetch(`${API_BASE}/services/user/${state.user.id}`)
+            fetch(`${API_BASE}/services/user/${state.user.id}`),
+            loadSavedItems(false)
         ]);
 
         const listings = await listingsRes.json();
@@ -1691,11 +1726,49 @@ async function loadMyItems() {
             ...services.map((item) => normalizePublication(item, 'service'))
         ]);
 
-        state.myItems = publications;
-        renderListings(publications, 'myItems');
+        state.myItems = markLikedItems(publications);
+        state.savedItems = markLikedItems(savedItems);
+        renderMyItemsSections();
     } catch (error) {
         console.error('Error loading my items:', error);
     }
+}
+
+async function loadSavedItems(render = true) {
+    if (!state.user?.id) {
+        return [];
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/likes/user/${state.user.id}`, {
+            headers: getAuthHeaders(false)
+        });
+
+        if (!response.ok) {
+            throw new Error('Не удалось загрузить сохраненные');
+        }
+
+        const items = await response.json();
+        const savedItems = items.map((item) => normalizePublication(item, item.item_type || 'listing'));
+        state.savedItems = savedItems;
+        state.likedItemKeys = new Set(savedItems.map(getPublicationKey));
+
+        if (render) {
+            renderMyItemsSections();
+        }
+
+        return savedItems;
+    } catch (error) {
+        console.error('Error loading saved items:', error);
+        return state.savedItems || [];
+    }
+}
+
+function renderMyItemsSections() {
+    document.getElementById('myItemsCount').textContent = state.myItems.length;
+    document.getElementById('savedItemsCount').textContent = state.savedItems.length;
+    renderListings(markLikedItems(state.myItems), 'myItems');
+    renderListings(markLikedItems(state.savedItems), 'savedItems');
 }
 
 function renderListings(listings, containerId) {
@@ -1703,7 +1776,10 @@ function renderListings(listings, containerId) {
     container.innerHTML = '';
 
     if (listings.length === 0) {
-        container.innerHTML = '<div class="empty-state"><strong>Пока пусто</strong><span>Здесь появятся объявления после публикации или поиска.</span></div>';
+        const emptyText = containerId === 'savedItems'
+            ? 'Лайкнутые объявления появятся здесь.'
+            : 'Здесь появятся объявления после публикации или поиска.';
+        container.innerHTML = `<div class="empty-state"><strong>Пока пусто</strong><span>${emptyText}</span></div>`;
         return;
     }
 
@@ -1721,6 +1797,8 @@ function renderListings(listings, containerId) {
         const promotionBadge = item.is_premium
             ? '<div class="promotion-card-label">Продвигается</div>'
             : '';
+        const liked = isItemLiked(item);
+        const likeCount = Number(item.like_count || 0);
         const statusBadge = item.status === 'archived'
             ? '<div class="publication-status publication-status-archived">Архивировано</div>'
             : item.status === 'pending_payment'
@@ -1730,6 +1808,16 @@ function renderListings(listings, containerId) {
         let content = `
             <div class="item-card-media">
                 <div class="item-badge">${badgeText}</div>
+                <button
+                    type="button"
+                    class="item-like-btn ${liked ? 'active' : ''}"
+                    data-like-button="${getItemKey(itemType, item.id)}"
+                    onclick="event.stopPropagation(); toggleItemLike('${item.id}', '${itemType}', this)"
+                    aria-label="${liked ? 'Убрать из сохраненных' : 'Сохранить объявление'}"
+                >
+                    <span>♥</span>
+                    <small>${likeCount}</small>
+                </button>
                 ${promotionBadge}
                 <div class="item-image ${isMedia ? '' : 'item-image-empty'}">
                     ${isMedia
@@ -1749,7 +1837,7 @@ function renderListings(listings, containerId) {
             </div>
         `;
 
-        if (containerId.includes('my')) {
+        if (containerId === 'myItems') {
             const primaryAction = item.status === 'archived'
                 ? `<button onclick="event.stopPropagation(); reactivateItem('${item.id}', '${itemType}')">Активировать</button>`
                 : item.status === 'pending_payment'
@@ -1781,6 +1869,89 @@ function renderListings(listings, containerId) {
     });
 }
 
+function updatePublicationLikeState(itemId, itemType, liked, likeCount) {
+    const applyUpdate = (items) => items.map((item) => {
+        if (item.id === itemId && (item.item_type || 'listing') === itemType) {
+            return {
+                ...item,
+                liked_by_me: liked,
+                like_count: likeCount
+            };
+        }
+
+        return item;
+    });
+
+    state.currentListings = applyUpdate(state.currentListings);
+    state.homeListings = applyUpdate(state.homeListings);
+    state.myItems = applyUpdate(state.myItems);
+    state.savedItems = applyUpdate(state.savedItems);
+
+    if (state.selectedItem?.id === itemId && (state.selectedItem.item_type || 'listing') === itemType) {
+        state.selectedItem = {
+            ...state.selectedItem,
+            liked_by_me: liked,
+            like_count: likeCount
+        };
+    }
+
+    const key = getItemKey(itemType, itemId);
+    if (liked) {
+        state.likedItemKeys.add(key);
+        return;
+    }
+
+    state.likedItemKeys.delete(key);
+    state.savedItems = state.savedItems.filter((item) => getPublicationKey(item) !== key);
+}
+
+window.toggleItemLike = async function(itemId, itemType = 'listing', button = null) {
+    if (!state.user?.id) {
+        alert('Сначала откройте приложение через Telegram');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/likes/toggle`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                user_id: state.user.id,
+                item_id: itemId,
+                item_type: itemType
+            })
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Не удалось обновить лайк');
+        }
+
+        const likeCount = Number(result.like_count || 0);
+        updatePublicationLikeState(itemId, itemType, result.liked, likeCount);
+
+        document.querySelectorAll(`[data-like-button="${getItemKey(itemType, itemId)}"]`).forEach((likeButton) => {
+            likeButton.classList.toggle('active', result.liked);
+            const counter = likeButton.querySelector('small');
+            if (counter) {
+                counter.textContent = likeCount;
+            }
+            const label = likeButton.querySelector('strong');
+            if (label) {
+                label.textContent = result.liked ? 'Сохранено' : 'Сохранить';
+            }
+            likeButton.setAttribute('aria-label', result.liked ? 'Убрать из сохраненных' : 'Сохранить объявление');
+        });
+
+        if (document.getElementById('my-items')?.classList.contains('active')) {
+            await loadMyItems();
+        }
+    } catch (error) {
+        console.error('Error toggling like:', error);
+        alert(error.message || 'Не удалось обновить лайк');
+    }
+};
+
 function showItemDetails(item) {
     state.selectedItem = item;
     const modal = document.getElementById('itemModal');
@@ -1788,6 +1959,9 @@ function showItemDetails(item) {
     const categoryName = getCategoryName(item.category_id);
     const subcategoryName = getListingSubcategoryName(item.category_id, item.subcategory);
     const isOwner = String(item.user_id || '') === String(state.user?.id || '');
+    const itemType = item.item_type || 'listing';
+    const liked = isItemLiked(item);
+    const likeCount = Number(item.like_count || 0);
 
     const gallery = item.images && item.images.length > 0 ? `
         <div class="item-details-gallery">
@@ -1819,6 +1993,17 @@ function showItemDetails(item) {
         </div>
         ${gallery}
         <div class="item-details-price">${formatPrice(item.price, item.price_type)}</div>
+        <button
+            type="button"
+            class="item-details-like ${liked ? 'active' : ''}"
+            data-like-button="${getItemKey(itemType, item.id)}"
+            onclick="toggleItemLike('${item.id}', '${itemType}', this)"
+            aria-label="${liked ? 'Убрать из сохраненных' : 'Сохранить объявление'}"
+        >
+            <span>♥</span>
+            <strong>${liked ? 'Сохранено' : 'Сохранить'}</strong>
+            <small>${likeCount}</small>
+        </button>
         ${isOwner && item.expires_at ? `<div class="info-text">Активно до ${new Date(item.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
         ${item.is_premium ? `<div class="promotion-status">В первой линии${item.premium_expires_at ? ` до ${new Date(item.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}
         <div class="item-details-description">${escapeHtml(item.description || 'Описание отсутствует')}</div>

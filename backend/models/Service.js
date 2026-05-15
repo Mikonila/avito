@@ -28,6 +28,17 @@ function getNextExpiry(days = 30) {
   return new Date(Date.now() + (days * 24 * 60 * 60 * 1000)).toISOString();
 }
 
+function getLikeCountJoin() {
+  return `
+    LEFT JOIN (
+      SELECT item_id, COUNT(*) AS like_count
+      FROM publication_likes
+      WHERE item_type = 'service'
+      GROUP BY item_id
+    ) like_counts ON like_counts.item_id = services.id
+  `;
+}
+
 class Service {
   static async create(user_id, data) {
     const id = uuidv4();
@@ -56,7 +67,11 @@ class Service {
 
   static async findByUserId(user_id) {
     const rows = await db.all(
-      `SELECT * FROM services WHERE user_id = $1 ORDER BY created_at DESC`,
+      `SELECT services.*, COALESCE(like_counts.like_count, 0) AS like_count
+       FROM services
+       ${getLikeCountJoin()}
+       WHERE services.user_id = $1
+       ORDER BY services.created_at DESC`,
       [user_id]
     );
 
@@ -64,30 +79,39 @@ class Service {
   }
 
   static async findById(id) {
-    const row = await db.get(`SELECT * FROM services WHERE id = $1`, [id]);
+    const row = await db.get(
+      `SELECT services.*, COALESCE(like_counts.like_count, 0) AS like_count
+       FROM services
+       ${getLikeCountJoin()}
+       WHERE services.id = $1`,
+      [id]
+    );
     return withParsedImages(row);
   }
 
   static async findByCityAndCategory(city_id, category_id) {
-    let query = `SELECT * FROM services WHERE status = 'active'`;
+    let query = `SELECT services.*, COALESCE(like_counts.like_count, 0) AS like_count
+      FROM services
+      ${getLikeCountJoin()}
+      WHERE services.status = 'active'`;
     const params = [];
 
     if (city_id) {
       params.push(city_id);
-      query += ` AND city_id = $${params.length}`;
+      query += ` AND services.city_id = $${params.length}`;
     }
 
     if (category_id) {
       params.push(category_id);
-      query += ` AND category_id = $${params.length}`;
+      query += ` AND services.category_id = $${params.length}`;
     }
 
     query += ` ORDER BY
       CASE
-        WHEN is_premium = TRUE AND (premium_expires_at IS NULL OR premium_expires_at > CURRENT_TIMESTAMP) THEN 0
+        WHEN services.is_premium = TRUE AND (services.premium_expires_at IS NULL OR services.premium_expires_at > CURRENT_TIMESTAMP) THEN 0
         ELSE 1
       END,
-      created_at DESC
+      services.created_at DESC
       LIMIT 50`;
 
     const rows = await db.all(query, params);

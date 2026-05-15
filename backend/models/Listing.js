@@ -28,6 +28,17 @@ function getNextExpiry(days = 30) {
   return new Date(Date.now() + (days * 24 * 60 * 60 * 1000)).toISOString();
 }
 
+function getLikeCountJoin() {
+  return `
+    LEFT JOIN (
+      SELECT item_id, COUNT(*) AS like_count
+      FROM publication_likes
+      WHERE item_type = 'listing'
+      GROUP BY item_id
+    ) like_counts ON like_counts.item_id = listings.id
+  `;
+}
+
 class Listing {
   static async create(user_id, data) {
     const id = uuidv4();
@@ -44,13 +55,23 @@ class Listing {
   }
 
   static async findById(id) {
-    const row = await db.get(`SELECT * FROM listings WHERE id = $1`, [id]);
+    const row = await db.get(
+      `SELECT listings.*, COALESCE(like_counts.like_count, 0) AS like_count
+       FROM listings
+       ${getLikeCountJoin()}
+       WHERE listings.id = $1`,
+      [id]
+    );
     return withParsedImages(row);
   }
 
   static async findByUserId(user_id) {
     const rows = await db.all(
-      `SELECT * FROM listings WHERE user_id = $1 ORDER BY created_at DESC`,
+      `SELECT listings.*, COALESCE(like_counts.like_count, 0) AS like_count
+       FROM listings
+       ${getLikeCountJoin()}
+       WHERE listings.user_id = $1
+       ORDER BY listings.created_at DESC`,
       [user_id]
     );
 
@@ -58,25 +79,28 @@ class Listing {
   }
 
   static async findByCityAndCategory(city_id, category_id) {
-    let query = `SELECT * FROM listings WHERE status = 'active'`;
+    let query = `SELECT listings.*, COALESCE(like_counts.like_count, 0) AS like_count
+      FROM listings
+      ${getLikeCountJoin()}
+      WHERE listings.status = 'active'`;
     const params = [];
 
     if (city_id) {
       params.push(city_id);
-      query += ` AND city_id = $${params.length}`;
+      query += ` AND listings.city_id = $${params.length}`;
     }
 
     if (category_id) {
       params.push(category_id);
-      query += ` AND category_id = $${params.length}`;
+      query += ` AND listings.category_id = $${params.length}`;
     }
 
     query += ` ORDER BY
       CASE
-        WHEN is_premium = TRUE AND (premium_expires_at IS NULL OR premium_expires_at > CURRENT_TIMESTAMP) THEN 0
+        WHEN listings.is_premium = TRUE AND (listings.premium_expires_at IS NULL OR listings.premium_expires_at > CURRENT_TIMESTAMP) THEN 0
         ELSE 1
       END,
-      created_at DESC
+      listings.created_at DESC
       LIMIT 50`;
 
     const rows = await db.all(query, params);
@@ -85,14 +109,16 @@ class Listing {
 
   static async getRandomListings(limit = 20) {
     const rows = await db.all(
-      `SELECT * FROM listings
-       WHERE status = 'active'
+      `SELECT listings.*, COALESCE(like_counts.like_count, 0) AS like_count
+       FROM listings
+       ${getLikeCountJoin()}
+       WHERE listings.status = 'active'
        ORDER BY
          CASE
-           WHEN is_premium = TRUE AND (premium_expires_at IS NULL OR premium_expires_at > CURRENT_TIMESTAMP) THEN 0
+           WHEN listings.is_premium = TRUE AND (listings.premium_expires_at IS NULL OR listings.premium_expires_at > CURRENT_TIMESTAMP) THEN 0
            ELSE 1
          END,
-         created_at DESC
+         listings.created_at DESC
        LIMIT $1`,
       [limit]
     );

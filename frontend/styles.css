@@ -1151,6 +1151,92 @@ html, body, #app {
     margin-bottom: 30px;
 }
 
+.items-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(168px, 210px);
+    grid-template-columns: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 2px 2px 12px;
+    scroll-snap-type: x proximity;
+}
+
+.items-row .item-card {
+    scroll-snap-align: start;
+}
+
+.my-items-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding: 14px 0 4px;
+}
+
+.my-items-header strong {
+    display: block;
+    color: var(--text-color);
+    font-size: var(--content-text-size);
+    font-weight: 700;
+}
+
+.my-items-header span {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted-color);
+    font-size: 13px;
+}
+
+.create-item-button {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 16px;
+    background: var(--brand-gradient);
+    color: #ffffff;
+    font-size: 32px;
+    line-height: 1;
+    font-weight: 400;
+    box-shadow: 0 14px 28px rgba(139, 92, 246, 0.24);
+    cursor: pointer;
+}
+
+.my-items-section {
+    margin-bottom: 20px;
+}
+
+.my-items-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.my-items-section-title strong {
+    color: var(--text-color);
+    font-size: var(--content-text-size);
+    font-weight: 600;
+}
+
+.my-items-section-title span {
+    min-width: 28px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #f3e8ff;
+    color: #7c3aed;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.create-listing-modal-content {
+    padding-top: 44px;
+}
+
 .item-card {
     position: relative;
     display: flex;
@@ -1167,7 +1253,7 @@ html, body, #app {
 
 .admin-remove-btn {
     position: absolute;
-    top: 12px;
+    top: 54px;
     right: 12px;
     z-index: 4;
     width: 34px;
@@ -1209,6 +1295,41 @@ html, body, #app {
     padding: 7px 10px;
     font-size: 11px;
     font-weight: 700;
+}
+
+.item-like-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 44px;
+    height: 34px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #8b5cf6;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+    cursor: pointer;
+}
+
+.item-like-btn span {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.item-like-btn small {
+    color: inherit;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.item-like-btn.active {
+    background: linear-gradient(135deg, #8b5cf6, #67c7ff);
+    color: #ffffff;
 }
 
 .promotion-card-label {
@@ -1306,6 +1427,39 @@ html, body, #app {
     font-weight: 800;
     margin-top: auto;
     margin-bottom: 8px;
+}
+
+.item-details-like {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: fit-content;
+    margin: 2px 0 14px;
+    padding: 10px 14px;
+    border: 1px solid rgba(139, 92, 246, 0.18);
+    border-radius: 999px;
+    background: #ffffff;
+    color: #7c3aed;
+    box-shadow: 0 10px 24px rgba(139, 92, 246, 0.12);
+    cursor: pointer;
+}
+
+.item-details-like span {
+    font-size: 18px;
+}
+
+.item-details-like strong,
+.item-details-like small {
+    color: inherit;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.item-details-like.active {
+    border-color: transparent;
+    background: var(--brand-gradient);
+    color: #ffffff;
 }
 
 .item-meta {
@@ -2656,6 +2810,18 @@ body {
 
 .item-meta-row {
     display: block !important;
+}
+
+.items-row {
+    display: grid !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(168px, 210px) !important;
+    grid-template-columns: none !important;
+    overflow-x: auto !important;
+}
+
+.items-row .empty-state {
+    width: min(78vw, 360px);
 }
 
 .item-meta {
