@@ -1491,6 +1491,30 @@ textarea {
     margin-bottom: 8px;
 }
 
+.item-price-row {
+    margin-top: auto;
+}
+
+.item-price-row .item-price {
+    margin-top: 0;
+}
+
+.item-price-row-owned {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.item-views {
+    flex: 0 0 auto;
+    text-align: right;
+    color: var(--muted-color);
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
 .item-details-like {
     display: inline-flex;
     align-items: center;
@@ -2454,9 +2478,24 @@ textarea {
 }
 
 @media (max-width: 768px) {
-    .promo-banner,
-    .price-grid {
+    .promo-banner {
         grid-template-columns: 1fr;
+    }
+
+    .filter-sheet .price-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .filter-sheet .filter-input {
+        min-height: 46px;
+        padding: 12px 14px;
+        font-size: 14px;
+        border-radius: 14px;
+    }
+
+    .filter-sheet #citySelect {
+        width: 100%;
     }
 
     .category-showcase-grid {
@@ -2903,6 +2942,29 @@ textarea {
     .category-tile-11,
     .category-tile-12 {
         padding: 0 16px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-sheet {
+        gap: 18px;
+    }
+
+    .filter-block h3,
+    .filter-block label {
+        margin-bottom: 10px;
+        font-size: 15px;
+    }
+
+    .filter-sheet .price-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .filter-sheet .filter-input {
+        min-height: 44px;
+        padding: 11px 12px;
+        font-size: 13px;
     }
 }
 

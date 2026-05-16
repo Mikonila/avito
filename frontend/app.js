@@ -2049,16 +2049,24 @@ function renderListings(listings, containerId) {
         const subcategoryName = getListingSubcategoryName(item.category_id, item.subcategory);
         const badgeText = subcategoryName || categoryName;
         const itemType = item.item_type || 'listing';
+        const isOwner = String(item.user_id || '') === String(state.user?.id || '');
         const promotionBadge = item.is_premium
             ? '<div class="promotion-card-label">Продвигается</div>'
             : '';
         const liked = isItemLiked(item);
         const likeCount = Number(item.like_count || 0);
+        const views = Number(item.views || 0);
         const statusBadge = item.status === 'archived'
             ? '<div class="publication-status publication-status-archived">Архивировано</div>'
             : item.status === 'pending_payment'
                 ? '<div class="publication-status publication-status-pending">Ожидает оплаты</div>'
                 : '';
+        const priceMarkup = `
+            <div class="item-price-row ${containerId === 'myItems' && isOwner ? 'item-price-row-owned' : ''}">
+                <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
+                ${containerId === 'myItems' && isOwner ? `<div class="item-views">👁 ${views}</div>` : ''}
+            </div>
+        `;
 
         let content = `
             <div class="item-card-media">
@@ -2085,7 +2093,7 @@ function renderListings(listings, containerId) {
         <div class="item-info">
                 ${statusBadge}
                 <div class="item-title">${escapeHtml(item.title)}</div>
-                <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
+                ${priceMarkup}
                 ${renderItemRating(item)}
                 <div class="item-meta-row">
                     <div class="item-meta">${getCityName(item.city_id || item.city)}</div>
@@ -2219,6 +2227,7 @@ function showItemDetails(item) {
     const itemType = item.item_type || 'listing';
     const liked = isItemLiked(item);
     const likeCount = Number(item.like_count || 0);
+    const views = Number(item.views || 0);
 
     const gallery = item.images && item.images.length > 0 ? `
         <div class="item-details-gallery">
@@ -2248,6 +2257,7 @@ function showItemDetails(item) {
             <span>${getCityName(item.city_id || item.city)}</span>
             <span>${new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
             <span>${formatPrice(item.price, item.price_type)}</span>
+            ${isOwner ? `<span>👁 ${views}</span>` : ''}
             <div id="itemDetailsRating" class="item-details-rating-slot">${renderItemRating(item)}</div>
         </div>
         ${gallery}
