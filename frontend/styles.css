@@ -2854,7 +2854,7 @@ textarea {
     font-weight: 400 !important;
     text-align: center !important;
     word-break: normal !important;
-    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 48%, #c084fc 100%) !important;
+    background: linear-gradient(135deg, #c084fc, #8b5cf6, #67c7ff) !important;
     -webkit-background-clip: text !important;
     background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
@@ -2863,7 +2863,7 @@ textarea {
 
 .category-tile.active strong,
 .category-tile-all.active strong {
-    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #b794f6 100%) !important;
+    background: linear-gradient(135deg, #c084fc, #8b5cf6, #67c7ff) !important;
     -webkit-background-clip: text !important;
     background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
@@ -2872,7 +2872,7 @@ textarea {
 }
 
 .category-tile-all strong {
-    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #c084fc 100%) !important;
+    background: linear-gradient(135deg, #c084fc, #8b5cf6, #67c7ff) !important;
     -webkit-background-clip: text !important;
     background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
@@ -3100,7 +3100,7 @@ html[data-theme="dark"] .category-tile::after {
 
 html[data-theme="dark"] .category-tile strong,
 html[data-theme="dark"] .category-tile-all strong {
-    background: linear-gradient(135deg, #b794f6 0%, #c084fc 50%, #e9d5ff 100%) !important;
+    background: linear-gradient(135deg, #c084fc, #8b5cf6, #67c7ff) !important;
     -webkit-background-clip: text !important;
     background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
@@ -3109,7 +3109,7 @@ html[data-theme="dark"] .category-tile-all strong {
 
 html[data-theme="dark"] .category-tile.active strong,
 html[data-theme="dark"] .category-tile-all.active strong {
-    background: linear-gradient(135deg, #c4b5fd 0%, #d8b4fe 45%, #f5d0fe 100%) !important;
+    background: linear-gradient(135deg, #c084fc, #8b5cf6, #67c7ff) !important;
     -webkit-background-clip: text !important;
     background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
