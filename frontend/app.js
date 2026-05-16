@@ -2064,8 +2064,9 @@ function renderListings(listings, containerId) {
             const adminButton = document.createElement('button');
             adminButton.className = 'admin-remove-btn';
             adminButton.type = 'button';
-            adminButton.textContent = '×';
-            adminButton.title = 'Модерация объявления';
+            adminButton.textContent = '⋯';
+            adminButton.setAttribute('aria-label', 'Действия администратора');
+            adminButton.title = 'Действия администратора';
             adminButton.addEventListener('click', (event) => {
                 event.stopPropagation();
                 window.openAdminModerationModal(item);
