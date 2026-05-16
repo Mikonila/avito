@@ -1,4 +1,5 @@
 :root {
+    --app-height: 100dvh;
     --primary-color: #67c7ff;
     --primary-dark: #8b5cf6;
     --secondary-color: #4c1d95;
@@ -54,12 +55,31 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     overflow-x: hidden;
+    overflow-y: hidden;
     padding-bottom: 82px;
 }
 
 html, body, #app {
     width: 100%;
     height: 100%;
+}
+
+html,
+body {
+    min-height: var(--app-height);
+    overscroll-behavior-y: none;
+}
+
+#app,
+#mainApp {
+    height: var(--app-height);
+    min-height: var(--app-height);
+}
+
+#mainApp {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 /* Loading state */
@@ -311,9 +331,14 @@ html, body, #app {
 }
 
 .tab-content {
+    flex: 1 1 auto;
+    min-height: 0;
     max-width: 1240px;
     margin: 0 auto;
     padding: 0 16px 110px;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 .tab-pane {
@@ -1489,30 +1514,6 @@ textarea {
     font-weight: 800;
     margin-top: auto;
     margin-bottom: 8px;
-}
-
-.item-price-row {
-    margin-top: auto;
-}
-
-.item-price-row .item-price {
-    margin-top: 0;
-}
-
-.item-price-row-owned {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.item-views {
-    flex: 0 0 auto;
-    text-align: right;
-    color: var(--muted-color);
-    font-size: 12px;
-    line-height: 1;
-    white-space: nowrap;
 }
 
 .item-details-like {

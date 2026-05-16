@@ -153,13 +153,28 @@ function toggleTheme() {
     applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
 }
 
+function syncAppViewportHeight() {
+    const telegramHeight = Number(tg?.viewportStableHeight || tg?.viewportHeight || 0);
+    const nextHeight = telegramHeight > 0 ? telegramHeight : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', `${nextHeight}px`);
+}
+
 document.documentElement.dataset.theme = getStoredTheme();
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        syncAppViewportHeight();
+        window.addEventListener('resize', syncAppViewportHeight);
+
         if (tg) {
             tg.ready();
             tg.expand();
+            if (typeof tg.disableVerticalSwipes === 'function') {
+                tg.disableVerticalSwipes();
+            }
+            if (typeof tg.onEvent === 'function') {
+                tg.onEvent('viewportChanged', syncAppViewportHeight);
+            }
         }
 
         document.getElementById('loading').style.display = 'none';
@@ -2049,24 +2064,16 @@ function renderListings(listings, containerId) {
         const subcategoryName = getListingSubcategoryName(item.category_id, item.subcategory);
         const badgeText = subcategoryName || categoryName;
         const itemType = item.item_type || 'listing';
-        const isOwner = String(item.user_id || '') === String(state.user?.id || '');
         const promotionBadge = item.is_premium
             ? '<div class="promotion-card-label">Продвигается</div>'
             : '';
         const liked = isItemLiked(item);
         const likeCount = Number(item.like_count || 0);
-        const views = Number(item.views || 0);
         const statusBadge = item.status === 'archived'
             ? '<div class="publication-status publication-status-archived">Архивировано</div>'
             : item.status === 'pending_payment'
                 ? '<div class="publication-status publication-status-pending">Ожидает оплаты</div>'
                 : '';
-        const priceMarkup = `
-            <div class="item-price-row ${containerId === 'myItems' && isOwner ? 'item-price-row-owned' : ''}">
-                <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
-                ${containerId === 'myItems' && isOwner ? `<div class="item-views">👁 ${views}</div>` : ''}
-            </div>
-        `;
 
         let content = `
             <div class="item-card-media">
@@ -2093,7 +2100,7 @@ function renderListings(listings, containerId) {
         <div class="item-info">
                 ${statusBadge}
                 <div class="item-title">${escapeHtml(item.title)}</div>
-                ${priceMarkup}
+                <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
                 ${renderItemRating(item)}
                 <div class="item-meta-row">
                     <div class="item-meta">${getCityName(item.city_id || item.city)}</div>
