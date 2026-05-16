@@ -356,7 +356,7 @@
             </div>
             <div class="form-group">
                 <label>Текст отзыва:</label>
-                <textarea id="reviewText" placeholder="Опишите ваш опыт" maxlength="1000"></textarea>
+                <textarea id="reviewText" placeholder="Опишите ваш опыт" maxlength="1000" lang="ru" inputmode="text" dir="auto" spellcheck="true" autocapitalize="sentences"></textarea>
             </div>
             <div class="form-group">
                 <label>Скриншот переписки, подтверждающий ваши слова (виден только админу):</label>
@@ -460,6 +460,7 @@
             <div class="form-group">
                 <label>Аватарка автора</label>
                 <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('adminSeedReviewAvatarInput').click()">+ Загрузить аватарку</button>
+                <p class="field-hint">Можно оставить пустым — аватарка создастся автоматически по первой букве имени.</p>
                 <input type="file" id="adminSeedReviewAvatarInput" accept="image/*" style="display:none;">
                 <div id="adminSeedReviewAvatarPreview" class="image-preview"></div>
             </div>

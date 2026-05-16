@@ -235,6 +235,11 @@ html, body, #app {
     stroke-linejoin: round;
 }
 
+.theme-toggle-btn .moon-icon {
+    fill: currentColor;
+    stroke: none;
+}
+
 .tabs {
     display: flex;
     overflow-x: auto;
@@ -464,6 +469,14 @@ html, body, #app {
 .form-group textarea {
     resize: vertical;
     min-height: 100px;
+    unicode-bidi: plaintext;
+}
+
+.field-hint {
+    margin: 6px 0 10px;
+    color: var(--muted-color);
+    font-size: 12px;
+    line-height: 1.35;
 }
 
 .price-type-options {
@@ -2061,7 +2074,14 @@ html, body, #app {
 }
 
 .review-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
     font-size: 18px;
+    font-weight: 800;
 }
 
 .review-meta {
@@ -3047,4 +3067,38 @@ html[data-theme="dark"] .footer-tabs {
 
 html[data-theme="dark"] .footer-tabs::after {
     background: #141527 !important;
+}
+
+html[data-theme="dark"] .item-title,
+html[data-theme="dark"] .item-details-description,
+html[data-theme="dark"] .review-text,
+html[data-theme="dark"] .review-author-name {
+    color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .item-meta,
+html[data-theme="dark"] .item-details-meta span,
+html[data-theme="dark"] .review-meta,
+html[data-theme="dark"] .field-hint,
+html[data-theme="dark"] .info-text {
+    color: #c7c9d8 !important;
+}
+
+html[data-theme="dark"] .btn-primary {
+    background:
+        radial-gradient(circle at 14% 20%, rgba(255, 255, 255, 0.28), transparent 26%),
+        linear-gradient(135deg, #7c3aed 0%, #a855f7 48%, #38bdf8 100%);
+    color: #ffffff;
+    box-shadow: 0 16px 30px rgba(124, 58, 237, 0.3);
+}
+
+html[data-theme="dark"] .btn-secondary {
+    background: rgba(44, 42, 68, 0.96);
+    border: 1px solid rgba(192, 132, 252, 0.22);
+    color: #e9ddff;
+}
+
+html[data-theme="dark"] .review-screenshot-link,
+html[data-theme="dark"] .review-admin-link {
+    color: #9bdcff;
 }

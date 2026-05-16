@@ -116,8 +116,8 @@ function getThemeIcon(theme) {
     }
 
     return `
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M20.5 15.8A8.5 8.5 0 0 1 8.2 3.5a7 7 0 1 0 12.3 12.3Z"></path>
+        <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M21 14.4A8.25 8.25 0 0 1 9.6 3a.75.75 0 0 0-.9-.95A10.1 10.1 0 1 0 21.95 15.3a.75.75 0 0 0-.95-.9Z"></path>
         </svg>
     `;
 }
@@ -580,12 +580,26 @@ function getAvatarInitial(user) {
     return source.charAt(0).toUpperCase();
 }
 
-function getAvatarMarkup(avatarUrl, fallbackText = '👤') {
+function getAvatarFallbackColor(seed = '') {
+    const colors = ['#8b5cf6', '#67c7ff', '#22c55e', '#f59e0b', '#ec4899', '#14b8a6', '#6366f1'];
+    const source = String(seed || 'Violet');
+    let hash = 0;
+
+    for (let index = 0; index < source.length; index += 1) {
+        hash = (hash + source.charCodeAt(index) * (index + 1)) % colors.length;
+    }
+
+    return colors[hash];
+}
+
+function getAvatarMarkup(avatarUrl, fallbackText = 'Пользователь') {
     if (avatarUrl) {
         return `<img src="${avatarUrl}" alt="Аватар" class="review-avatar-image">`;
     }
 
-    return `<span class="review-avatar-fallback">${fallbackText}</span>`;
+    const initial = String(fallbackText || 'Пользователь').trim().charAt(0).toUpperCase() || 'П';
+    const color = getAvatarFallbackColor(fallbackText);
+    return `<span class="review-avatar-fallback" style="background:${color}">${escapeHtml(initial)}</span>`;
 }
 
 function updateProfileButtonAvatar() {
@@ -2337,7 +2351,7 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
                 <div class="review-header">
                     <div class="review-author-block">
                         <div class="review-avatar">
-                            ${getAvatarMarkup(review.author_avatar_url)}
+                            ${getAvatarMarkup(review.author_avatar_url, review.author_name)}
                         </div>
                         <div>
                             ${authorName}
