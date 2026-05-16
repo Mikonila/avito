@@ -16,6 +16,7 @@ function getMediaValidationOptions(req) {
 
   return {
     maxImages: isAdmin ? 10 : 5,
+    maxImageSizeMb: isAdmin ? 4 : 2,
     maxVideoSizeMb: isAdmin ? 30 : 15,
     maxTotalMediaSizeMb: isAdmin ? 45 : 25
   };

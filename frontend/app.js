@@ -1,7 +1,8 @@
 const tg = window.Telegram?.WebApp;
 const DEFAULT_MAX_IMAGE_COUNT = 5;
 const ADMIN_MAX_IMAGE_COUNT = 10;
-const MAX_IMAGE_SIZE_BYTES = 1572864;
+const DEFAULT_MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
+const ADMIN_MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024;
 const DEFAULT_MAX_VIDEO_SIZE_BYTES = 15 * 1024 * 1024;
 const ADMIN_MAX_VIDEO_SIZE_BYTES = 30 * 1024 * 1024;
 const LISTING_DRAFT_KEY = 'violet_listing_drafts';
@@ -245,6 +246,10 @@ function isAdminUser() {
 
 function getMaxImageCount() {
     return isAdminUser() ? ADMIN_MAX_IMAGE_COUNT : DEFAULT_MAX_IMAGE_COUNT;
+}
+
+function getMaxImageSizeBytes() {
+    return isAdminUser() ? ADMIN_MAX_IMAGE_SIZE_BYTES : DEFAULT_MAX_IMAGE_SIZE_BYTES;
 }
 
 function getMaxVideoSizeBytes() {
@@ -1571,8 +1576,8 @@ function handleImageSelect(e, type) {
             return;
         }
 
-        if (file.type.startsWith('image/') && file.size > MAX_IMAGE_SIZE_BYTES && !isEditMedia) {
-            alert('Каждая фотография должна быть меньше 1.5 МБ');
+        if (file.type.startsWith('image/') && file.size > getMaxImageSizeBytes() && !isEditMedia) {
+            alert(`Каждая фотография должна быть меньше ${Math.round(getMaxImageSizeBytes() / (1024 * 1024))} МБ`);
             return;
         }
 
@@ -1599,8 +1604,8 @@ function handleReviewScreenshotSelect(e) {
         return;
     }
 
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-        alert('Скриншот должен быть меньше 1.5 МБ');
+    if (file.size > getMaxImageSizeBytes()) {
+        alert(`Скриншот должен быть меньше ${Math.round(getMaxImageSizeBytes() / (1024 * 1024))} МБ`);
         e.target.value = '';
         return;
     }
@@ -1621,8 +1626,8 @@ function handleAdminReviewAvatarSelect(e) {
         return;
     }
 
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-        alert('Аватарка должна быть меньше 1.5 МБ');
+    if (file.size > getMaxImageSizeBytes()) {
+        alert(`Аватарка должна быть меньше ${Math.round(getMaxImageSizeBytes() / (1024 * 1024))} МБ`);
         e.target.value = '';
         return;
     }

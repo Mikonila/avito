@@ -2959,7 +2959,7 @@ body {
 
 @media (max-width: 370px) {
     .category-showcase-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 8px 0 !important;
     }
 }
 
@@ -2977,8 +2977,8 @@ body {
 .category-tile-10,
 .category-tile-11,
 .category-tile-12 {
-    width: 100% !important;
-    padding: 0 7px !important;
+    width: auto !important;
+    padding: 0 14px !important;
 }
 
 .item-details-gallery img,

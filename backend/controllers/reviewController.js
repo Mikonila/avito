@@ -7,6 +7,14 @@ const { getTelegramBot } = require('../telegramBot');
 const { destroyImages, uploadImages } = require('../utils/cloudinary');
 const { validateImages } = require('../utils/validators');
 
+function getReviewMediaValidationOptions(req) {
+  const isAdmin = isAdminTelegramId(getRequesterTelegramId(req));
+
+  return {
+    maxImageSizeMb: isAdmin ? 4 : 2
+  };
+}
+
 async function notifySellerAboutReview(targetUser, publicationTitle = '') {
   const bot = getTelegramBot();
 
@@ -116,7 +124,7 @@ async function createReview(req, res) {
       publicationTitle = service.title || '';
     }
 
-    const screenshotValidation = validateImages(screenshot ? [screenshot] : []);
+    const screenshotValidation = validateImages(screenshot ? [screenshot] : [], getReviewMediaValidationOptions(req));
     if (!screenshotValidation.isValid || screenshotValidation.images.length !== 1) {
       return res.status(400).json({ error: 'Нужно прикрепить один скриншот переписки' });
     }
@@ -124,7 +132,7 @@ async function createReview(req, res) {
     let reviewImagesToUpload = [];
 
     if (Array.isArray(images) && images.length) {
-      const imagesValidation = validateImages(images);
+      const imagesValidation = validateImages(images, getReviewMediaValidationOptions(req));
       if (!imagesValidation.isValid || imagesValidation.images.length > 5) {
         return res.status(400).json({ error: 'Можно добавить до 5 корректных фотографий к отзыву' });
       }
@@ -231,7 +239,7 @@ async function createAdminSeededReview(req, res) {
     }
 
     if (avatar) {
-      const avatarValidation = validateImages([avatar]);
+      const avatarValidation = validateImages([avatar], getReviewMediaValidationOptions(req));
       if (!avatarValidation.isValid || avatarValidation.images.length !== 1) {
         return res.status(400).json({ error: 'Загрузите корректную фотографию аватарки' });
       }

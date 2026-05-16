@@ -17,7 +17,15 @@ const CATEGORIES = [
   },
   { id: 'cat-15', name: 'Вакансии', icon: '💼' },
   { id: 'cat-13', name: 'Афиша', icon: '🎭' },
-  { id: 'cat-1', name: 'Электроника', icon: '💻' },
+  {
+    id: 'cat-1',
+    name: 'Электроника',
+    icon: '💻',
+    subcategories: [
+      { id: 'smartphones', name: 'Смартфоны' },
+      { id: 'computers', name: 'Компьютеры' }
+    ]
+  },
   {
     id: 'cat-2',
     name: 'Авто',

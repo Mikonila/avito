@@ -5,7 +5,8 @@
  */
 
 const MAX_IMAGES_PER_ITEM = 5;
-const MAX_IMAGE_SIZE_MB = 1.5;
+const MAX_IMAGE_SIZE_MB = 2;
+const ADMIN_MAX_IMAGE_SIZE_MB = 4;
 const MAX_VIDEO_SIZE_MB = 15;
 const MAX_TOTAL_MEDIA_SIZE_MB = 25;
 
@@ -122,6 +123,7 @@ function validateImages(images, options = {}) {
     const normalizedImages = normalizeImagesInput(images);
     const errors = [];
     const maxImages = options.maxImages || MAX_IMAGES_PER_ITEM;
+    const maxImageSizeMb = options.maxImageSizeMb || MAX_IMAGE_SIZE_MB;
     const maxVideoSizeMb = options.maxVideoSizeMb || MAX_VIDEO_SIZE_MB;
     const maxTotalMediaSizeMb = options.maxTotalMediaSizeMb || MAX_TOTAL_MEDIA_SIZE_MB;
 
@@ -147,8 +149,8 @@ function validateImages(images, options = {}) {
         const sizeInMb = getBase64SizeInMb(image);
         totalSizeInMb += sizeInMb;
 
-        if (isImage && sizeInMb > MAX_IMAGE_SIZE_MB) {
-            errors.push(`Image ${index + 1} exceeds ${MAX_IMAGE_SIZE_MB} MB`);
+        if (isImage && sizeInMb > maxImageSizeMb) {
+            errors.push(`Image ${index + 1} exceeds ${maxImageSizeMb} MB`);
         }
 
         if (isVideo && sizeInMb > maxVideoSizeMb) {
@@ -168,12 +170,14 @@ function validateImages(images, options = {}) {
 }
 
 module.exports = {
+    ADMIN_MAX_IMAGE_SIZE_MB,
     validateEmail,
     validateImages,
     isBase64Image,
     isBase64Video,
     isRemoteImageUrl,
     normalizeImagesInput,
+    MAX_IMAGE_SIZE_MB,
     validatePhone,
     validatePrice,
     validateLength,
