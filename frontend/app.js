@@ -325,9 +325,9 @@ function getAverageRating(reviews = []) {
     };
 }
 
-function renderRatingSummary(average, count, emptyText = 'Пока нет оценок') {
+function renderRatingSummary(average, count) {
     if (!count) {
-        return `<div class="rating-summary muted">${emptyText}</div>`;
+        return '';
     }
 
     return `
@@ -2214,7 +2214,9 @@ function showItemDetails(item) {
         </button>
         ${isOwner && item.expires_at ? `<div class="info-text">Активно до ${new Date(item.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
         ${item.is_premium ? `<div class="promotion-status">В первой линии${item.premium_expires_at ? ` до ${new Date(item.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}
-        <div class="item-details-description">${formatMultilineText(item.description || 'Описание отсутствует')}</div>
+        ${String(item.description || '').trim()
+            ? `<div class="item-details-description">${formatMultilineText(item.description)}</div>`
+            : ''}
         <div class="item-details-actions">
             <button class="btn btn-primary btn-block item-details-contact-btn" onclick="openSellerChat()">Написать</button>
             <button class="btn btn-secondary btn-block item-details-profile-btn" onclick="showSellerProfile()">Профиль продавца</button>

@@ -2754,20 +2754,19 @@ textarea {
 }
 
 .category-showcase-grid {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    column-gap: 0 !important;
-    row-gap: 3px !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
     overflow: visible !important;
     padding: 7px 8px !important;
-    align-items: center !important;
-    border: 1px solid rgba(139, 92, 246, 0.12) !important;
-    border-radius: 14px !important;
-    background: rgba(255, 255, 255, 0.78) !important;
-    box-shadow: 0 8px 22px rgba(139, 92, 246, 0.06) !important;
+    align-items: stretch !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
     scroll-snap-type: none !important;
 }
 
@@ -2785,18 +2784,19 @@ textarea {
 .category-tile-10,
 .category-tile-11,
 .category-tile-12 {
-    flex: initial !important;
-    height: 26px !important;
+    display: flex !important;
+    width: 100% !important;
+    height: 46px !important;
     min-width: 0 !important;
-    min-height: 26px !important;
-    max-height: 26px !important;
-    width: auto !important;
-    padding: 0 10px !important;
-    border: none !important;
-    border-radius: 0 !important;
+    min-height: 46px !important;
+    max-height: none !important;
+    padding: 8px 10px !important;
+    border: 1px solid rgba(139, 92, 246, 0.14) !important;
+    border-radius: 12px !important;
     justify-content: center !important;
-    overflow: visible !important;
-    background: transparent !important;
+    align-items: center !important;
+    overflow: hidden !important;
+    background: rgba(255, 255, 255, 0.82) !important;
     box-shadow: none !important;
 }
 
@@ -2806,15 +2806,7 @@ textarea {
 }
 
 .category-tile::after {
-    content: '' !important;
-    position: absolute !important;
-    top: 8px !important;
-    right: 0 !important;
-    width: 1px !important;
-    height: 10px !important;
-    border-radius: 999px !important;
-    background: linear-gradient(180deg, rgba(139, 92, 246, 0), rgba(139, 92, 246, 0.28), rgba(103, 199, 255, 0)) !important;
-    pointer-events: none !important;
+    display: none !important;
 }
 
 .category-tile:last-child::after {
@@ -2831,31 +2823,33 @@ textarea {
 }
 
 .category-tile.active {
-    background: transparent !important;
-    border-color: transparent !important;
-    box-shadow: inset 0 -2px 0 rgba(139, 92, 246, 0.55) !important;
+    background: linear-gradient(135deg, rgba(103, 199, 255, 0.18), rgba(139, 92, 246, 0.16)) !important;
+    border-color: rgba(139, 92, 246, 0.28) !important;
+    box-shadow: none !important;
 }
 
 .category-tile-all,
 .category-tile-all.active {
-    background: transparent !important;
-    border-color: transparent !important;
+    background: linear-gradient(135deg, rgba(103, 199, 255, 0.18), rgba(139, 92, 246, 0.16)) !important;
+    border-color: rgba(139, 92, 246, 0.28) !important;
 }
 
 .category-tile strong {
     max-width: 100% !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-    font-size: 11px !important;
-    line-height: 1 !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+    font-size: var(--content-text-size) !important;
+    line-height: 1.2 !important;
     font-weight: 400 !important;
+    text-align: center !important;
+    word-break: break-word !important;
 }
 
 .category-tile.active strong,
 .category-tile-all.active strong {
     color: var(--secondary-color) !important;
-    font-weight: 500 !important;
+    font-weight: 400 !important;
 }
 
 .category-tile-all strong {
@@ -2864,6 +2858,7 @@ textarea {
 
 @media (min-width: 390px) {
     .category-showcase-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
         padding: 8px 10px !important;
     }
 
@@ -2881,7 +2876,7 @@ textarea {
     .category-tile-10,
     .category-tile-11,
     .category-tile-12 {
-        padding: 0 12px !important;
+        padding: 8px 12px !important;
     }
 }
 
@@ -2949,10 +2944,10 @@ body {
     line-height: 1.25 !important;
 }
 
-.catego.category-showcase-grid {
+.category-showcase-grid {
     display: grid !important;
     grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 4px 0 !important;
+    gap: 6px !important;
     height: auto !important;
     max-height: none !important;
     overflow: hidden !important;
@@ -3118,11 +3113,17 @@ html[data-theme="dark"] .item-meta,
 html[data-theme="dark"] .item-details-meta span,
 html[data-theme="dark"] .review-meta,
 html[data-theme="dark"] .field-hint,
-html[data-theme="dark"] .info-text,
 html[data-theme="dark"] .profile-summary-subtitle,
 html[data-theme="dark"] .profile-info-label,
 html[data-theme="dark"] .promotion-inline-panel p,
 html[data-theme="dark"] .promotion-plan-card small {
+    color: #c7c9d8 !important;
+}
+
+html[data-theme="dark"] .info-text,
+html[data-theme="dark"] .rating-summary.muted {
+    background: rgba(31, 32, 52, 0.96) !important;
+    border: 1px solid rgba(192, 132, 252, 0.18) !important;
     color: #c7c9d8 !important;
 }
 
