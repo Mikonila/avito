@@ -1143,6 +1143,10 @@ textarea {
     gap: 10px;
 }
 
+#searchResultSubcategories {
+    margin-bottom: 14px;
+}
+
 .filter-chip {
     border: none;
     background: #f2f3f5;
@@ -3087,6 +3091,18 @@ html[data-theme="dark"] input::placeholder,
 html[data-theme="dark"] textarea::placeholder,
 html[data-theme="dark"] .search-trigger-input::placeholder {
     color: rgba(166, 168, 186, 0.82);
+}
+
+html[data-theme="dark"] .filter-chip {
+    background: rgba(31, 32, 52, 0.96) !important;
+    border: 1px solid rgba(192, 132, 252, 0.18) !important;
+    color: #d8daea !important;
+}
+
+html[data-theme="dark"] .filter-chip.active {
+    background: var(--brand-gradient) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
 }
 
 html[data-theme="dark"] .category-showcase-grid {

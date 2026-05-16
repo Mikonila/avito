@@ -675,7 +675,7 @@ function setSearchViewMode(mode) {
     state.activeSearchView = mode;
 
     document.getElementById('promoBannerSection')?.classList.toggle('hidden', mode !== 'home');
-    document.getElementById('categoriesShowcaseSection')?.classList.toggle('hidden', !['home', 'category'].includes(mode));
+    document.getElementById('categoriesShowcaseSection')?.classList.add('hidden');
     document.getElementById('homeRecommendationsBlock')?.classList.toggle('hidden', mode !== 'home');
     document.getElementById('categoryLandingSection')?.classList.toggle('hidden', mode !== 'category');
     document.getElementById('sellerProfileSection')?.classList.toggle('hidden', mode !== 'seller');
@@ -980,6 +980,49 @@ function renderFilterCategoryChips() {
             state.filters.categoryId = button.dataset.filterCategory;
             state.filters.subcategoryId = '';
             syncFilterUi();
+        });
+    });
+}
+
+function renderSearchResultSubcategories() {
+    const container = document.getElementById('searchResultSubcategories');
+    const category = getCategoryById(state.filters.categoryId);
+    const subcategories = category?.subcategories || [];
+
+    if (!container) {
+        return;
+    }
+
+    if (!state.filters.categoryId || !subcategories.length) {
+        container.innerHTML = '';
+        container.classList.add('hidden');
+        return;
+    }
+
+    const allChip = `
+        <button type="button" class="filter-chip ${!state.filters.subcategoryId ? 'active' : ''}" data-result-subcategory="">
+            Все объявления
+        </button>
+    `;
+
+    const subcategoryChips = subcategories.map((subcategory) => `
+        <button
+            type="button"
+            class="filter-chip ${state.filters.subcategoryId === subcategory.id ? 'active' : ''}"
+            data-result-subcategory="${subcategory.id}"
+        >
+            ${subcategory.name}
+        </button>
+    `).join('');
+
+    container.innerHTML = allChip + subcategoryChips;
+    container.classList.remove('hidden');
+
+    container.querySelectorAll('[data-result-subcategory]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            state.filters.subcategoryId = button.dataset.resultSubcategory;
+            syncFilterUi();
+            await performSearch();
         });
     });
 }
@@ -1841,6 +1884,7 @@ async function performSearch() {
                     ? `Результаты: ${state.filters.query}`
                     : 'Найденные объявления';
         document.getElementById('resetSearchResultsBtn')?.classList.toggle('hidden', !state.filters.query);
+        renderSearchResultSubcategories();
         renderListings(listings, 'searchResults');
         setSearchViewMode('results');
         closeFiltersModal();
