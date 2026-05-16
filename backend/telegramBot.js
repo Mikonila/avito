@@ -14,6 +14,7 @@ let startupPromise = null;
 let webhookRouteRegistered = false;
 const botsWithRegisteredHandlers = new WeakSet();
 const adminAdSessions = new Map();
+const adminChannelPostSessions = new Map();
 const botDiagnostics = {
   lastWebhookUpdateAt: null,
   lastProcessedUpdateAt: null,
@@ -30,6 +31,7 @@ const SERVICE_PUBLICATION_PLANS = {
   month: { days: 30, stars: 100, label: '1 месяц' }
 };
 const HERO_AD_SETTING_KEY = 'hero_ad';
+const DEFAULT_CHANNEL_ID = '-1003793027909';
 
 function getWebAppUrl() {
   const webAppUrl = process.env.WEBAPP_URL || 'https://your-domain.com';
@@ -47,6 +49,10 @@ function getSupportUsername() {
 
 function getSupportTelegramLink() {
   return `https://t.me/${getSupportUsername()}`;
+}
+
+function getChannelId() {
+  return process.env.TELEGRAM_CHANNEL_ID || DEFAULT_CHANNEL_ID;
 }
 
 function isAdminMessage(msg) {
@@ -192,6 +198,7 @@ async function sendHelp(bot, msg) {
       '/unban <id> - разбанить пользователя по ID или Telegram ID\n' +
       '/ad_create - создать рекламу в верхнем блоке\n' +
       '/ad_reset - вернуть стандартный верхний блок\n' +
+      '/channel_post - написать пост в канал с кнопкой\n' +
       '/cancel - отменить текущее действие'
     : '';
 
@@ -274,6 +281,104 @@ async function resetHeroAd(bot, msg) {
   await AppSettings.set(HERO_AD_SETTING_KEY, null);
   adminAdSessions.delete(String(msg.chat.id));
   await bot.sendMessage(msg.chat.id, 'Рекламный блок сброшен. Вернулся стандартный блок.');
+}
+
+async function startChannelPostCreation(bot, msg) {
+  if (!isAdminMessage(msg)) {
+    await bot.sendMessage(msg.chat.id, 'Команда доступна только администратору.');
+    return;
+  }
+
+  adminChannelPostSessions.set(String(msg.chat.id), { step: 'post_text' });
+  await bot.sendMessage(msg.chat.id, 'Введите текст поста для канала. Для отмены: /cancel');
+}
+
+function isValidButtonUrl(value = '') {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol);
+  } catch (error) {
+    return false;
+  }
+}
+
+async function publishChannelPost(bot, session) {
+  return bot.sendMessage(getChannelId(), session.postText, {
+    reply_markup: {
+      inline_keyboard: [[
+        {
+          text: session.buttonText,
+          url: session.buttonUrl
+        }
+      ]]
+    },
+    disable_web_page_preview: false
+  });
+}
+
+async function handleChannelPostSession(bot, msg) {
+  const chatId = String(msg.chat.id);
+  const session = adminChannelPostSessions.get(chatId);
+
+  if (!session) {
+    return false;
+  }
+
+  if (!isAdminMessage(msg)) {
+    adminChannelPostSessions.delete(chatId);
+    await bot.sendMessage(msg.chat.id, 'Действие отменено: нет прав администратора.');
+    return true;
+  }
+
+  const text = (msg.text || '').trim();
+
+  if (text === '/cancel') {
+    adminChannelPostSessions.delete(chatId);
+    await bot.sendMessage(msg.chat.id, 'Создание поста отменено.');
+    return true;
+  }
+
+  if (session.step === 'post_text') {
+    if (!text || text.startsWith('/')) {
+      await bot.sendMessage(msg.chat.id, 'Введите текст поста обычным сообщением.');
+      return true;
+    }
+
+    session.postText = text.slice(0, 4096);
+    session.step = 'button_text';
+    adminChannelPostSessions.set(chatId, session);
+    await bot.sendMessage(msg.chat.id, 'Введите текст кнопки.');
+    return true;
+  }
+
+  if (session.step === 'button_text') {
+    if (!text || text.startsWith('/')) {
+      await bot.sendMessage(msg.chat.id, 'Введите текст кнопки обычным сообщением.');
+      return true;
+    }
+
+    session.buttonText = text.slice(0, 64);
+    session.step = 'button_url';
+    adminChannelPostSessions.set(chatId, session);
+    await bot.sendMessage(msg.chat.id, 'Введите ссылку для кнопки. Ссылка должна начинаться с http:// или https://');
+    return true;
+  }
+
+  if (session.step === 'button_url') {
+    if (!isValidButtonUrl(text)) {
+      await bot.sendMessage(msg.chat.id, 'Введите корректную ссылку: http:// или https://');
+      return true;
+    }
+
+    session.buttonUrl = text;
+    await publishChannelPost(bot, session);
+    adminChannelPostSessions.delete(chatId);
+    await bot.sendMessage(msg.chat.id, 'Пост отправлен в канал.');
+    return true;
+  }
+
+  adminChannelPostSessions.delete(chatId);
+  return false;
 }
 
 async function handleHeroAdSession(bot, msg) {
@@ -409,6 +514,10 @@ function registerHandlers(bot) {
         return;
       }
 
+      if (await handleChannelPostSession(bot, msg)) {
+        return;
+      }
+
       if (command === '/start') {
         await sendWelcome(bot, msg);
         return;
@@ -439,7 +548,14 @@ function registerHandlers(bot) {
         return;
       }
 
+      if (command === '/channel_post' || command === '/post_channel' || command === '/пост_в_канал') {
+        await startChannelPostCreation(bot, msg);
+        return;
+      }
+
       if (command === '/cancel') {
+        adminAdSessions.delete(String(msg.chat.id));
+        adminChannelPostSessions.delete(String(msg.chat.id));
         await bot.sendMessage(msg.chat.id, 'Нет активного действия для отмены.');
         return;
       }

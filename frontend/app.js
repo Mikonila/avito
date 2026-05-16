@@ -161,6 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         document.getElementById('loading').style.display = 'none';
         updateThemeToggleButton();
+        prepareTextInputs();
 
         await loadReferences();
         const user = await registerUser();
@@ -178,6 +179,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert('Ошибка при инициализации');
     }
 });
+
+function prepareTextInputs(root = document) {
+    root.querySelectorAll('input, textarea').forEach((field) => {
+        const type = String(field.getAttribute('type') || 'text').toLowerCase();
+        const textLikeTypes = new Set(['text', 'search', 'email', 'url', 'tel', 'password']);
+
+        if (field.tagName === 'TEXTAREA' || textLikeTypes.has(type)) {
+            field.setAttribute('lang', 'ru');
+            field.setAttribute('dir', 'auto');
+            field.setAttribute('inputmode', 'text');
+            field.setAttribute('autocapitalize', 'sentences');
+            field.setAttribute('spellcheck', 'true');
+        }
+    });
+}
 
 function getTelegramUser() {
     return tg?.initDataUnsafe?.user || null;

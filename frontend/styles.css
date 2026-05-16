@@ -458,6 +458,13 @@ html, body, #app {
     background: #fbfcfe;
 }
 
+input,
+textarea {
+    -webkit-user-select: text;
+    user-select: text;
+    ime-mode: auto;
+}
+
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
