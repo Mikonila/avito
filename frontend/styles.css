@@ -2540,8 +2540,8 @@ html, body, #app {
     .item-details-gallery img,
     .item-details-gallery video,
     .item-details-media-button {
-        width: 120px;
-        height: 120px;
+        width: min(72vw, 260px);
+        height: min(72vw, 260px);
     }
 
     .brand-title {

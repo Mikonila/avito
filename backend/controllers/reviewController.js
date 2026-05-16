@@ -7,16 +7,7 @@ const { getTelegramBot } = require('../telegramBot');
 const { destroyImages, uploadImages } = require('../utils/cloudinary');
 const { validateImages } = require('../utils/validators');
 
-function getReviewAuthorName(user) {
-  const fullName = [user?.first_name, user?.last_name]
-    .filter(Boolean)
-    .join(' ')
-    .trim();
-
-  return fullName || user?.username || 'Пользователь';
-}
-
-async function notifySellerAboutReview(targetUser, author, publicationTitle = '') {
+async function notifySellerAboutReview(targetUser, publicationTitle = '') {
   const bot = getTelegramBot();
 
   if (!bot || !targetUser?.telegram_id) {
@@ -24,9 +15,7 @@ async function notifySellerAboutReview(targetUser, author, publicationTitle = ''
   }
 
   const lines = [
-    'Вам оставили новый отзыв.',
-    '',
-    `От: ${getReviewAuthorName(author)}`
+    'Вам оставили новый отзыв.'
   ];
 
   if (publicationTitle) {
@@ -143,7 +132,7 @@ async function createReview(req, res) {
       screenshot_url: uploadedScreenshotUrls[0]
     });
 
-    await notifySellerAboutReview(targetUser, requester, publicationTitle);
+    await notifySellerAboutReview(targetUser, publicationTitle);
 
     res.json({ success: true, review_id: reviewId });
   } catch (error) {
