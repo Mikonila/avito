@@ -608,14 +608,34 @@ function getAvatarFallbackColor(seed = '') {
     return colors[hash];
 }
 
+function getAvatarGradient(seed = '') {
+    const gradients = [
+        'linear-gradient(135deg, #8b5cf6, #67c7ff)',
+        'linear-gradient(135deg, #67c7ff, #22c55e)',
+        'linear-gradient(135deg, #f59e0b, #ec4899)',
+        'linear-gradient(135deg, #ec4899, #67c7ff)',
+        'linear-gradient(135deg, #14b8a6, #8b5cf6)',
+        'linear-gradient(135deg, #6366f1, #22c55e)',
+        'linear-gradient(135deg, #f59e0b, #14b8a6)'
+    ];
+    const source = String(seed || 'Violet');
+    let hash = 0;
+
+    for (let index = 0; index < source.length; index += 1) {
+        hash = (hash + source.charCodeAt(index) * (index + 1)) % gradients.length;
+    }
+
+    return gradients[hash];
+}
+
 function getAvatarMarkup(avatarUrl, fallbackText = 'Пользователь') {
     if (avatarUrl) {
         return `<img src="${avatarUrl}" alt="Аватар" class="review-avatar-image">`;
     }
 
     const initial = String(fallbackText || 'Пользователь').trim().charAt(0).toUpperCase() || 'П';
-    const color = getAvatarFallbackColor(fallbackText);
-    return `<span class="review-avatar-fallback" style="background:${color}">${escapeHtml(initial)}</span>`;
+    const gradient = getAvatarGradient(fallbackText);
+    return `<span class="review-avatar-fallback" style="background:${gradient}">${escapeHtml(initial)}</span>`;
 }
 
 function updateProfileButtonAvatar() {
@@ -1336,6 +1356,11 @@ function switchTab(tabName) {
 
 function openCreateListingModal() {
     document.getElementById('listings')?.classList.remove('hidden');
+    
+    // Восстанавливаем последнюю открытую вкладку или по умолчанию открываем "Товар"
+    const lastTabType = localStorage.getItem('lastListingTabType') || 'product';
+    switchListingType(lastTabType);
+    
     refreshServicePublicationRequirement();
 }
 
@@ -1359,6 +1384,9 @@ function switchListingType(type) {
         refreshServicePublicationRequirement();
     }
 
+    // Сохраняем последнюю открытую вкладку
+    localStorage.setItem('lastListingTabType', type);
+    
     saveListingDrafts();
 }
 
@@ -2360,6 +2388,11 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
         const deleteButton = canDelete
             ? `<button class="review-delete-btn" onclick="deleteReview('${review.id}')">✕</button>`
             : '';
+        
+        // Добавляем изображения отзыва если они есть
+        const reviewImages = review.images && review.images.length > 0
+            ? `<div class="review-images">${review.images.map(img => `<div class="review-image-item"><img src="${img}" alt="Фото отзыва"></div>`).join('')}</div>`
+            : '';
 
         return `
             <div class="review-card">
@@ -2381,6 +2414,7 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
                     </div>
                 </div>
                 <p class="review-text">${formatMultilineText(review.text)}</p>
+                ${reviewImages}
             </div>
         `;
     }).join('');

@@ -1934,6 +1934,12 @@ textarea {
     font-size: 14px;
 }
 
+html[data-theme="dark"] .profile-summary-subtitle,
+html[data-theme="dark"] .profile-info-label,
+html[data-theme="dark"] .profile-info-value {
+    color: var(--muted-color) !important;
+}
+
 .profile-info-list {
     display: flex;
     flex-direction: column;
@@ -2089,6 +2095,28 @@ textarea {
     color: #ffffff;
     font-size: 18px;
     font-weight: 800;
+}
+
+.review-images {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.review-image-item {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.review-image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .review-meta {
@@ -2910,15 +2938,17 @@ body {
     border-radius: 0 !important;
     background: transparent !important;
     background-image: none !important;
-    border: none !important;
-    box-shadow: none !important;
+
+.item-meta-row {
+    display: block !important;
 }
 
-.footer-tabs .tab.active {
-    color: var(--secondary-color) !important;
+.item-meta {
+    font-size: 12px !important;
+    line-height: 1.25 !important;
 }
 
-.category-showcase-grid {
+.catego.category-showcase-grid {
     display: grid !important;
     grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
     gap: 4px 0 !important;
@@ -2958,8 +2988,8 @@ body {
     padding: 0 !important;
 }
 
-.item-meta-row {
-    display: block !important;
+.category-landing-tile strong {
+    margin-bottom: 0 !important;
 }
 
 .items-row {
@@ -2972,15 +3002,6 @@ body {
 
 .items-row .empty-state {
     width: min(78vw, 360px);
-}
-
-.item-meta {
-    font-size: 12px !important;
-    line-height: 1.25 !important;
-}
-
-.category-landing-tile strong {
-    margin-bottom: 0 !important;
 }
 
 .category-landing-tile span {
@@ -3031,9 +3052,12 @@ html[data-theme="dark"] .seller-profile-card,
 html[data-theme="dark"] .review-card,
 html[data-theme="dark"] .empty-state,
 html[data-theme="dark"] .form-shell,
-html[data-theme="dark"] .profile-card {
-    background: rgba(23, 24, 42, 0.94) !important;
-    border-color: var(--border-color) !important;
+html[data-theme="dark"] .profile-card,
+html[data-theme="dark"] .form-shell,
+html[data-theme="dark"] .profile-info-row,
+html[data-theme="dark"] .profile-summary-card {
+    background: rgba(23, 24, 42, 0.98) !important;
+    border-color: rgba(192, 132, 252, 0.25) !important;
     color: var(--text-color);
 }
 
@@ -3108,4 +3132,12 @@ html[data-theme="dark"] .btn-secondary {
 html[data-theme="dark"] .review-screenshot-link,
 html[data-theme="dark"] .review-admin-link {
     color: #9bdcff;
+}
+
+html[data-theme="dark"] .review-meta {
+    color: var(--muted-color) !important;
+}
+
+html[data-theme="dark"] .review-avatar-fallback {
+    background: linear-gradient(135deg, #7c3aed 0%, #67c7ff 100%);
 }
