@@ -2854,16 +2854,29 @@ textarea {
     font-weight: 400 !important;
     text-align: center !important;
     word-break: normal !important;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 48%, #c084fc 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
 }
 
 .category-tile.active strong,
 .category-tile-all.active strong {
-    color: var(--secondary-color) !important;
+    background: linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #b794f6 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
     font-weight: 400 !important;
 }
 
 .category-tile-all strong {
-    color: var(--text-color) !important;
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #c084fc 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
 }
 
 @media (min-width: 390px) {
@@ -3087,11 +3100,22 @@ html[data-theme="dark"] .category-tile::after {
 
 html[data-theme="dark"] .category-tile strong,
 html[data-theme="dark"] .category-tile-all strong {
-    color: #d8daea !important;
+    background: linear-gradient(135deg, #b794f6 0%, #c084fc 50%, #e9d5ff 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
 }
 
 html[data-theme="dark"] .category-tile.active strong,
-html[data-theme="dark"] .category-tile-all.active strong,
+html[data-theme="dark"] .category-tile-all.active strong {
+    background: linear-gradient(135deg, #c4b5fd 0%, #d8b4fe 45%, #f5d0fe 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
+}
+
 html[data-theme="dark"] .footer-tabs .tab.active {
     color: #c4b5fd !important;
 }
