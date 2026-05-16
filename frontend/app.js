@@ -6,6 +6,7 @@ const DEFAULT_MAX_VIDEO_SIZE_BYTES = 15 * 1024 * 1024;
 const ADMIN_MAX_VIDEO_SIZE_BYTES = 30 * 1024 * 1024;
 const LISTING_DRAFT_KEY = 'violet_listing_drafts';
 const LISTING_DRAFT_VERSION = 1;
+const LISTING_TYPE_STORAGE_KEY = 'violet_last_listing_type';
 const FALLBACK_TELEGRAM_ID_KEY = 'fallback_telegram_id';
 const THEME_STORAGE_KEY = 'violet_theme';
 const CLOTHING_CATEGORY_ID = 'cat-5';
@@ -67,6 +68,7 @@ let state = {
     serviceImages: [],
     adImages: [],
     reviewScreenshot: null,
+    reviewImages: [],
     selectedItem: null,
     adminModerationItem: null,
     editingItem: null,
@@ -1309,6 +1311,7 @@ function attachEventListeners() {
     document.getElementById('serviceImageInput').addEventListener('change', (e) => handleImageSelect(e, 'serviceImages'));
     document.getElementById('editImageInput').addEventListener('change', (e) => handleImageSelect(e, 'editImages'));
     document.getElementById('reviewScreenshotInput').addEventListener('change', handleReviewScreenshotSelect);
+    document.getElementById('reviewImageInput').addEventListener('change', (e) => handleImageSelect(e, 'reviewImages'));
     document.getElementById('adminSeedReviewAvatarInput').addEventListener('change', handleAdminReviewAvatarSelect);
 
     attachPriceTypeListeners();
@@ -1335,6 +1338,8 @@ function switchTab(tabName) {
 }
 
 function openCreateListingModal() {
+    const savedType = localStorage.getItem(LISTING_TYPE_STORAGE_KEY);
+    switchListingType(['product', 'service', 'ad'].includes(savedType) ? savedType : 'product');
     document.getElementById('listings')?.classList.remove('hidden');
     refreshServicePublicationRequirement();
 }
@@ -1344,8 +1349,13 @@ window.closeCreateListingModal = function() {
 };
 
 function switchListingType(type) {
+    if (!['product', 'service', 'ad'].includes(type)) {
+        type = 'product';
+    }
+
     document.querySelectorAll('.listing-type').forEach((btn) => btn.classList.remove('active'));
     document.querySelector(`[data-type="${type}"]`).classList.add('active');
+    localStorage.setItem(LISTING_TYPE_STORAGE_KEY, type);
 
     document.querySelectorAll('.form-section').forEach((section) => {
         section.classList.remove('active');
@@ -1510,10 +1520,6 @@ function restoreListingDrafts() {
 
     applyListingDraft('product', drafts.product);
     applyListingDraft('service', drafts.service);
-
-    if (['product', 'service'].includes(drafts.activeType)) {
-        switchListingType(drafts.activeType);
-    }
 }
 
 function clearListingDraft(formType) {
@@ -1637,6 +1643,7 @@ function renderImagePreview(type) {
         adImages: 'adImagePreview',
         editImages: 'editImagePreview',
         reviewScreenshot: 'reviewScreenshotPreview',
+        reviewImages: 'reviewImagePreview',
         adminReviewAvatar: 'adminSeedReviewAvatarPreview'
     };
 
@@ -2347,6 +2354,14 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
 
     return reviews.map((review) => {
         const typeLabel = review.review_type === 'product' ? 'Отзыв о товаре' : 'Отзыв о продавце';
+        const reviewImages = Array.isArray(review.review_images) ? review.review_images : [];
+        const reviewImagesMarkup = reviewImages.length
+            ? `<div class="review-image-gallery">${reviewImages.map((image) => `
+                <button type="button" class="review-image-button" data-fullscreen-media="${escapeHtml(image)}">
+                    <img src="${escapeHtml(image)}" alt="Фото к отзыву">
+                </button>
+            `).join('')}</div>`
+            : '';
         const canDelete = canModerate || review.author_user_id === state.user?.id;
         const screenshotLink = canModerate && review.screenshot_url
             ? `<a class="review-screenshot-link" href="${review.screenshot_url}" target="_blank" rel="noreferrer">Скриншот</a>`
@@ -2381,6 +2396,7 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
                     </div>
                 </div>
                 <p class="review-text">${formatMultilineText(review.text)}</p>
+                ${reviewImagesMarkup}
             </div>
         `;
     }).join('');
@@ -2395,6 +2411,12 @@ function renderReviews(reviews, canModerate, containerId = 'profileReviews', emp
 
     const rating = getAverageRating(reviews);
     container.innerHTML = renderRatingSummary(rating.average, rating.count) + renderReviewsMarkup(reviews, canModerate, emptyText);
+    container.querySelectorAll('[data-fullscreen-media]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            openMediaPreview(button.dataset.fullscreenMedia);
+        });
+    });
 }
 
 async function loadItemReviews(item) {
@@ -2573,7 +2595,9 @@ window.openReviewModal = function() {
     document.getElementById('reviewRating').value = '5';
     document.getElementById('reviewText').value = '';
     state.reviewScreenshot = null;
+    state.reviewImages = [];
     renderImagePreview('reviewScreenshot');
+    renderImagePreview('reviewImages');
     closeItemModal();
     document.getElementById('reviewModal').classList.remove('hidden');
 };
@@ -2677,6 +2701,10 @@ window.startPromotionPayment = async function(planKey) {
 
 window.closeReviewModal = function() {
     document.getElementById('reviewModal').classList.add('hidden');
+    state.reviewScreenshot = null;
+    state.reviewImages = [];
+    renderImagePreview('reviewScreenshot');
+    renderImagePreview('reviewImages');
 };
 
 window.submitReview = async function() {
@@ -2712,7 +2740,8 @@ window.submitReview = async function() {
                 review_type: reviewType,
                 rating: reviewRating,
                 text: reviewText,
-                screenshot: state.reviewScreenshot
+                screenshot: state.reviewScreenshot,
+                images: state.reviewImages
             })
         });
 

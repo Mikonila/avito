@@ -1,6 +1,18 @@
 const db = require('./database');
 const { v4: uuidv4 } = require('uuid');
 
+function parseReviewImages(images) {
+  if (!images) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(images);
+  } catch (error) {
+    return [];
+  }
+}
+
 class Review {
   static async create(data) {
     const id = uuidv4();
@@ -15,6 +27,7 @@ class Review {
       screenshot_url,
       display_author_name = '',
       display_author_avatar_url = '',
+      review_images = '[]',
       is_admin_seeded = false
     } = data;
 
@@ -31,9 +44,10 @@ class Review {
          screenshot_url,
          display_author_name,
          display_author_avatar_url,
+         review_images,
          is_admin_seeded
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         id,
         target_user_id,
@@ -46,6 +60,7 @@ class Review {
         screenshot_url || '',
         display_author_name,
         display_author_avatar_url,
+        review_images,
         is_admin_seeded
       ]
     );
@@ -74,6 +89,7 @@ class Review {
          reviews.screenshot_url,
          reviews.display_author_name,
          reviews.display_author_avatar_url,
+         reviews.review_images,
          reviews.is_admin_seeded,
          COALESCE(listings.title, services.title) AS listing_title,
          author.avatar_url AS author_avatar_url,
@@ -110,6 +126,7 @@ class Review {
         created_at: review.created_at,
         author_name: authorName,
         author_avatar_url: review.display_author_avatar_url || review.author_avatar_url || '',
+        review_images: parseReviewImages(review.review_images),
         is_admin_seeded: isAdminSeeded,
         screenshot_url: includeAdminFields ? review.screenshot_url : undefined
       };

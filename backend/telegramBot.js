@@ -293,12 +293,15 @@ async function startChannelPostCreation(bot, msg) {
   await bot.sendMessage(msg.chat.id, 'Введите текст поста для канала. Для отмены: /cancel');
 }
 
-function isValidButtonUrl(value = '') {
+function normalizeButtonUrl(value = '') {
+  const trimmed = value.trim();
+  const normalized = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
   try {
-    const url = new URL(value);
-    return ['http:', 'https:'].includes(url.protocol);
+    const url = new URL(normalized);
+    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : '';
   } catch (error) {
-    return false;
+    return '';
   }
 }
 
@@ -365,15 +368,28 @@ async function handleChannelPostSession(bot, msg) {
   }
 
   if (session.step === 'button_url') {
-    if (!isValidButtonUrl(text)) {
+    const buttonUrl = normalizeButtonUrl(text);
+
+    if (!buttonUrl) {
       await bot.sendMessage(msg.chat.id, 'Введите корректную ссылку: http:// или https://');
       return true;
     }
 
-    session.buttonUrl = text;
-    await publishChannelPost(bot, session);
-    adminChannelPostSessions.delete(chatId);
-    await bot.sendMessage(msg.chat.id, 'Пост отправлен в канал.');
+    session.buttonUrl = buttonUrl;
+
+    try {
+      await publishChannelPost(bot, session);
+      adminChannelPostSessions.delete(chatId);
+      await bot.sendMessage(msg.chat.id, 'Пост отправлен в канал.');
+    } catch (error) {
+      botDiagnostics.lastError = error.message;
+      console.error('Error publishing channel post:', error);
+      await bot.sendMessage(
+        msg.chat.id,
+        `Не удалось отправить пост в канал. Проверьте, что бот админ канала и может публиковать сообщения.\n\nОшибка: ${error.message}`
+      );
+    }
+
     return true;
   }
 

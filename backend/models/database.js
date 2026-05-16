@@ -124,6 +124,7 @@ const SQLITE_SCHEMA = [
     screenshot_url TEXT NOT NULL,
     display_author_name TEXT,
     display_author_avatar_url TEXT,
+    review_images TEXT DEFAULT '[]',
     is_admin_seeded BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(target_user_id) REFERENCES users(id),
@@ -263,6 +264,7 @@ const POSTGRES_SCHEMA = [
     screenshot_url TEXT NOT NULL,
     display_author_name TEXT,
     display_author_avatar_url TEXT,
+    review_images TEXT DEFAULT '[]',
     is_admin_seeded BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
@@ -438,6 +440,7 @@ async function applyMigrations() {
   await ensureColumn('reviews', 'rating', 'INTEGER DEFAULT 5');
   await ensureColumn('reviews', 'display_author_name', 'TEXT');
   await ensureColumn('reviews', 'display_author_avatar_url', 'TEXT');
+  await ensureColumn('reviews', 'review_images', `TEXT DEFAULT '[]'`);
   await ensureColumn('reviews', 'is_admin_seeded', 'BOOLEAN DEFAULT FALSE');
 
   if (dialect === 'postgres') {

@@ -364,6 +364,12 @@
                 <input type="file" id="reviewScreenshotInput" accept="image/*" style="display:none;">
                 <div id="reviewScreenshotPreview" class="image-preview"></div>
             </div>
+            <div class="form-group">
+                <label>Фотографии к отзыву (необязательно):</label>
+                <button type="button" class="btn btn-secondary btn-block" onclick="document.getElementById('reviewImageInput').click()">+ Добавить фотографии</button>
+                <input type="file" id="reviewImageInput" accept="image/*" multiple style="display:none;">
+                <div id="reviewImagePreview" class="image-preview"></div>
+            </div>
             <button class="btn btn-primary btn-block" onclick="submitReview()">Отправить отзыв</button>
         </div>
     </div>

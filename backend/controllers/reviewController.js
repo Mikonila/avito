@@ -33,6 +33,7 @@ async function notifySellerAboutReview(targetUser, publicationTitle = '') {
 
 async function createReview(req, res) {
   let uploadedScreenshotUrls = [];
+  let uploadedReviewImageUrls = [];
 
   try {
     const {
@@ -43,7 +44,8 @@ async function createReview(req, res) {
       review_type,
       rating = 5,
       text,
-      screenshot
+      screenshot,
+      images = []
     } = req.body;
 
     const requesterTelegramId = getRequesterTelegramId(req);
@@ -119,7 +121,21 @@ async function createReview(req, res) {
       return res.status(400).json({ error: 'Нужно прикрепить один скриншот переписки' });
     }
 
+    let reviewImagesToUpload = [];
+
+    if (Array.isArray(images) && images.length) {
+      const imagesValidation = validateImages(images);
+      if (!imagesValidation.isValid || imagesValidation.images.length > 5) {
+        return res.status(400).json({ error: 'Можно добавить до 5 корректных фотографий к отзыву' });
+      }
+
+      reviewImagesToUpload = imagesValidation.images;
+    }
+
     uploadedScreenshotUrls = await uploadImages(screenshotValidation.images, 'review');
+    uploadedReviewImageUrls = reviewImagesToUpload.length
+      ? await uploadImages(reviewImagesToUpload, 'review')
+      : [];
 
     const reviewId = await Review.create({
       target_user_id,
@@ -129,7 +145,8 @@ async function createReview(req, res) {
       review_type,
       rating: normalizedRating,
       text: String(text).trim(),
-      screenshot_url: uploadedScreenshotUrls[0]
+      screenshot_url: uploadedScreenshotUrls[0],
+      review_images: JSON.stringify(uploadedReviewImageUrls)
     });
 
     await notifySellerAboutReview(targetUser, publicationTitle);
@@ -137,8 +154,8 @@ async function createReview(req, res) {
     res.json({ success: true, review_id: reviewId });
   } catch (error) {
     console.error('Error creating review:', error);
-    if (uploadedScreenshotUrls.length) {
-      await destroyImages(uploadedScreenshotUrls);
+    if (uploadedScreenshotUrls.length || uploadedReviewImageUrls.length) {
+      await destroyImages([...uploadedScreenshotUrls, ...uploadedReviewImageUrls]);
     }
     res.status(500).json({ error: 'Не удалось отправить отзыв' });
   }
@@ -271,7 +288,14 @@ async function deleteReview(req, res) {
     const deleted = await Review.delete(review_id);
 
     if (deleted) {
-      await destroyImages([review.screenshot_url, review.display_author_avatar_url].filter(Boolean));
+      const reviewImages = (() => {
+        try {
+          return JSON.parse(review.review_images || '[]');
+        } catch (error) {
+          return [];
+        }
+      })();
+      await destroyImages([review.screenshot_url, review.display_author_avatar_url, ...reviewImages].filter(Boolean));
     }
 
     res.json({ success: deleted });
