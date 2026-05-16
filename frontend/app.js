@@ -7,18 +7,23 @@ const ADMIN_MAX_VIDEO_SIZE_BYTES = 30 * 1024 * 1024;
 const LISTING_DRAFT_KEY = 'violet_listing_drafts';
 const LISTING_DRAFT_VERSION = 1;
 const FALLBACK_TELEGRAM_ID_KEY = 'fallback_telegram_id';
+const THEME_STORAGE_KEY = 'violet_theme';
 const CLOTHING_CATEGORY_ID = 'cat-5';
 const SERVICE_CATEGORY_ID = 'cat-8';
 const OTHER_SUBCATEGORY = { id: 'other', name: 'Прочее' };
 const SUPPORT_LINK = 'https://t.me/helionstudio';
 const SERVICE_PUBLICATION_PLAN = { key: 'month', label: '1 месяц', stars: 100, rub: 182 };
 const CATEGORY_SHOWCASE_LABELS = {
-    'cat-1': 'Мебель и техника',
-    'cat-3': 'Недвижимость',
-    'cat-4': 'Всё для дома',
+    'cat-1': 'Техника',
+    'cat-2': 'Авто',
+    'cat-3': 'Жильё',
+    'cat-4': 'Для дома',
     'cat-5': 'Одежда',
     'cat-6': 'Хобби',
+    'cat-7': 'Детское',
     'cat-11': 'Работа',
+    'cat-12': 'Бесплатно',
+    'cat-14': 'Медицина',
     'cat-15': 'Вакансии'
 };
 const PROMOTION_PLANS = {
@@ -92,6 +97,61 @@ let state = {
 
 const API_BASE = '/api';
 
+function getStoredTheme() {
+    try {
+        return localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark';
+    } catch (error) {
+        return 'dark';
+    }
+}
+
+function getThemeIcon(theme) {
+    if (theme === 'light') {
+        return `
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+            </svg>
+        `;
+    }
+
+    return `
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M20.5 15.8A8.5 8.5 0 0 1 8.2 3.5a7 7 0 1 0 12.3 12.3Z"></path>
+        </svg>
+    `;
+}
+
+function updateThemeToggleButton() {
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    if (!themeToggleBtn) {
+        return;
+    }
+
+    const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    themeToggleBtn.innerHTML = getThemeIcon(theme);
+    themeToggleBtn.setAttribute('aria-label', theme === 'dark' ? 'Текущая тема: темная' : 'Текущая тема: светлая');
+    themeToggleBtn.setAttribute('title', theme === 'dark' ? 'Темная тема' : 'Светлая тема');
+}
+
+function applyTheme(theme) {
+    const normalizedTheme = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = normalizedTheme;
+    try {
+        localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
+    } catch (error) {
+        console.warn('Theme preference was not saved:', error);
+    }
+    updateThemeToggleButton();
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+}
+
+document.documentElement.dataset.theme = getStoredTheme();
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         if (tg) {
@@ -100,6 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         document.getElementById('loading').style.display = 'none';
+        updateThemeToggleButton();
 
         await loadReferences();
         const user = await registerUser();
@@ -269,6 +330,45 @@ function renderItemRating(item) {
     }
 
     return `<div class="item-rating">${getRatingStars(average)} <span>${average.toFixed(1)}</span></div>`;
+}
+
+function syncItemRating(item, average, count) {
+    if (!item) {
+        return;
+    }
+
+    const itemType = item.item_type || 'listing';
+    const itemKey = getItemKey(itemType, item.id);
+    const applyRating = (target) => {
+        if (getItemKey(target.item_type || 'listing', target.id) === itemKey) {
+            target.rating_average = average;
+            target.rating_count = count;
+        }
+    };
+
+    item.rating_average = average;
+    item.rating_count = count;
+    state.currentListings.forEach(applyRating);
+    state.homeListings.forEach(applyRating);
+    state.myItems.forEach(applyRating);
+    state.savedItems.forEach(applyRating);
+}
+
+function refreshRenderedListings() {
+    const containers = [
+        ['randomListings', state.homeListings],
+        ['categoryRecommendations', state.currentListings],
+        ['searchResults', state.currentListings],
+        ['myItems', state.myItems],
+        ['savedItems', state.savedItems]
+    ];
+
+    containers.forEach(([containerId, items]) => {
+        const container = document.getElementById(containerId);
+        if (container && !container.closest('.hidden')) {
+            renderListings(markLikedItems(items), containerId);
+        }
+    });
 }
 
 function getTelegramPayload() {
@@ -680,7 +780,22 @@ function renderCategoryShowcase() {
         </button>
     `;
 
-    const showcasePriority = [SERVICE_CATEGORY_ID, 'cat-15', 'cat-11', 'cat-13', 'cat-12'];
+    const showcasePriority = [
+        SERVICE_CATEGORY_ID,
+        'cat-15',
+        'cat-13',
+        'cat-1',
+        'cat-2',
+        'cat-3',
+        'cat-4',
+        'cat-5',
+        'cat-6',
+        'cat-7',
+        'cat-9',
+        'cat-11',
+        'cat-12',
+        'cat-14'
+    ];
     const showcaseCategories = [
         ...showcasePriority
             .map((id) => state.categories.find((category) => category.id === id))
@@ -1110,6 +1225,7 @@ function attachEventListeners() {
     document.getElementById('searchBtn').addEventListener('click', performSearch);
     document.getElementById('searchSubmitInlineBtn').addEventListener('click', performSearch);
     document.getElementById('profileBtn').addEventListener('click', showProfileModal);
+    document.getElementById('themeToggleBtn')?.addEventListener('click', toggleTheme);
     document.getElementById('openFiltersBtn').addEventListener('click', openFiltersModal);
     document.querySelector('[data-tab-jump="listings"]').addEventListener('click', openCreateListingModal);
     document.getElementById('openCreateListingBtn')?.addEventListener('click', openCreateListingModal);
@@ -1883,8 +1999,8 @@ function renderListings(listings, containerId) {
         <div class="item-info">
                 ${statusBadge}
                 <div class="item-title">${escapeHtml(item.title)}</div>
-                ${renderItemRating(item)}
                 <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
+                ${renderItemRating(item)}
                 <div class="item-meta-row">
                     <div class="item-meta">${getCityName(item.city_id || item.city)}</div>
                 </div>
@@ -2045,9 +2161,9 @@ function showItemDetails(item) {
             <span>${getCityName(item.city_id || item.city)}</span>
             <span>${new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
             <span>${formatPrice(item.price, item.price_type)}</span>
+            <div id="itemDetailsRating" class="item-details-rating-slot">${renderItemRating(item)}</div>
         </div>
         ${gallery}
-        ${renderItemRating(item)}
         <button
             type="button"
             class="item-details-like ${liked ? 'active' : ''}"
@@ -2272,6 +2388,14 @@ async function loadItemReviews(item) {
             const belongsToItem = review.listing_id === item.id || review.service_id === item.id;
             return belongsToItem && review.review_type === 'product';
         });
+        const rating = getAverageRating(itemReviews);
+        syncItemRating(item, rating.average, rating.count);
+
+        const ratingContainer = document.getElementById('itemDetailsRating');
+        if (ratingContainer) {
+            ratingContainer.innerHTML = renderItemRating(item);
+        }
+
         renderReviews(itemReviews, state.user?.is_admin === true, 'itemReviewsList', 'По этому объявлению пока нет отзывов.');
     } catch (error) {
         console.error('Error loading item reviews:', error);
@@ -2415,7 +2539,7 @@ window.openReviewModal = function() {
     }
 
     document.getElementById('reviewTargetInfo').textContent = `Отзыв будет привязан к продавцу и товару: ${state.selectedItem.title}`;
-    document.getElementById('reviewType').value = 'seller';
+    document.getElementById('reviewType').value = 'product';
     document.getElementById('reviewRating').value = '5';
     document.getElementById('reviewText').value = '';
     state.reviewScreenshot = null;
@@ -2579,6 +2703,7 @@ window.submitReview = async function() {
         }
 
         await loadItemReviews(state.selectedItem);
+        refreshRenderedListings();
     } catch (error) {
         console.error('Error creating review:', error);
         alert(error.message || 'Ошибка при отправке отзыва');

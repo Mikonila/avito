@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Violet</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        (function () {
+            try {
+                var savedTheme = localStorage.getItem('violet_theme');
+                document.documentElement.dataset.theme = savedTheme === 'light' ? 'light' : 'dark';
+            } catch (error) {
+                document.documentElement.dataset.theme = 'dark';
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -33,6 +43,7 @@
                     </div>
                     <div class="header-icons">
                         <button class="header-post-btn" data-tab-jump="listings">Разместить объявление</button>
+                        <button id="themeToggleBtn" class="icon-btn theme-toggle-btn" type="button" aria-label="Текущая тема: темная"></button>
                         <button id="profileBtn" class="icon-btn">👤</button>
                     </div>
                 </div>
