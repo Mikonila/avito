@@ -112,6 +112,9 @@ class Review {
         review.author_username ||
         'Пользователь';
       const isAdminSeeded = review.is_admin_seeded === true || review.is_admin_seeded === 1;
+      const authorAvatarUrl = isAdminSeeded
+        ? (review.display_author_avatar_url || '')
+        : (review.display_author_avatar_url || review.author_avatar_url || '');
 
       return {
         id: review.id,
@@ -125,7 +128,7 @@ class Review {
         text: review.text,
         created_at: review.created_at,
         author_name: authorName,
-        author_avatar_url: review.display_author_avatar_url || review.author_avatar_url || '',
+        author_avatar_url: authorAvatarUrl,
         review_images: parseReviewImages(review.review_images),
         is_admin_seeded: isAdminSeeded,
         screenshot_url: includeAdminFields ? review.screenshot_url : undefined
