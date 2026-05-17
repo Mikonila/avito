@@ -654,16 +654,30 @@ function getAvatarInitial(user) {
     return source.charAt(0).toUpperCase();
 }
 
-function getAvatarFallbackColor(seed = '') {
-    const colors = ['#8b5cf6', '#67c7ff', '#22c55e', '#f59e0b', '#ec4899', '#14b8a6', '#6366f1'];
+function getAvatarFallbackGradient(seed = '') {
+    const gradients = [
+        ['#5b8bf7', '#8f5df6'],
+        ['#38bdf8', '#2563eb'],
+        ['#2dd4bf', '#0f766e'],
+        ['#f59e0b', '#ef4444'],
+        ['#fb7185', '#a855f7'],
+        ['#34d399', '#10b981'],
+        ['#a78bfa', '#ec4899'],
+        ['#60a5fa', '#06b6d4']
+    ];
     const source = String(seed || 'Violet');
     let hash = 0;
 
     for (let index = 0; index < source.length; index += 1) {
-        hash = (hash + source.charCodeAt(index) * (index + 1)) % colors.length;
+        hash = (hash + source.charCodeAt(index) * (index + 1)) % gradients.length;
     }
 
-    return colors[hash];
+    const [from, to] = gradients[hash];
+    return `linear-gradient(135deg, ${from} 0%, ${to} 100%)`;
+}
+
+function getAvatarFallbackStyle(seed = '') {
+    return `background:${getAvatarFallbackGradient(seed)};color:#ffffff;`;
 }
 
 function getAvatarMarkup(avatarUrl, fallbackText = 'Пользователь') {
@@ -672,8 +686,7 @@ function getAvatarMarkup(avatarUrl, fallbackText = 'Пользователь') {
     }
 
     const initial = String(fallbackText || 'Пользователь').trim().charAt(0).toUpperCase() || 'П';
-    const color = getAvatarFallbackColor(fallbackText);
-    return `<span class="review-avatar-fallback" style="background:${color}">${escapeHtml(initial)}</span>`;
+    return `<span class="review-avatar-fallback" style="${getAvatarFallbackStyle(fallbackText)}">${escapeHtml(initial)}</span>`;
 }
 
 function updateProfileButtonAvatar() {
@@ -694,7 +707,7 @@ function updateProfileButtonAvatar() {
         return;
     }
 
-    profileBtn.innerHTML = `<span class="profile-btn-avatar-fallback">${escapeHtml(avatarInitial)}</span>`;
+    profileBtn.innerHTML = `<span class="profile-btn-avatar-fallback" style="${getAvatarFallbackStyle(accessibleName || avatarInitial)}">${escapeHtml(avatarInitial)}</span>`;
 }
 
 function updateSearchTriggerLabel() {
