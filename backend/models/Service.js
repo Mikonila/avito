@@ -109,6 +109,15 @@ class Service {
     return withParsedImages(row);
   }
 
+  static async incrementViews(id) {
+    const result = await db.run(
+      `UPDATE services SET views = views + 1 WHERE id = $1`,
+      [id]
+    );
+
+    return result.changes > 0;
+  }
+
   static async findByCityAndCategory(city_id, category_id) {
     let query = `SELECT ${getServiceSelect()}
       FROM services

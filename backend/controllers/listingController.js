@@ -35,6 +35,14 @@ function normalizePriceValue(price, priceType) {
   return Number.isFinite(normalizedPrice) && normalizedPrice >= 0 ? normalizedPrice : null;
 }
 
+function shouldIncrementViews(req, ownerUserId) {
+  const rawValue = String(req.query.increment_view ?? 'true').trim().toLowerCase();
+  const incrementRequested = !['0', 'false', 'no'].includes(rawValue);
+  const viewerUserId = String(req.headers['x-user-id'] || req.query.viewer_user_id || '').trim();
+
+  return incrementRequested && viewerUserId !== String(ownerUserId || '').trim();
+}
+
 async function createListing(req, res) {
   let newlyUploadedImages = [];
 
@@ -99,11 +107,15 @@ async function getListingsByUser(req, res) {
 async function getListingDetails(req, res) {
   try {
     const { listing_id } = req.params;
-    await Listing.incrementViews(listing_id);
-    const listing = await Listing.findById(listing_id);
+    let listing = await Listing.findById(listing_id);
 
     if (!listing) {
       return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    if (shouldIncrementViews(req, listing.user_id)) {
+      await Listing.incrementViews(listing_id);
+      listing = await Listing.findById(listing_id);
     }
 
     res.json(listing);

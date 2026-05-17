@@ -26,7 +26,8 @@ const CATEGORY_SHOWCASE_LABELS = {
     'cat-11': 'Работа',
     'cat-12': 'Бесплатно',
     'cat-14': 'Медицина',
-    'cat-15': 'Вакансии'
+    'cat-15': 'Вакансии',
+    'cat-16': 'Прочее'
 };
 const PROMOTION_PLANS = {
     three_days: { label: '3 дня', stars: 100, rub: 182 },
@@ -49,6 +50,7 @@ const CATEGORY_IMAGE_MAP = {
     'cat-13': 'assets/categories/afisha.svg',
     'cat-14': 'assets/categories/medicine.svg',
     'cat-15': 'assets/categories/work.svg',
+    'cat-16': 'assets/categories/other.svg',
  };
 
 let state = {
@@ -409,6 +411,39 @@ function refreshRenderedListings() {
     });
 }
 
+function replacePublicationInCollection(items, updatedItem) {
+    const updatedKey = getPublicationKey(updatedItem);
+
+    return items.map((item) => (
+        getPublicationKey(item) === updatedKey
+            ? {
+                ...item,
+                ...updatedItem,
+                images: updatedItem.images || item.images || []
+            }
+            : item
+    ));
+}
+
+function syncPublicationState(updatedItem) {
+    if (!updatedItem?.id) {
+        return;
+    }
+
+    state.currentListings = replacePublicationInCollection(state.currentListings, updatedItem);
+    state.homeListings = replacePublicationInCollection(state.homeListings, updatedItem);
+    state.myItems = replacePublicationInCollection(state.myItems, updatedItem);
+    state.savedItems = replacePublicationInCollection(state.savedItems, updatedItem);
+
+    if (state.selectedItem && getPublicationKey(state.selectedItem) === getPublicationKey(updatedItem)) {
+        state.selectedItem = {
+            ...state.selectedItem,
+            ...updatedItem,
+            images: updatedItem.images || state.selectedItem.images || []
+        };
+    }
+}
+
 function getTelegramPayload() {
     const telegramUser = getTelegramUser();
 
@@ -464,7 +499,8 @@ function normalizePublication(item, type) {
         ...item,
         item_type: type,
         source_type: type,
-        like_count: Number(item.like_count || 0)
+        like_count: Number(item.like_count || 0),
+        views: Number(item.views || 0)
     };
 }
 
@@ -1095,8 +1131,12 @@ window.resetFilters = function() {
         sort: 'default'
     };
     state.activeCategoryId = '';
+    state.lastCategoryId = '';
+    state.viewedProfileId = null;
     syncFilterUi();
+    closeFiltersModal();
     setSearchViewMode('home');
+    switchTab('search');
     loadRandomListings();
 };
 
@@ -1248,6 +1288,34 @@ function updateEditSubcategorySelect() {
     const subcategories = getSubcategoriesForCategory(categorySelect.value);
     subcategoryGroup.classList.toggle('hidden', subcategories.length === 0);
     populateSelectElement(subcategorySelect, subcategories, 'Выберите подкатегорию');
+}
+
+async function fetchPublicationDetails(item) {
+    if (!item?.id) {
+        return item;
+    }
+
+    const itemType = item.item_type || 'listing';
+    const isOwner = String(item.user_id || '') === String(state.user?.id || '');
+    const params = new URLSearchParams();
+
+    if (isOwner) {
+        params.set('increment_view', 'false');
+    }
+
+    const endpoint = itemType === 'service'
+        ? `${API_BASE}/services/details/${item.id}`
+        : `${API_BASE}/listings/details/${item.id}`;
+    const response = await fetch(`${endpoint}${params.toString() ? `?${params}` : ''}`, {
+        headers: getAuthHeaders(false)
+    });
+    const detailedItem = await response.json();
+
+    if (!response.ok) {
+        throw new Error(detailedItem.error || 'Не удалось загрузить объявление');
+    }
+
+    return normalizePublication(detailedItem, itemType);
 }
 
 function renderPromotionOptions(formType) {
@@ -1926,7 +1994,10 @@ window.resetSearchResults = function() {
     }
 
     document.getElementById('resetSearchResultsBtn')?.classList.add('hidden');
+    state.activeCategoryId = '';
+    state.lastCategoryId = '';
     setSearchViewMode('home');
+    switchTab('search');
     loadRandomListings();
 };
 
@@ -2224,31 +2295,41 @@ window.toggleItemLike = async function(itemId, itemType = 'listing', button = nu
     }
 };
 
-function showItemDetails(item) {
-    state.selectedItem = item;
+async function showItemDetails(item) {
+    let selectedItem = item;
+
+    try {
+        selectedItem = await fetchPublicationDetails(item);
+        syncPublicationState(selectedItem);
+        refreshRenderedListings();
+    } catch (error) {
+        console.error('Error loading publication details:', error);
+    }
+
+    state.selectedItem = selectedItem;
     const modal = document.getElementById('itemModal');
     const content = document.getElementById('itemContent');
-    const categoryName = getCategoryName(item.category_id);
-    const subcategoryName = getListingSubcategoryName(item.category_id, item.subcategory);
-    const isOwner = String(item.user_id || '') === String(state.user?.id || '');
-    const itemType = item.item_type || 'listing';
-    const liked = isItemLiked(item);
-    const likeCount = Number(item.like_count || 0);
-    const views = Number(item.views || 0);
+    const categoryName = getCategoryName(selectedItem.category_id);
+    const subcategoryName = getListingSubcategoryName(selectedItem.category_id, selectedItem.subcategory);
+    const isOwner = String(selectedItem.user_id || '') === String(state.user?.id || '');
+    const itemType = selectedItem.item_type || 'listing';
+    const liked = isItemLiked(selectedItem);
+    const likeCount = Number(selectedItem.like_count || 0);
+    const views = Number(selectedItem.views || 0);
 
-    const gallery = item.images && item.images.length > 0 ? `
+    const gallery = selectedItem.images && selectedItem.images.length > 0 ? `
         <div class="item-details-gallery">
-            ${item.images.map((media) => isMediaVideo(media)
+            ${selectedItem.images.map((media) => isMediaVideo(media)
                 ? `<video src="${media}" controls playsinline></video>`
-                : `<button type="button" class="item-details-media-button" data-fullscreen-media="${escapeHtml(media)}"><img src="${media}" alt="${escapeHtml(item.title)}"></button>`).join('')}
+                : `<button type="button" class="item-details-media-button" data-fullscreen-media="${escapeHtml(media)}"><img src="${media}" alt="${escapeHtml(selectedItem.title)}"></button>`).join('')}
         </div>
     ` : '';
     const adminAction = isAdminUser()
         ? '<button class="admin-details-menu-btn" type="button" onclick="openAdminModerationModalFromDetails()" aria-label="Действия администратора">⋯</button>'
         : '';
-    const statusLine = item.status === 'archived'
+    const statusLine = selectedItem.status === 'archived'
         ? '<div class="publication-status publication-status-archived">Архивировано</div>'
-        : item.status === 'pending_payment'
+        : selectedItem.status === 'pending_payment'
             ? '<div class="publication-status publication-status-pending">Ожидает оплаты</div>'
             : '';
 
@@ -2259,30 +2340,30 @@ function showItemDetails(item) {
             ${subcategoryName ? `<span class="item-detail-chip item-detail-chip-muted">${subcategoryName}</span>` : ''}
         </div>
         ${statusLine}
-        <h2>${item.title}</h2>
+        <h2>${selectedItem.title}</h2>
         <div class="item-details-meta">
-            <span>${getCityName(item.city_id || item.city)}</span>
-            <span>${new Date(item.created_at).toLocaleDateString('ru-RU')}</span>
-            <span>${formatPrice(item.price, item.price_type)}</span>
+            <span>${getCityName(selectedItem.city_id || selectedItem.city)}</span>
+            <span>${new Date(selectedItem.created_at).toLocaleDateString('ru-RU')}</span>
+            <span>${formatPrice(selectedItem.price, selectedItem.price_type)}</span>
             ${isOwner ? `<span>👁 ${views}</span>` : ''}
-            <div id="itemDetailsRating" class="item-details-rating-slot">${renderItemRating(item)}</div>
+            <div id="itemDetailsRating" class="item-details-rating-slot">${renderItemRating(selectedItem)}</div>
         </div>
         ${gallery}
         <button
             type="button"
             class="item-details-like ${liked ? 'active' : ''}"
-            data-like-button="${getItemKey(itemType, item.id)}"
-            onclick="toggleItemLike('${item.id}', '${itemType}', this)"
+            data-like-button="${getItemKey(itemType, selectedItem.id)}"
+            onclick="toggleItemLike('${selectedItem.id}', '${itemType}', this)"
             aria-label="${liked ? 'Убрать из сохраненных' : 'Сохранить объявление'}"
         >
             <span>♥</span>
             <strong>${liked ? 'Сохранено' : 'Сохранить'}</strong>
             <small>${likeCount}</small>
         </button>
-        ${isOwner && item.expires_at ? `<div class="info-text">Активно до ${new Date(item.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
-        ${item.is_premium ? `<div class="promotion-status">В первой линии${item.premium_expires_at ? ` до ${new Date(item.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}
-        ${String(item.description || '').trim()
-            ? `<div class="item-details-description">${formatMultilineText(item.description)}</div>`
+        ${isOwner && selectedItem.expires_at ? `<div class="info-text">Активно до ${new Date(selectedItem.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
+        ${selectedItem.is_premium ? `<div class="promotion-status">В первой линии${selectedItem.premium_expires_at ? ` до ${new Date(selectedItem.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}
+        ${String(selectedItem.description || '').trim()
+            ? `<div class="item-details-description">${formatMultilineText(selectedItem.description)}</div>`
             : ''}
         <div class="item-details-actions">
             <button class="btn btn-primary btn-block item-details-contact-btn" onclick="openSellerChat()">Написать</button>
@@ -2305,7 +2386,7 @@ function showItemDetails(item) {
             openMediaPreview(button.dataset.fullscreenMedia);
         });
     });
-    loadItemReviews(item);
+    loadItemReviews(selectedItem);
 }
 
 window.openMediaPreview = function(src) {

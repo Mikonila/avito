@@ -1259,6 +1259,10 @@ textarea {
     gap: 14px;
     margin-bottom: 16px;
     padding: 14px 0 4px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg-color);
 }
 
 .my-items-header strong {
@@ -1292,6 +1296,10 @@ textarea {
 
 .my-items-section {
     margin-bottom: 20px;
+}
+
+#my-items {
+    padding-bottom: 112px;
 }
 
 .my-items-section-title {

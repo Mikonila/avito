@@ -70,6 +70,7 @@ const CATEGORIES = [
   },
   { id: 'cat-12', name: 'Бесплатно', icon: '⚙️' },
   { id: 'cat-14', name: 'Медицина', icon: '🏥' },
+  { id: 'cat-16', name: 'Прочее', icon: '📦' },
 ];
 
 const CITIES = [

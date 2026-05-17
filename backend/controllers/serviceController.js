@@ -35,6 +35,14 @@ function normalizePriceValue(price, priceType) {
   return Number.isFinite(normalizedPrice) && normalizedPrice >= 0 ? normalizedPrice : null;
 }
 
+function shouldIncrementViews(req, ownerUserId) {
+  const rawValue = String(req.query.increment_view ?? 'true').trim().toLowerCase();
+  const incrementRequested = !['0', 'false', 'no'].includes(rawValue);
+  const viewerUserId = String(req.headers['x-user-id'] || req.query.viewer_user_id || '').trim();
+
+  return incrementRequested && viewerUserId !== String(ownerUserId || '').trim();
+}
+
 async function createServicePublicationInvoiceLink(bot, service, userId, planKey = 'month') {
   const publicationPlan = SERVICE_PUBLICATION_PLANS[planKey];
 
@@ -157,6 +165,27 @@ async function getServicesByUser(req, res) {
   } catch (error) {
     console.error('Error fetching services:', error);
     res.status(500).json({ error: 'Failed to fetch services' });
+  }
+}
+
+async function getServiceDetails(req, res) {
+  try {
+    const { service_id } = req.params;
+    let service = await Service.findById(service_id);
+
+    if (!service) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+
+    if (shouldIncrementViews(req, service.user_id)) {
+      await Service.incrementViews(service_id);
+      service = await Service.findById(service_id);
+    }
+
+    res.json(service);
+  } catch (error) {
+    console.error('Error fetching service:', error);
+    res.status(500).json({ error: 'Failed to fetch service' });
   }
 }
 
@@ -470,6 +499,7 @@ module.exports = {
   createService,
   adminActivatePromotion,
   adminDeleteService,
+  getServiceDetails,
   getServicesByUser,
   searchServices,
   deleteService,
