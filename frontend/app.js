@@ -3173,6 +3173,37 @@ window.adminBoostSelectedItemLikes = async function() {
     }
 };
 
+window.adminPinSelectedItem = async function() {
+    const item = state.adminModerationItem || state.selectedItem;
+
+    if (!isAdminUser() || !item) {
+        return;
+    }
+
+    try {
+        const endpoint = item.item_type === 'service'
+            ? `/services/${item.id}/promotion/admin`
+            : `/listings/${item.id}/promotion/admin`;
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ plan: 'month' })
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Не удалось закрепить объявление');
+        }
+
+        alert(`Объявление закреплено до ${new Date(result.expires_at).toLocaleDateString('ru-RU')}`);
+        closeAdminModerationModal();
+        await refreshListingsAfterModeration();
+    } catch (error) {
+        console.error('Error pinning item:', error);
+        alert(error.message || 'Ошибка закрепления');
+    }
+};
+
 window.openAdminSeedReviewModal = function() {
     if (!isAdminUser()) {
         return;

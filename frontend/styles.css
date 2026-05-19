@@ -139,6 +139,18 @@ body {
     min-width: 0;
 }
 
+.brand-button {
+    padding: 0;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+
+.brand-button:hover {
+    opacity: 0.92;
+}
+
 .brand-mark {
     display: grid;
     grid-template-columns: repeat(2, 14px);
@@ -1342,7 +1354,7 @@ textarea {
     box-shadow: var(--shadow-soft);
     border: 1px solid rgba(229, 231, 235, 0.92);
     cursor: pointer;
-    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+    transition: box-shadow 0.3s, border-color 0.3s;
 }
 
 .admin-remove-btn {
@@ -1369,7 +1381,6 @@ textarea {
 }
 
 .item-card:hover {
-    transform: translateY(-4px);
     box-shadow: var(--shadow);
     border-color: rgba(139, 92, 246, 0.22);
 }

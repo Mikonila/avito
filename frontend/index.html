@@ -29,7 +29,7 @@
         <div id="mainApp" class="hidden">
             <header class="header">
                 <div class="header-content">
-                    <div class="brand">
+                    <button type="button" class="brand brand-button" onclick="openPlatformRulesModal()" aria-label="Открыть правила платформы">
                         <div class="brand-mark" aria-hidden="true">
                             <span class="brand-dot brand-dot-blue"></span>
                             <span class="brand-dot brand-dot-green"></span>
@@ -40,7 +40,7 @@
                             <span class="brand-title">Violet</span>
                             <span class="brand-subtitle">Все нужное — в одном приложении</span>
                         </div>
-                    </div>
+                    </button>
                     <div class="header-icons">
                         <button class="header-post-btn" data-tab-jump="listings">Разместить объявление</button>
                         <button id="themeToggleBtn" class="icon-btn theme-toggle-btn" type="button" aria-label="Текущая тема: темная"></button>
@@ -429,6 +429,7 @@
             <h2>Модерация объявления</h2>
             <p id="adminModerationInfo" class="info-text"></p>
             <div class="moderation-actions">
+                <button type="button" class="btn btn-secondary btn-block" onclick="adminPinSelectedItem()">Закрепить объявление</button>
                 <button type="button" class="btn btn-primary btn-block" onclick="openAdminSeedReviewModal()">Добавить отзыв</button>
                 <button type="button" class="btn btn-secondary btn-block" onclick="adminBoostSelectedItemLikes()">Добавить лайки</button>
                 <button type="button" class="btn btn-danger btn-block" onclick="adminDeleteSelectedItem(false)">Удалить</button>
