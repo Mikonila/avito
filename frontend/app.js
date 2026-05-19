@@ -691,7 +691,7 @@ function getHeartIconMarkup(active = false) {
             </defs>
             <path
                 d="M12 20.7 4.9 13.8a4.9 4.9 0 0 1 6.9-6.9L12 7.1l.2-.2a4.9 4.9 0 0 1 6.9 6.9Z"
-                fill="none"
+                fill="${active ? 'url(#heartGradient)' : 'none'}"
                 stroke="url(#heartGradient)"
                 stroke-width="${active ? '2.3' : '1.9'}"
                 stroke-linecap="round"
@@ -2219,6 +2219,7 @@ function renderListings(listings, containerId) {
                         aria-label="${liked ? 'Убрать из сохраненных' : 'Сохранить объявление'}"
                     >
                         <span class="item-like-icon">${getHeartIconMarkup(liked)}</span>
+                        <small class="item-like-count ${likeCount > 0 ? '' : 'hidden'}">${likeCount}</small>
                     </button>
                 </div>
                 <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
@@ -2332,6 +2333,7 @@ window.toggleItemLike = async function(itemId, itemType = 'listing', button = nu
             const counter = likeButton.querySelector('small');
             if (counter) {
                 counter.textContent = likeCount;
+                counter.classList.toggle('hidden', likeCount <= 0);
             }
             const label = likeButton.querySelector('strong');
             if (label) {
@@ -2412,7 +2414,7 @@ async function showItemDetails(item) {
         >
             <span>♥</span>
             <strong>${liked ? 'Сохранено' : 'Сохранить'}</strong>
-            <small>${likeCount}</small>
+            <small class="${likeCount > 0 ? '' : 'hidden'}">${likeCount}</small>
         </button>
         ${isOwner && selectedItem.expires_at ? `<div class="info-text">Активно до ${new Date(selectedItem.expires_at).toLocaleDateString('ru-RU')}</div>` : ''}
         ${selectedItem.is_premium ? `<div class="promotion-status">В первой линии${selectedItem.premium_expires_at ? ` до ${new Date(selectedItem.premium_expires_at).toLocaleDateString('ru-RU')}` : ''}</div>` : ''}

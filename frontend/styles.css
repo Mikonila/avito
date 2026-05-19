@@ -1525,23 +1525,32 @@ textarea {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
+    min-width: 34px;
     height: 34px;
-    padding: 0;
+    padding: 0 2px;
     border: none;
     background: transparent;
     color: rgba(17, 24, 39, 0.78);
     cursor: pointer;
+    gap: 4px;
 }
 
 .item-like-inline svg {
     width: 26px;
     height: 26px;
     display: block;
+    flex-shrink: 0;
 }
 
 .item-like-inline.active {
     color: var(--text-color);
+}
+
+.item-like-count {
+    color: var(--text-color);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .item-like-inline:hover {
