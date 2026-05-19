@@ -436,15 +436,17 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #dff1ff, #ebe3ff);
-    color: var(--secondary-color);
-    box-shadow: 0 10px 24px rgba(139, 92, 246, 0.12);
+    background:
+        radial-gradient(circle at 14% 20%, rgba(255, 255, 255, 0.28), transparent 26%),
+        linear-gradient(135deg, #7c3aed 0%, #a855f7 48%, #38bdf8 100%);
+    color: #ffffff;
+    box-shadow: 0 16px 30px rgba(124, 58, 237, 0.3);
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #d4ebff, #e5d9ff);
+    filter: brightness(1.04);
     transform: translateY(-2px);
-    box-shadow: 0 14px 28px rgba(103, 199, 255, 0.16);
+    box-shadow: 0 18px 32px rgba(124, 58, 237, 0.34);
 }
 
 .btn-secondary {
@@ -1343,6 +1345,33 @@ textarea {
     padding-top: 44px;
 }
 
+#listings.modal {
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+    align-items: flex-start;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+}
+
+#listings .create-listing-modal-content {
+    width: min(100%, 920px);
+    margin: 0 auto;
+    padding-bottom: calc(32px + env(safe-area-inset-bottom));
+}
+
+#listings .modal-close {
+    top: 0;
+    margin: 0 0 14px auto;
+    float: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#listings .form-shell,
+#listings .promotion-standalone-panel {
+    width: 100%;
+}
+
 .item-card {
     position: relative;
     display: flex;
@@ -1559,7 +1588,14 @@ textarea {
     padding: 0;
     border: none;
     background: transparent;
-    color: rgba(15, 23, 42, 0.72);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-image: linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
     font-size: 22px;
     line-height: 1;
     font-weight: 900;
@@ -1568,6 +1604,10 @@ textarea {
 
 .admin-remove-inline-btn:hover {
     opacity: 0.72;
+}
+
+html[data-theme="dark"] .admin-remove-inline-btn {
+    background-image: linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%);
 }
 
 .item-price {
@@ -2812,6 +2852,47 @@ textarea {
         padding: 12px;
         border-radius: 14px;
         font-size: 13px;
+    }
+}
+
+@media (max-width: 768px) {
+    #listings.modal {
+        padding: max(12px, env(safe-area-inset-top)) 0 calc(12px + env(safe-area-inset-bottom));
+        align-items: stretch;
+    }
+
+    #listings .create-listing-modal-content {
+        width: 100%;
+        max-width: none;
+        max-height: none;
+        min-height: calc(var(--app-height) - max(12px, env(safe-area-inset-top)) - 12px - env(safe-area-inset-bottom));
+        border-radius: 24px 24px 0 0;
+        padding: 18px 14px calc(110px + env(safe-area-inset-bottom));
+    }
+
+    #listings .listings-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 16px;
+        overflow: visible;
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        padding: 2px 0 12px;
+        background: var(--surface-color);
+    }
+
+    #listings .listing-type {
+        min-width: 0;
+        padding: 12px 10px;
+        text-align: center;
+    }
+
+    #listings .form-shell,
+    #listings .promotion-standalone-panel {
+        padding: 16px;
+        border-radius: 20px;
     }
 }
 
