@@ -195,6 +195,7 @@ async function sendHelp(bot, msg) {
     ? '\n\nКоманды администратора:\n' +
       '/unban <id> - разбанить пользователя по ID или Telegram ID\n' +
       '/ad_create - создать рекламу в верхнем блоке\n' +
+      '/ad_photo - заменить только фото в верхнем блоке\n' +
       '/ad_reset - вернуть стандартный верхний блок\n' +
       '/channel_post - написать пост в канал с кнопкой\n' +
       '/cancel - отменить текущее действие'
@@ -232,10 +233,27 @@ async function saveHeroAdFromTelegramPhoto(bot, session, fileId) {
   return AppSettings.set(HERO_AD_SETTING_KEY, {
     title: session.title,
     description: session.description,
+    details: session.details || 'в привычном формате объявлений.',
     image_url: imageUrl,
     is_custom: true,
     updated_at: new Date().toISOString()
   });
+}
+
+async function startHeroAdPhotoUpdate(bot, msg) {
+  if (!isAdminMessage(msg)) {
+    await bot.sendMessage(msg.chat.id, 'Команда доступна только администратору.');
+    return;
+  }
+
+  const currentHeroAd = await AppSettings.get(HERO_AD_SETTING_KEY);
+  adminAdSessions.set(String(msg.chat.id), {
+    step: 'photo_only',
+    title: currentHeroAd?.title || 'Покупайте и продавайте по всей Черногории',
+    description: currentHeroAd?.description || 'Недвижимость, авто, услуги и подработка',
+    details: currentHeroAd?.details || 'в привычном формате объявлений.'
+  });
+  await bot.sendMessage(msg.chat.id, 'Отправьте новое фото для верхнего блока. Для отмены: /cancel');
 }
 
 async function handleUnbanCommand(bot, msg, args) {
@@ -266,7 +284,11 @@ async function startHeroAdCreation(bot, msg) {
     return;
   }
 
-  adminAdSessions.set(String(msg.chat.id), { step: 'title' });
+  const currentHeroAd = await AppSettings.get(HERO_AD_SETTING_KEY);
+  adminAdSessions.set(String(msg.chat.id), {
+    step: 'title',
+    details: currentHeroAd?.details || 'в привычном формате объявлений.'
+  });
   await bot.sendMessage(msg.chat.id, 'Введите заголовок рекламного блока. Для отмены: /cancel');
 }
 
@@ -457,6 +479,20 @@ async function handleHeroAdSession(bot, msg) {
     return true;
   }
 
+  if (session.step === 'photo_only') {
+    const photo = Array.isArray(msg.photo) ? msg.photo[msg.photo.length - 1] : null;
+
+    if (!photo?.file_id) {
+      await bot.sendMessage(msg.chat.id, 'Нужно отправить фото. Для отмены: /cancel');
+      return true;
+    }
+
+    await saveHeroAdFromTelegramPhoto(bot, session, photo.file_id);
+    adminAdSessions.delete(chatId);
+    await bot.sendMessage(msg.chat.id, 'Фото верхнего блока обновлено и загружено в Cloudinary.');
+    return true;
+  }
+
   adminAdSessions.delete(chatId);
   return false;
 }
@@ -554,6 +590,11 @@ function registerHandlers(bot) {
 
       if (command === '/ad_create' || command === '/create_ad' || command === '/реклама') {
         await startHeroAdCreation(bot, msg);
+        return;
+      }
+
+      if (command === '/ad_photo' || command === '/hero_photo' || command === '/фото_баннера') {
+        await startHeroAdPhotoUpdate(bot, msg);
         return;
       }
 

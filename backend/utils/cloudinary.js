@@ -1,6 +1,7 @@
 const { v2: cloudinary } = require('cloudinary');
 
 const CLOUDINARY_FOLDERS = {
+  hero: 'montenegro-marketplace/hero',
   listing: 'montenegro-marketplace/listings',
   service: 'montenegro-marketplace/services',
   review: 'montenegro-marketplace/reviews'

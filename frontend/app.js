@@ -803,6 +803,38 @@ async function loadReferences() {
     }
 }
 
+function renderHeroAd(heroAd) {
+    const banner = document.getElementById('promoBannerSection');
+    const title = document.getElementById('promoBannerTitle');
+    const text = document.getElementById('promoBannerText');
+    const image = document.getElementById('promoBannerImage');
+
+    if (!banner || !title || !text || !image || !heroAd) {
+        return;
+    }
+
+    title.textContent = heroAd.title || 'Покупайте и продавайте по всей Черногории';
+    text.innerHTML = `${escapeHtml(heroAd.description || 'Недвижимость, авто, услуги и подработка')}<br><span>${escapeHtml(heroAd.details || 'в привычном формате объявлений.')} <a href="#" class="rules-link" onclick="openPlatformRulesModal(); return false;">Подробнее о правилах платформы</a></span>`;
+    image.src = heroAd.image_url || 'assets/IMG_5898.PNG';
+    image.alt = escapeHtml(heroAd.title || 'Violet');
+    banner.classList.toggle('promo-banner-custom', heroAd.is_custom === true);
+}
+
+async function loadHeroAd() {
+    try {
+        const response = await fetch(`${API_BASE}/reference/hero-ad`);
+        const heroAd = await response.json();
+
+        if (!response.ok) {
+            throw new Error(heroAd.error || 'Не удалось загрузить верхний блок');
+        }
+
+        renderHeroAd(heroAd);
+    } catch (error) {
+        console.error('Error loading hero ad:', error);
+    }
+}
+
 function populateSelectElement(select, options, placeholder) {
     if (!select) {
         return;
@@ -854,6 +886,7 @@ function populateSelects() {
 async function showMainApp() {
     document.getElementById('mainApp').classList.remove('hidden');
     updateProfileButtonAvatar();
+    await loadHeroAd();
     setSearchViewMode('home');
     await loadSavedItems(false);
     loadRandomListings();
