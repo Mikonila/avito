@@ -1357,29 +1357,6 @@ textarea {
     transition: box-shadow 0.3s, border-color 0.3s;
 }
 
-.admin-remove-btn {
-    position: absolute;
-    top: 54px;
-    right: 12px;
-    z-index: 4;
-    width: 34px;
-    height: 34px;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: rgba(15, 23, 42, 0.58);
-    font-size: 22px;
-    line-height: 1;
-    font-weight: 900;
-    cursor: pointer;
-    box-shadow: none;
-}
-
-.admin-remove-btn:hover {
-    background: transparent;
-    color: var(--danger-color);
-}
-
 .item-card:hover {
     box-shadow: var(--shadow);
     border-color: rgba(139, 92, 246, 0.22);
@@ -1565,6 +1542,31 @@ textarea {
 }
 
 .item-like-inline:hover {
+    opacity: 0.72;
+}
+
+.item-card-side-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.admin-remove-inline-btn {
+    width: 34px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: rgba(15, 23, 42, 0.72);
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.admin-remove-inline-btn:hover {
     opacity: 0.72;
 }
 

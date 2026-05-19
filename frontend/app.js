@@ -2211,16 +2211,27 @@ function renderListings(listings, containerId) {
                 ${statusBadge}
                 <div class="item-title-row">
                     <div class="item-title">${escapeHtml(item.title)}</div>
-                    <button
-                        type="button"
-                        class="item-like-inline ${liked ? 'active' : ''}"
-                        data-like-button="${getItemKey(itemType, item.id)}"
-                        onclick="event.stopPropagation(); toggleItemLike('${item.id}', '${itemType}', this)"
-                        aria-label="${liked ? 'Убрать из сохраненных' : 'Сохранить объявление'}"
-                    >
-                        <span class="item-like-icon">${getHeartIconMarkup(liked)}</span>
-                        <small class="item-like-count ${likeCount > 0 ? '' : 'hidden'}">${likeCount}</small>
-                    </button>
+                    <div class="item-card-side-actions">
+                        <button
+                            type="button"
+                            class="item-like-inline ${liked ? 'active' : ''}"
+                            data-like-button="${getItemKey(itemType, item.id)}"
+                            onclick="event.stopPropagation(); toggleItemLike('${item.id}', '${itemType}', this)"
+                            aria-label="${liked ? 'Убрать из сохраненных' : 'Сохранить объявление'}"
+                        >
+                            <span class="item-like-icon">${getHeartIconMarkup(liked)}</span>
+                            <small class="item-like-count ${likeCount > 0 ? '' : 'hidden'}">${likeCount}</small>
+                        </button>
+                        ${isAdminUser() ? `
+                            <button
+                                type="button"
+                                class="admin-remove-inline-btn"
+                                onclick="event.stopPropagation(); openAdminModerationModalById('${item.id}', '${itemType}')"
+                                aria-label="Действия администратора"
+                                title="Действия администратора"
+                            >⋯</button>
+                        ` : ''}
+                    </div>
                 </div>
                 <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
                 ${renderItemRating(item)}
@@ -2246,19 +2257,6 @@ function renderListings(listings, containerId) {
         }
 
         card.innerHTML = content;
-        if (isAdminUser()) {
-            const adminButton = document.createElement('button');
-            adminButton.className = 'admin-remove-btn';
-            adminButton.type = 'button';
-            adminButton.textContent = '⋯';
-            adminButton.setAttribute('aria-label', 'Действия администратора');
-            adminButton.title = 'Действия администратора';
-            adminButton.addEventListener('click', (event) => {
-                event.stopPropagation();
-                window.openAdminModerationModal(item);
-            });
-            card.appendChild(adminButton);
-        }
         container.appendChild(card);
     });
 }
@@ -3117,6 +3115,25 @@ window.openAdminModerationModal = function(item) {
     document.getElementById('adminModerationInfo').textContent =
         `Выберите действие для публикации «${state.adminModerationItem.title}».`;
     document.getElementById('adminModerationModal').classList.remove('hidden');
+};
+
+window.openAdminModerationModalById = function(itemId, itemType = 'listing') {
+    if (!isAdminUser()) {
+        return;
+    }
+
+    const item = [
+        ...state.currentListings,
+        ...state.homeListings,
+        ...state.myItems,
+        ...state.savedItems
+    ].find((entry) => entry.id === itemId && (entry.item_type || 'listing') === itemType);
+
+    if (!item) {
+        return;
+    }
+
+    window.openAdminModerationModal(item);
 };
 
 window.openAdminModerationModalFromDetails = function() {
