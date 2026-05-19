@@ -27,6 +27,7 @@ const CATEGORY_SHOWCASE_LABELS = {
     'cat-11': 'Работа',
     'cat-12': 'Бесплатно',
     'cat-14': 'Медицина',
+    'cat-17': 'Косметика',
     'cat-15': 'Вакансии',
     'cat-16': 'Прочее'
 };
@@ -51,6 +52,7 @@ const CATEGORY_IMAGE_MAP = {
     'cat-13': 'assets/categories/afisha.svg',
     'cat-14': 'assets/categories/medicine.svg',
     'cat-15': 'assets/categories/work.svg',
+    'cat-17': 'assets/categories/other.svg',
     'cat-16': 'assets/categories/other.svg',
  };
 

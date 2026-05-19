@@ -893,8 +893,8 @@ textarea {
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(240px, 0.85fr);
     align-items: center;
-    gap: 20px;
-    padding: 24px;
+    gap: 14px;
+    padding: 20px;
     border-radius: 30px;
     background: linear-gradient(135deg, #ffffff, #f4f7ff);
     box-shadow: var(--shadow);
@@ -976,7 +976,7 @@ textarea {
     position: relative;
     min-height: 220px;
     height: 220px;
-    border-radius: 28px;
+    border-radius: 22px;
     overflow: hidden;
     background: transparent;
     border: none;
@@ -990,7 +990,7 @@ textarea {
     min-height: 0;
     object-fit: cover;
     object-position: center;
-    transform: scale(1.14);
+    transform: scale(1.08);
     transform-origin: center;
 }
 
@@ -1063,12 +1063,38 @@ textarea {
 .category-back-btn {
     width: 52px;
     height: 52px;
-    border: none;
+    position: relative;
+    border: 1.5px solid transparent;
     border-radius: 18px;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: var(--shadow-soft);
+    background: transparent;
+    box-shadow: none;
     font-size: 24px;
+    line-height: 1;
     cursor: pointer;
+    color: transparent;
+    background-image: linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.category-back-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%);
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+.category-back-btn:hover {
+    opacity: 0.8;
 }
 
 .category-landing-grid {
@@ -2820,12 +2846,12 @@ html[data-theme="dark"] .media-picker-button {
 
     .form-shell,
     .promo-banner {
-        padding: 14px;
+        padding: 12px;
         border-radius: 18px;
     }
 
     .promo-banner {
-        gap: 12px;
+        gap: 10px;
     }
 
     .promo-banner h2 {
@@ -2842,6 +2868,7 @@ html[data-theme="dark"] .media-picker-button {
     .promo-visual {
         min-height: 220px;
         height: 220px;
+        border-radius: 18px;
     }
 
     .promo-visual-image {

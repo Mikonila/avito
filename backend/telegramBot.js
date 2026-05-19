@@ -1,3 +1,5 @@
+const http = require('http');
+const https = require('https');
 const TelegramBot = require('node-telegram-bot-api');
 const Listing = require('./models/Listing');
 const Service = require('./models/Service');
@@ -213,14 +215,32 @@ async function sendHelp(bot, msg) {
 
 async function downloadTelegramPhotoAsDataUrl(bot, fileId) {
   const fileUrl = await bot.getFileLink(fileId);
-  const response = await fetch(fileUrl);
+  const url = new URL(fileUrl);
+  const transport = url.protocol === 'http:' ? http : https;
 
-  if (!response.ok) {
-    throw new Error(`Не удалось скачать фото из Telegram: ${response.status}`);
-  }
+  const { contentType, buffer } = await new Promise((resolve, reject) => {
+    const request = transport.get(url, (response) => {
+      if (response.statusCode && response.statusCode >= 400) {
+        response.resume();
+        reject(new Error(`Не удалось скачать фото из Telegram: ${response.statusCode}`));
+        return;
+      }
 
-  const contentType = response.headers.get('content-type') || 'image/jpeg';
-  const buffer = Buffer.from(await response.arrayBuffer());
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => {
+        resolve({
+          contentType: response.headers['content-type'] || 'image/jpeg',
+          buffer: Buffer.concat(chunks)
+        });
+      });
+    });
+
+    request.on('error', (error) => {
+      reject(new Error(`Не удалось скачать фото из Telegram: ${error.message}`));
+    });
+  });
+
   return `data:${contentType};base64,${buffer.toString('base64')}`;
 }
 
@@ -473,9 +493,15 @@ async function handleHeroAdSession(bot, msg) {
       return true;
     }
 
-    await saveHeroAdFromTelegramPhoto(bot, session, photo.file_id);
-    adminAdSessions.delete(chatId);
-    await bot.sendMessage(msg.chat.id, 'Реклама обновлена и появится в верхнем блоке приложения.');
+    try {
+      await saveHeroAdFromTelegramPhoto(bot, session, photo.file_id);
+      adminAdSessions.delete(chatId);
+      await bot.sendMessage(msg.chat.id, 'Реклама обновлена и появится в верхнем блоке приложения.');
+    } catch (error) {
+      botDiagnostics.lastError = error.message;
+      console.error('Error saving hero ad photo:', error);
+      await bot.sendMessage(msg.chat.id, `Не удалось загрузить фото баннера.\n\nОшибка: ${error.message}`);
+    }
     return true;
   }
 
@@ -487,9 +513,15 @@ async function handleHeroAdSession(bot, msg) {
       return true;
     }
 
-    await saveHeroAdFromTelegramPhoto(bot, session, photo.file_id);
-    adminAdSessions.delete(chatId);
-    await bot.sendMessage(msg.chat.id, 'Фото верхнего блока обновлено и загружено в Cloudinary.');
+    try {
+      await saveHeroAdFromTelegramPhoto(bot, session, photo.file_id);
+      adminAdSessions.delete(chatId);
+      await bot.sendMessage(msg.chat.id, 'Фото верхнего блока обновлено и загружено в Cloudinary.');
+    } catch (error) {
+      botDiagnostics.lastError = error.message;
+      console.error('Error updating hero ad photo:', error);
+      await bot.sendMessage(msg.chat.id, `Не удалось загрузить фото баннера.\n\nОшибка: ${error.message}`);
+    }
     return true;
   }
 
