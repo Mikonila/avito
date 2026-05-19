@@ -1530,7 +1530,7 @@ textarea {
     padding: 0;
     border: none;
     background: transparent;
-    color: var(--text-color);
+    color: rgba(17, 24, 39, 0.78);
     cursor: pointer;
 }
 
@@ -1765,6 +1765,11 @@ textarea {
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.82);
     border: 1px solid rgba(229, 231, 235, 0.9);
+}
+
+.promotion-standalone-panel {
+    margin-top: 18px;
+    box-shadow: var(--shadow-soft);
 }
 
 .promotion-inline-panel h4 {

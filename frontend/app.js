@@ -685,9 +685,9 @@ function getHeartIconMarkup(active = false) {
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path
                 d="M12 20.7 4.9 13.8a4.9 4.9 0 0 1 6.9-6.9L12 7.1l.2-.2a4.9 4.9 0 0 1 6.9 6.9Z"
-                fill="${active ? 'currentColor' : 'none'}"
+                fill="none"
                 stroke="currentColor"
-                stroke-width="1.9"
+                stroke-width="${active ? '2.3' : '1.9'}"
                 stroke-linecap="round"
                 stroke-linejoin="round"
             ></path>
@@ -2561,9 +2561,6 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
             `).join('')}</div>`
             : '';
         const canDelete = canModerate || review.author_user_id === state.user?.id;
-        const screenshotLink = canModerate && review.screenshot_url
-            ? `<a class="review-screenshot-link" href="${review.screenshot_url}" target="_blank" rel="noreferrer">Скриншот</a>`
-            : '';
         const authorName = review.is_admin_seeded || canModerate
             ? `<div class="review-author-name">${escapeHtml(review.author_name || 'Пользователь')}</div>`
             : '';
@@ -2589,7 +2586,6 @@ function renderReviewsMarkup(reviews, canModerate, emptyText = 'Пока нет 
                         </div>
                     </div>
                     <div class="review-actions">
-                        ${screenshotLink}
                         ${authorProfileButton}
                     </div>
                 </div>

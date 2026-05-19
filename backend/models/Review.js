@@ -72,9 +72,7 @@ class Review {
     return db.get(`SELECT * FROM reviews WHERE id = $1`, [id]);
   }
 
-  static async findByTargetUserId(target_user_id, options = {}) {
-    const includeAdminFields = options.includeAdminFields === true;
-
+  static async findByTargetUserId(target_user_id) {
     const rows = await db.all(
       `SELECT
          reviews.id,
@@ -86,7 +84,6 @@ class Review {
         reviews.rating,
         reviews.text,
          reviews.created_at,
-         reviews.screenshot_url,
          reviews.display_author_name,
          reviews.display_author_avatar_url,
          reviews.review_images,
@@ -130,8 +127,7 @@ class Review {
         author_name: authorName,
         author_avatar_url: authorAvatarUrl,
         review_images: parseReviewImages(review.review_images),
-        is_admin_seeded: isAdminSeeded,
-        screenshot_url: includeAdminFields ? review.screenshot_url : undefined
+        is_admin_seeded: isAdminSeeded
       };
     });
   }

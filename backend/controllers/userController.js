@@ -72,15 +72,13 @@ async function register(req, res) {
 async function getUserProfile(req, res) {
   try {
     const { user_id } = req.params;
-    const requesterTelegramId = getRequesterTelegramId(req);
-    const includeAdminFields = isAdminTelegramId(requesterTelegramId);
 
     const user = await User.findById(user_id);
     if (!user) {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
-    const reviews = await Review.findByTargetUserId(user_id, { includeAdminFields });
+    const reviews = await Review.findByTargetUserId(user_id);
 
     res.json({
       ...serializeUser(user),
