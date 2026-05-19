@@ -195,6 +195,26 @@ class Listing {
     return result.changes > 0;
   }
 
+  static async updateById(id, data) {
+    const { title, description, price, price_type = '', category_id, subcategory = '', city_id, images } = data;
+    const result = await db.run(
+      `UPDATE listings
+       SET title = $1,
+           description = $2,
+           price = $3,
+           price_type = $4,
+           category_id = $5,
+           subcategory = $6,
+           city_id = $7,
+           images = $8,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $9`,
+      [title, description, price, price_type, category_id, subcategory, city_id, images || '[]', id]
+    );
+
+    return result.changes > 0;
+  }
+
   static async activatePromotion(id, days) {
     const listing = await Listing.findById(id);
 

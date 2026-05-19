@@ -70,7 +70,7 @@ const CATEGORIES = [
   },
   { id: 'cat-12', name: 'Бесплатно', icon: '⚙️' },
   { id: 'cat-14', name: 'Медицина', icon: '🏥' },
-  { id: 'cat-17', name: 'Косметика', icon: '💄' },
+  { id: 'cat-17', name: 'Косметика и уход', icon: '💄' },
   { id: 'cat-16', name: 'Прочее', icon: '📦' },
 ];
 

@@ -27,7 +27,7 @@ const CATEGORY_SHOWCASE_LABELS = {
     'cat-11': 'Работа',
     'cat-12': 'Бесплатно',
     'cat-14': 'Медицина',
-    'cat-17': 'Косметика',
+    'cat-17': 'Косметика и уход',
     'cat-15': 'Вакансии',
     'cat-16': 'Прочее'
 };
@@ -531,6 +531,18 @@ function markLikedItems(items) {
 }
 
 function sortPublications(items, preferredCategoryId = '') {
+    const isPremiumActive = (item) => {
+        if (item.is_premium !== true && item.is_premium !== 1) {
+            return false;
+        }
+
+        if (!item.premium_expires_at) {
+            return true;
+        }
+
+        return new Date(item.premium_expires_at) > new Date();
+    };
+
     const isPreferred = (item) => {
         if (!preferredCategoryId) {
             return false;
@@ -544,6 +556,13 @@ function sortPublications(items, preferredCategoryId = '') {
     };
 
     return [...items].sort((a, b) => {
+        const aPremium = isPremiumActive(a) ? 0 : 1;
+        const bPremium = isPremiumActive(b) ? 0 : 1;
+
+        if (aPremium !== bPremium) {
+            return aPremium - bPremium;
+        }
+
         const aPreferred = isPreferred(a) ? 0 : 1;
         const bPreferred = isPreferred(b) ? 0 : 1;
 
@@ -2224,9 +2243,6 @@ function renderListings(listings, containerId) {
         const subcategoryName = getListingSubcategoryName(item.category_id, item.subcategory);
         const badgeText = subcategoryName || categoryName;
         const itemType = item.item_type || 'listing';
-        const promotionBadge = item.is_premium
-            ? '<div class="promotion-card-label">Продвигается</div>'
-            : '';
         const liked = isItemLiked(item);
         const likeCount = Number(item.like_count || 0);
         const statusBadge = item.status === 'archived'
@@ -2238,7 +2254,6 @@ function renderListings(listings, containerId) {
         let content = `
             <div class="item-card-media">
                 <div class="item-badge">${badgeText}</div>
-                ${promotionBadge}
                 <div class="item-image ${isMedia ? '' : 'item-image-empty'}">
                     ${isMedia
                         ? isMediaVideo(image)
@@ -3154,6 +3169,18 @@ window.openAdminModerationModal = function(item) {
 
     document.getElementById('adminModerationInfo').textContent =
         `Выберите действие для публикации «${state.adminModerationItem.title}».`;
+
+    const moderationActions = document.querySelector('#adminModerationModal .moderation-actions');
+    if (moderationActions && !moderationActions.querySelector('[data-admin-edit-btn]')) {
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.className = 'btn btn-secondary btn-block';
+        editButton.dataset.adminEditBtn = 'true';
+        editButton.textContent = 'Редактировать';
+        editButton.onclick = () => window.adminEditSelectedItem();
+        moderationActions.prepend(editButton);
+    }
+
     document.getElementById('adminModerationModal').classList.remove('hidden');
 };
 
@@ -3429,9 +3456,7 @@ window.closePlatformRulesModal = function() {
     document.getElementById('platformRulesModal').classList.add('hidden');
 };
 
-window.editItem = function(itemId, itemType = 'listing') {
-    const item = state.myItems.find((entry) => entry.id === itemId && entry.item_type === itemType);
-
+function openEditItemModal(item) {
     if (!item) {
         alert('Объявление не найдено');
         return;
@@ -3450,12 +3475,28 @@ window.editItem = function(itemId, itemType = 'listing') {
     setPriceType('edit', item.price_type === 'request' ? '' : item.price_type || '');
     renderImagePreview('editImages');
     document.getElementById('editItemModal').classList.remove('hidden');
+}
+
+window.editItem = function(itemId, itemType = 'listing') {
+    const item = state.myItems.find((entry) => entry.id === itemId && entry.item_type === itemType);
+    openEditItemModal(item);
 };
 
 window.closeEditItemModal = function() {
     document.getElementById('editItemModal').classList.add('hidden');
     state.editingItem = null;
     state.editImages = [];
+};
+
+window.adminEditSelectedItem = function() {
+    const item = state.adminModerationItem || state.selectedItem;
+
+    if (!isAdminUser() || !item) {
+        return;
+    }
+
+    closeAdminModerationModal();
+    openEditItemModal(item);
 };
 
 async function handleEditItemSubmit(event) {
@@ -3472,7 +3513,9 @@ async function handleEditItemSubmit(event) {
 
     const pricePayload = getPricePayload(document.getElementById('editPrice').value, 'edit');
     const payload = {
-        user_id: state.user.id,
+        user_id: isAdminUser()
+            ? (state.editingItem.user_id || state.user.id)
+            : state.user.id,
         title: document.getElementById('editTitle').value.trim(),
         description: document.getElementById('editDescription').value.trim(),
         category_id: document.getElementById('editCategory').value,
@@ -3505,10 +3548,19 @@ async function handleEditItemSubmit(event) {
             throw new Error(result.error || 'Не удалось сохранить изменения');
         }
 
+        const updatedItem = result.listing || result.service || null;
+        if (updatedItem) {
+            syncPublicationState(updatedItem);
+            refreshRenderedListings();
+        }
+
         alert('Изменения сохранены');
         closeEditItemModal();
-        await loadMyItems();
-        await loadRandomListings();
+        await refreshListingsAfterModeration();
+
+        if (updatedItem && state.selectedItem && getPublicationKey(state.selectedItem) === getPublicationKey(updatedItem)) {
+            await showItemDetails(updatedItem);
+        }
     } catch (error) {
         console.error('Error updating item:', error);
         alert(error.message || 'Ошибка при сохранении');

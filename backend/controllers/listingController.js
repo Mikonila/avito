@@ -214,14 +214,15 @@ async function updateListing(req, res) {
   try {
     const { listing_id } = req.params;
     const { user_id, title, description, price, price_type = '', category_id, subcategory = '', city_id, images } = req.body;
+    const requesterTelegramId = getRequesterTelegramId(req);
+    const isAdminRequester = isAdminTelegramId(requesterTelegramId);
 
-    if (!user_id) {
-      return res.status(400).json({ error: 'user_id is required' });
+    if (!requesterTelegramId) {
+      return res.status(401).json({ error: 'Не удалось определить пользователя Telegram' });
     }
 
-    const author = await ensureUserCanPublish(user_id, res);
-    if (!author) {
-      return;
+    if (!isAdminRequester && !user_id) {
+      return res.status(400).json({ error: 'user_id is required' });
     }
 
     const normalizedPriceType = normalizePriceType(price_type);
@@ -236,19 +237,51 @@ async function updateListing(req, res) {
     }
 
     const existingListing = await Listing.findById(listing_id);
+    if (!existingListing) {
+      return res.status(404).json({ error: 'Объявление не найдено' });
+    }
+
+    if (isAdminRequester) {
+      const admin = await User.findByTelegramId(requesterTelegramId);
+      if (!admin) {
+        return res.status(401).json({ error: 'Администратор не найден' });
+      }
+    } else {
+      const requester = await User.findByTelegramId(requesterTelegramId);
+      if (!requester || requester.id !== user_id || existingListing.user_id !== user_id) {
+        return res.status(403).json({ error: 'Нельзя редактировать чужое объявление' });
+      }
+
+      const author = await ensureUserCanPublish(user_id, res);
+      if (!author) {
+        return;
+      }
+    }
+
     const uploadedImages = await uploadImages(imageValidation.images, 'listing');
     newlyUploadedImages = uploadedImages.filter((imageUrl) => !imageValidation.images.includes(imageUrl));
 
-    const updated = await Listing.update(listing_id, user_id, {
-      title,
-      description,
-      price: normalizedPrice,
-      price_type: normalizedPriceType,
-      category_id,
-      subcategory,
-      city_id,
-      images: JSON.stringify(uploadedImages)
-    });
+    const updated = isAdminRequester
+      ? await Listing.updateById(listing_id, {
+        title,
+        description,
+        price: normalizedPrice,
+        price_type: normalizedPriceType,
+        category_id,
+        subcategory,
+        city_id,
+        images: JSON.stringify(uploadedImages)
+      })
+      : await Listing.update(listing_id, user_id, {
+        title,
+        description,
+        price: normalizedPrice,
+        price_type: normalizedPriceType,
+        category_id,
+        subcategory,
+        city_id,
+        images: JSON.stringify(uploadedImages)
+      });
 
     if (updated && existingListing?.images?.length) {
       const imagesToRemove = existingListing.images.filter(
@@ -257,7 +290,8 @@ async function updateListing(req, res) {
       await destroyImages(imagesToRemove);
     }
 
-    res.json({ success: updated });
+    const listing = updated ? await Listing.findById(listing_id) : null;
+    res.json({ success: updated, listing });
   } catch (error) {
     console.error('Error updating listing:', error);
     if (newlyUploadedImages.length) {
