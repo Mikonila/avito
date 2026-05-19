@@ -1,5 +1,6 @@
 const tg = window.Telegram?.WebApp;
 const DEFAULT_MAX_IMAGE_COUNT = 5;
+const DEFAULT_LISTING_IMAGE_COUNT = 6;
 const ADMIN_MAX_IMAGE_COUNT = 10;
 const DEFAULT_MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 const ADMIN_MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024;
@@ -261,7 +262,11 @@ function isAdminUser() {
     return state.user?.is_admin === true || state.user?.is_admin === 1;
 }
 
-function getMaxImageCount() {
+function getMaxImageCount(type = '') {
+    if (['images', 'serviceImages', 'editImages'].includes(type)) {
+        return isAdminUser() ? ADMIN_MAX_IMAGE_COUNT : DEFAULT_LISTING_IMAGE_COUNT;
+    }
+
     return isAdminUser() ? ADMIN_MAX_IMAGE_COUNT : DEFAULT_MAX_IMAGE_COUNT;
 }
 
@@ -307,7 +312,7 @@ function formatPrice(value, priceType = '') {
 
 function getMediaLimitText() {
     const maxVideoMb = Math.round(getMaxVideoSizeBytes() / (1024 * 1024));
-    return `${getMaxImageCount()} файлов, видео до ${maxVideoMb} МБ`;
+    return `${getMaxImageCount('images')} файлов, видео до ${maxVideoMb} МБ`;
 }
 
 function escapeHtml(value = '') {
@@ -1768,7 +1773,7 @@ function attachListingDraftListeners() {
 function handleImageSelect(e, type) {
     const files = Array.from(e.target.files);
     state[type] = state[type] || [];
-    const maxImageCount = getMaxImageCount();
+    const maxImageCount = getMaxImageCount(type);
 
     if (state[type].length + files.length > maxImageCount) {
         alert(`Можно добавить не более ${maxImageCount} фотографий`);

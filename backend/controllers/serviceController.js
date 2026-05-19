@@ -15,7 +15,7 @@ function getMediaValidationOptions(req) {
   const isAdmin = isAdminTelegramId(getRequesterTelegramId(req));
 
   return {
-    maxImages: isAdmin ? 10 : 5,
+    maxImages: isAdmin ? 10 : 6,
     maxImageSizeMb: isAdmin ? 4 : 2,
     maxVideoSizeMb: isAdmin ? 30 : 15,
     maxTotalMediaSizeMb: isAdmin ? 45 : 25
