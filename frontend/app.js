@@ -683,10 +683,16 @@ function getAvatarFallbackStyle(seed = '') {
 function getHeartIconMarkup(active = false) {
     return `
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <defs>
+                <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#c084fc"></stop>
+                    <stop offset="100%" stop-color="#8b5cf6"></stop>
+                </linearGradient>
+            </defs>
             <path
                 d="M12 20.7 4.9 13.8a4.9 4.9 0 0 1 6.9-6.9L12 7.1l.2-.2a4.9 4.9 0 0 1 6.9 6.9Z"
                 fill="none"
-                stroke="currentColor"
+                stroke="url(#heartGradient)"
                 stroke-width="${active ? '2.3' : '1.9'}"
                 stroke-linecap="round"
                 stroke-linejoin="round"
