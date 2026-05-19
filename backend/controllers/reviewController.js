@@ -60,6 +60,7 @@ async function createReview(req, res) {
     if (!requesterTelegramId) {
       return res.status(401).json({ error: 'Не удалось определить пользователя Telegram' });
     }
+    const isAdminRequester = isAdminTelegramId(requesterTelegramId);
 
     if (!user_id || !target_user_id || !review_type || !text) {
       return res.status(400).json({ error: 'Не заполнены обязательные поля' });
@@ -125,7 +126,11 @@ async function createReview(req, res) {
     }
 
     const screenshotValidation = validateImages(screenshot ? [screenshot] : [], getReviewMediaValidationOptions(req));
-    if (!screenshotValidation.isValid || screenshotValidation.images.length !== 1) {
+    if (!screenshotValidation.isValid) {
+      return res.status(400).json({ error: 'Прикрепите корректный скриншот переписки' });
+    }
+
+    if (!isAdminRequester && screenshotValidation.images.length !== 1) {
       return res.status(400).json({ error: 'Нужно прикрепить один скриншот переписки' });
     }
 
@@ -140,7 +145,9 @@ async function createReview(req, res) {
       reviewImagesToUpload = imagesValidation.images;
     }
 
-    uploadedScreenshotUrls = await uploadImages(screenshotValidation.images, 'review');
+    uploadedScreenshotUrls = screenshotValidation.images.length
+      ? await uploadImages(screenshotValidation.images, 'review')
+      : [];
     uploadedReviewImageUrls = reviewImagesToUpload.length
       ? await uploadImages(reviewImagesToUpload, 'review')
       : [];
@@ -153,7 +160,7 @@ async function createReview(req, res) {
       review_type,
       rating: normalizedRating,
       text: String(text).trim(),
-      screenshot_url: uploadedScreenshotUrls[0],
+      screenshot_url: uploadedScreenshotUrls[0] || '',
       review_images: JSON.stringify(uploadedReviewImageUrls)
     });
 

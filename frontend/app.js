@@ -680,6 +680,21 @@ function getAvatarFallbackStyle(seed = '') {
     return `background:${getAvatarFallbackGradient(seed)};color:#ffffff;`;
 }
 
+function getHeartIconMarkup(active = false) {
+    return `
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+                d="M12 20.7 4.9 13.8a4.9 4.9 0 0 1 6.9-6.9L12 7.1l.2-.2a4.9 4.9 0 0 1 6.9 6.9Z"
+                fill="${active ? 'currentColor' : 'none'}"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            ></path>
+        </svg>
+    `;
+}
+
 function getAvatarMarkup(avatarUrl, fallbackText = 'Пользователь') {
     if (avatarUrl) {
         return `<img src="${avatarUrl}" alt="Аватар" class="review-avatar-image">`;
@@ -1349,6 +1364,21 @@ function renderPromotionOptions(formType) {
             <small>≈ ${plan.rub} ₽</small>
         </button>
     `).join('');
+}
+
+function syncReviewModalUi() {
+    const screenshotGroup = document.getElementById('reviewScreenshotGroup');
+    if (!screenshotGroup) {
+        return;
+    }
+
+    const hideScreenshot = isAdminUser();
+    screenshotGroup.classList.toggle('hidden', hideScreenshot);
+
+    if (hideScreenshot) {
+        state.reviewScreenshot = null;
+        renderImagePreview('reviewScreenshot');
+    }
 }
 
 window.selectPromotionPlan = function(formType, planKey) {
@@ -2162,16 +2192,6 @@ function renderListings(listings, containerId) {
         let content = `
             <div class="item-card-media">
                 <div class="item-badge">${badgeText}</div>
-                <button
-                    type="button"
-                    class="item-like-btn ${liked ? 'active' : ''}"
-                    data-like-button="${getItemKey(itemType, item.id)}"
-                    onclick="event.stopPropagation(); toggleItemLike('${item.id}', '${itemType}', this)"
-                    aria-label="${liked ? 'Убрать из сохраненных' : 'Сохранить объявление'}"
-                >
-                    <span>♥</span>
-                    <small>${likeCount}</small>
-                </button>
                 ${promotionBadge}
                 <div class="item-image ${isMedia ? '' : 'item-image-empty'}">
                     ${isMedia
@@ -2183,7 +2203,18 @@ function renderListings(listings, containerId) {
             </div>
         <div class="item-info">
                 ${statusBadge}
-                <div class="item-title">${escapeHtml(item.title)}</div>
+                <div class="item-title-row">
+                    <div class="item-title">${escapeHtml(item.title)}</div>
+                    <button
+                        type="button"
+                        class="item-like-inline ${liked ? 'active' : ''}"
+                        data-like-button="${getItemKey(itemType, item.id)}"
+                        onclick="event.stopPropagation(); toggleItemLike('${item.id}', '${itemType}', this)"
+                        aria-label="${liked ? 'Убрать из сохраненных' : 'Сохранить объявление'}"
+                    >
+                        <span class="item-like-icon">${getHeartIconMarkup(liked)}</span>
+                    </button>
+                </div>
                 <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
                 ${renderItemRating(item)}
                 <div class="item-meta-row">
@@ -2288,6 +2319,10 @@ window.toggleItemLike = async function(itemId, itemType = 'listing', button = nu
 
         document.querySelectorAll(`[data-like-button="${getItemKey(itemType, itemId)}"]`).forEach((likeButton) => {
             likeButton.classList.toggle('active', result.liked);
+            const icon = likeButton.querySelector('.item-like-icon');
+            if (icon) {
+                icon.innerHTML = getHeartIconMarkup(result.liked);
+            }
             const counter = likeButton.querySelector('small');
             if (counter) {
                 counter.textContent = likeCount;
@@ -2761,6 +2796,7 @@ window.openReviewModal = function() {
     state.reviewImages = [];
     renderImagePreview('reviewScreenshot');
     renderImagePreview('reviewImages');
+    syncReviewModalUi();
     closeItemModal();
     document.getElementById('reviewModal').classList.remove('hidden');
 };
@@ -2874,6 +2910,7 @@ window.submitReview = async function() {
     const reviewType = document.getElementById('reviewType').value;
     const reviewRating = Number(document.getElementById('reviewRating').value || 5);
     const reviewText = document.getElementById('reviewText').value.trim();
+    const requiresScreenshot = !isAdminUser();
 
     if (!state.selectedItem) {
         alert('Сначала выберите товар');
@@ -2885,7 +2922,7 @@ window.submitReview = async function() {
         return;
     }
 
-    if (!state.reviewScreenshot) {
+    if (requiresScreenshot && !state.reviewScreenshot) {
         alert('Обязательно приложите скриншот переписки');
         return;
     }
