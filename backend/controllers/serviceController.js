@@ -424,6 +424,58 @@ async function reactivateService(req, res) {
   }
 }
 
+async function archiveService(req, res) {
+  try {
+    const { service_id } = req.params;
+    const { user_id } = req.body;
+    const requesterTelegramId = getRequesterTelegramId(req);
+
+    if (!requesterTelegramId || !user_id) {
+      return res.status(400).json({ error: 'Не заполнены обязательные поля' });
+    }
+
+    const requester = await User.findByTelegramId(requesterTelegramId);
+    if (!requester || requester.id !== user_id) {
+      return res.status(403).json({ error: 'Нельзя архивировать чужую услугу' });
+    }
+
+    const service = await Service.findById(service_id);
+    if (!service || service.user_id !== user_id) {
+      return res.status(404).json({ error: 'Услуга не найдена' });
+    }
+
+    const archived = await Service.archive(service_id);
+    const updatedService = archived ? await Service.findById(service_id) : null;
+    res.json({ success: archived, item: updatedService });
+  } catch (error) {
+    console.error('Error archiving service:', error);
+    res.status(500).json({ error: 'Не удалось архивировать услугу' });
+  }
+}
+
+async function adminArchiveService(req, res) {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) {
+      return;
+    }
+
+    const { service_id } = req.params;
+    const service = await Service.findById(service_id);
+
+    if (!service) {
+      return res.status(404).json({ error: 'Услуга не найдена' });
+    }
+
+    const archived = await Service.archive(service_id);
+    const updatedService = archived ? await Service.findById(service_id) : null;
+    res.json({ success: archived, item: updatedService });
+  } catch (error) {
+    console.error('Error archiving service as admin:', error);
+    res.status(500).json({ error: 'Не удалось архивировать услугу' });
+  }
+}
+
 async function createPromotionInvoice(req, res) {
   try {
     const { service_id } = req.params;
@@ -523,11 +575,13 @@ async function adminActivatePromotion(req, res) {
 }
 
 module.exports = {
+  adminArchiveService,
   createPromotionInvoice,
   createPublicationInvoice,
   createService,
   adminActivatePromotion,
   adminDeleteService,
+  archiveService,
   getServiceDetails,
   getServicesByUser,
   searchServices,

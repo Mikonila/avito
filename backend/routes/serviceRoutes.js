@@ -9,6 +9,8 @@ router.get('/search', serviceController.searchServices);
 router.post('/:service_id/promotion/admin', serviceController.adminActivatePromotion);
 router.post('/:service_id/promotion/invoice', serviceController.createPromotionInvoice);
 router.post('/:service_id/publication/invoice', serviceController.createPublicationInvoice);
+router.post('/:service_id/archive/admin', serviceController.adminArchiveService);
+router.post('/:service_id/archive', serviceController.archiveService);
 router.post('/:service_id/reactivate', serviceController.reactivateService);
 router.delete('/:service_id/admin', serviceController.adminDeleteService);
 router.delete('/:service_id', serviceController.deleteService);

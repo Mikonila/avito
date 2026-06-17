@@ -329,6 +329,58 @@ async function reactivateListing(req, res) {
   }
 }
 
+async function archiveListing(req, res) {
+  try {
+    const { listing_id } = req.params;
+    const { user_id } = req.body;
+    const requesterTelegramId = getRequesterTelegramId(req);
+
+    if (!requesterTelegramId || !user_id) {
+      return res.status(400).json({ error: 'Не заполнены обязательные поля' });
+    }
+
+    const requester = await User.findByTelegramId(requesterTelegramId);
+    if (!requester || requester.id !== user_id) {
+      return res.status(403).json({ error: 'Нельзя архивировать чужое объявление' });
+    }
+
+    const listing = await Listing.findById(listing_id);
+    if (!listing || listing.user_id !== user_id) {
+      return res.status(404).json({ error: 'Объявление не найдено' });
+    }
+
+    const archived = await Listing.archive(listing_id);
+    const updatedListing = archived ? await Listing.findById(listing_id) : null;
+    res.json({ success: archived, item: updatedListing });
+  } catch (error) {
+    console.error('Error archiving listing:', error);
+    res.status(500).json({ error: 'Не удалось архивировать объявление' });
+  }
+}
+
+async function adminArchiveListing(req, res) {
+  try {
+    const admin = await requireAdminUser(req, res);
+    if (!admin) {
+      return;
+    }
+
+    const { listing_id } = req.params;
+    const listing = await Listing.findById(listing_id);
+
+    if (!listing) {
+      return res.status(404).json({ error: 'Объявление не найдено' });
+    }
+
+    const archived = await Listing.archive(listing_id);
+    const updatedListing = archived ? await Listing.findById(listing_id) : null;
+    res.json({ success: archived, item: updatedListing });
+  } catch (error) {
+    console.error('Error archiving listing as admin:', error);
+    res.status(500).json({ error: 'Не удалось архивировать объявление' });
+  }
+}
+
 async function createPromotionInvoice(req, res) {
   try {
     const { listing_id } = req.params;
@@ -428,6 +480,8 @@ async function adminActivatePromotion(req, res) {
 }
 
 module.exports = {
+  archiveListing,
+  adminArchiveListing,
   createListing,
   adminActivatePromotion,
   adminDeleteListing,

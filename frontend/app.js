@@ -77,6 +77,7 @@ let state = {
     reviewImages: [],
     selectedItem: null,
     adminModerationItem: null,
+    ownerActionItem: null,
     editingItem: null,
     editImages: [],
     adminReviewAvatar: null,
@@ -2249,6 +2250,28 @@ function renderListings(listings, containerId) {
         const itemType = item.item_type || 'listing';
         const liked = isItemLiked(item);
         const likeCount = Number(item.like_count || 0);
+        const ownerActionsButton = containerId === 'myItems' && item.status !== 'archived'
+            ? `
+                            <button
+                                type="button"
+                                class="admin-remove-inline-btn"
+                                onclick="event.stopPropagation(); openOwnerItemActionsById('${item.id}', '${itemType}')"
+                                aria-label="Действия с объявлением"
+                                title="Действия с объявлением"
+                            >⋯</button>
+                        `
+            : '';
+        const adminActionsButton = isAdminUser()
+            ? `
+                            <button
+                                type="button"
+                                class="admin-remove-inline-btn"
+                                onclick="event.stopPropagation(); openAdminModerationModalById('${item.id}', '${itemType}')"
+                                aria-label="Действия администратора"
+                                title="Действия администратора"
+                            >⋯</button>
+                        `
+            : '';
         const statusBadge = item.status === 'archived'
             ? '<div class="publication-status publication-status-archived">Архивировано</div>'
             : item.status === 'pending_payment'
@@ -2281,15 +2304,7 @@ function renderListings(listings, containerId) {
                             <span class="item-like-icon">${getHeartIconMarkup(liked)}</span>
                             <small class="item-like-count ${likeCount > 0 ? '' : 'hidden'}">${likeCount}</small>
                         </button>
-                        ${isAdminUser() ? `
-                            <button
-                                type="button"
-                                class="admin-remove-inline-btn"
-                                onclick="event.stopPropagation(); openAdminModerationModalById('${item.id}', '${itemType}')"
-                                aria-label="Действия администратора"
-                                title="Действия администратора"
-                            >⋯</button>
-                        ` : ''}
+                        ${ownerActionsButton || adminActionsButton}
                     </div>
                 </div>
                 <div class="item-price">${formatPrice(item.price, item.price_type)}</div>
@@ -2437,7 +2452,10 @@ async function showItemDetails(item) {
                 : `<button type="button" class="item-details-media-button" data-fullscreen-media="${escapeHtml(media)}"><img src="${media}" alt="${escapeHtml(selectedItem.title)}"></button>`).join('')}
         </div>
     ` : '';
-    const adminAction = isAdminUser()
+    const ownerAction = isOwner && selectedItem.status !== 'archived'
+        ? '<button class="admin-details-menu-btn" type="button" onclick="openOwnerItemActionsFromDetails()" aria-label="Действия с объявлением">⋯</button>'
+        : '';
+    const adminAction = !ownerAction && isAdminUser()
         ? '<button class="admin-details-menu-btn" type="button" onclick="openAdminModerationModalFromDetails()" aria-label="Действия администратора">⋯</button>'
         : '';
     const statusLine = selectedItem.status === 'archived'
@@ -2451,6 +2469,7 @@ async function showItemDetails(item) {
         <div class="item-details-topline">
             <span class="item-detail-chip">${categoryName}</span>
             ${subcategoryName ? `<span class="item-detail-chip item-detail-chip-muted">${subcategoryName}</span>` : ''}
+            ${ownerAction || adminAction}
         </div>
         ${statusLine}
         <h2>${selectedItem.title}</h2>
@@ -3162,6 +3181,95 @@ window.reactivateItem = async function(itemId, itemType = 'listing') {
     }
 };
 
+window.archiveItem = async function(itemId, itemType = 'listing') {
+    if (!confirm('Архивировать эту публикацию?')) {
+        return;
+    }
+
+    try {
+        const endpoint = itemType === 'service'
+            ? `/services/${itemId}/archive`
+            : `/listings/${itemId}/archive`;
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ user_id: state.user.id })
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Не удалось архивировать публикацию');
+        }
+
+        if (result.item) {
+            syncPublicationState(result.item);
+        }
+
+        alert('Публикация отправлена в архив');
+        await loadMyItems();
+        await loadRandomListings();
+        await refreshServicePublicationRequirement();
+        refreshRenderedListings();
+    } catch (error) {
+        console.error('Error archiving item:', error);
+        alert(error.message || 'Ошибка архивации');
+    }
+};
+
+window.openOwnerItemActions = function(item) {
+    if (!item || String(item.user_id || '') !== String(state.user?.id || '') || item.status === 'archived') {
+        return;
+    }
+
+    state.ownerActionItem = {
+        id: item.id,
+        title: item.title || 'Объявление',
+        item_type: item.item_type || 'listing',
+        user_id: item.user_id
+    };
+
+    document.getElementById('ownerItemActionsInfo').textContent =
+        `Выберите действие для публикации «${state.ownerActionItem.title}».`;
+    document.getElementById('ownerItemActionsModal').classList.remove('hidden');
+};
+
+window.openOwnerItemActionsById = function(itemId, itemType = 'listing') {
+    const item = [
+        ...state.currentListings,
+        ...state.homeListings,
+        ...state.myItems,
+        ...state.savedItems
+    ].find((entry) => entry.id === itemId && (entry.item_type || 'listing') === itemType);
+
+    if (!item) {
+        return;
+    }
+
+    window.openOwnerItemActions(item);
+};
+
+window.openOwnerItemActionsFromDetails = function() {
+    if (state.selectedItem) {
+        window.openOwnerItemActions(state.selectedItem);
+    }
+};
+
+window.closeOwnerItemActionsModal = function() {
+    document.getElementById('ownerItemActionsModal').classList.add('hidden');
+    state.ownerActionItem = null;
+};
+
+window.ownerArchiveSelectedItem = async function() {
+    const item = state.ownerActionItem;
+
+    if (!item) {
+        return;
+    }
+
+    closeOwnerItemActionsModal();
+    await archiveItem(item.id, item.item_type || 'listing');
+};
+
 window.openAdminModerationModal = function(item) {
     if (!isAdminUser()) {
         return;
@@ -3176,17 +3284,6 @@ window.openAdminModerationModal = function(item) {
 
     document.getElementById('adminModerationInfo').textContent =
         `Выберите действие для публикации «${state.adminModerationItem.title}».`;
-
-    const moderationActions = document.querySelector('#adminModerationModal .moderation-actions');
-    if (moderationActions && !moderationActions.querySelector('[data-admin-edit-btn]')) {
-        const editButton = document.createElement('button');
-        editButton.type = 'button';
-        editButton.className = 'btn btn-secondary btn-block';
-        editButton.dataset.adminEditBtn = 'true';
-        editButton.textContent = 'Редактировать';
-        editButton.onclick = () => window.adminEditSelectedItem();
-        moderationActions.prepend(editButton);
-    }
 
     document.getElementById('adminModerationModal').classList.remove('hidden');
 };
@@ -3292,6 +3389,44 @@ window.adminPinSelectedItem = async function() {
     } catch (error) {
         console.error('Error pinning item:', error);
         alert(error.message || 'Ошибка закрепления');
+    }
+};
+
+window.adminArchiveSelectedItem = async function() {
+    const item = state.adminModerationItem;
+
+    if (!item) {
+        return;
+    }
+
+    if (!confirm('Архивировать объявление?')) {
+        return;
+    }
+
+    try {
+        const endpoint = item.item_type === 'service'
+            ? `/services/${item.id}/archive/admin`
+            : `/listings/${item.id}/archive/admin`;
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Не удалось архивировать объявление');
+        }
+
+        if (result.item) {
+            syncPublicationState(result.item);
+        }
+
+        closeAdminModerationModal();
+        await refreshListingsAfterModeration();
+        alert('Публикация архивирована');
+    } catch (error) {
+        console.error('Error archiving item as admin:', error);
+        alert(error.message || 'Ошибка модерации');
     }
 };
 

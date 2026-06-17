@@ -15,7 +15,7 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260618-archive-menu-1">
 </head>
 <body>
     <div id="app">
@@ -456,6 +456,17 @@
         </div>
     </div>
 
+    <div id="ownerItemActionsModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeOwnerItemActionsModal()">✕</button>
+            <h2>Действия с объявлением</h2>
+            <p id="ownerItemActionsInfo" class="info-text"></p>
+            <div class="moderation-actions">
+                <button type="button" class="btn btn-secondary btn-block" onclick="ownerArchiveSelectedItem()">Архивировать</button>
+            </div>
+        </div>
+    </div>
+
     <div id="adminModerationModal" class="modal hidden">
         <div class="modal-content">
             <button class="modal-close" onclick="closeAdminModerationModal()">✕</button>
@@ -463,6 +474,7 @@
             <p id="adminModerationInfo" class="info-text"></p>
             <div class="moderation-actions">
                 <button type="button" class="btn btn-secondary btn-block" onclick="adminEditSelectedItem()">Редактировать</button>
+                <button type="button" class="btn btn-secondary btn-block" onclick="adminArchiveSelectedItem()">Архивировать</button>
                 <button type="button" class="btn btn-secondary btn-block" onclick="adminPinSelectedItem()">Закрепить объявление</button>
                 <button type="button" class="btn btn-primary btn-block" onclick="openAdminSeedReviewModal()">Добавить отзыв</button>
                 <button type="button" class="btn btn-secondary btn-block" onclick="adminBoostSelectedItemLikes()">Добавить лайки</button>
@@ -582,6 +594,6 @@
         <img id="mediaPreviewImage" alt="Фото объявления">
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20260618-archive-menu-1"></script>
 </body>
 </html>
