@@ -416,13 +416,8 @@ async function reactivateService(req, res) {
       return res.status(404).json({ error: 'Услуга не найдена' });
     }
 
-    const canAddFree = await Service.canAddService(user_id);
-    if (!service.is_paid && canAddFree) {
-      const expiresAt = await Service.activatePublication(service_id, 30, false);
-      return res.json({ success: Boolean(expiresAt), expires_at: expiresAt });
-    }
-
-    return createPublicationInvoice(req, res);
+    const expiresAt = await Service.activatePublication(service_id, 30, Boolean(service.is_paid));
+    return res.json({ success: Boolean(expiresAt), expires_at: expiresAt });
   } catch (error) {
     console.error('Error reactivating service:', error);
     res.status(500).json({ error: 'Не удалось активировать услугу' });

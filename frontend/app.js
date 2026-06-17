@@ -3128,6 +3128,7 @@ window.reactivateItem = async function(itemId, itemType = 'listing') {
                         alert('Публикация активирована');
                         await loadMyItems();
                         await loadRandomListings();
+                        await refreshServicePublicationRequirement();
                     }
                 });
                 return;
@@ -3141,6 +3142,7 @@ window.reactivateItem = async function(itemId, itemType = 'listing') {
                     alert('Публикация активирована');
                     await loadMyItems();
                     await loadRandomListings();
+                    await refreshServicePublicationRequirement();
                 }
             });
             return;
@@ -3149,6 +3151,7 @@ window.reactivateItem = async function(itemId, itemType = 'listing') {
         alert('Публикация активирована на 1 месяц');
         await loadMyItems();
         await loadRandomListings();
+        await refreshServicePublicationRequirement();
     } catch (error) {
         console.error('Error reactivating item:', error);
         alert(error.message || 'Ошибка активации');
