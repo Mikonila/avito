@@ -530,6 +530,10 @@ function markLikedItems(items) {
     }));
 }
 
+function getPublicationSortTimestamp(item) {
+    return new Date(item.reactivated_at || item.created_at || 0).getTime();
+}
+
 function sortPublications(items, preferredCategoryId = '') {
     const isPremiumActive = (item) => {
         if (item.is_premium !== true && item.is_premium !== 1) {
@@ -570,7 +574,7 @@ function sortPublications(items, preferredCategoryId = '') {
             return aPreferred - bPreferred;
         }
 
-        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+        return getPublicationSortTimestamp(b) - getPublicationSortTimestamp(a);
     });
 }
 
@@ -2145,7 +2149,7 @@ function applyListingFilters(listings) {
 
     switch (state.filters.sort) {
         case 'date':
-            filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            filtered.sort((a, b) => getPublicationSortTimestamp(b) - getPublicationSortTimestamp(a));
             break;
         case 'cheap':
             filtered.sort((a, b) => Number(a.price) - Number(b.price));

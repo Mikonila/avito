@@ -57,6 +57,10 @@ function getServiceSelect() {
           COALESCE(review_stats.rating_count, 0) AS rating_count`;
 }
 
+function getServiceSortExpression() {
+  return `COALESCE(services.reactivated_at, services.created_at)`;
+}
+
 class Service {
   static async create(user_id, data) {
     const id = uuidv4();
@@ -90,7 +94,7 @@ class Service {
        ${getLikeCountJoin()}
        ${getReviewStatsJoin()}
        WHERE services.user_id = $1
-       ORDER BY services.created_at DESC`,
+       ORDER BY ${getServiceSortExpression()} DESC`,
       [user_id]
     );
 
@@ -141,7 +145,7 @@ class Service {
         WHEN services.is_premium = TRUE AND (services.premium_expires_at IS NULL OR services.premium_expires_at > CURRENT_TIMESTAMP) THEN 0
         ELSE 1
       END,
-      services.created_at DESC
+      ${getServiceSortExpression()} DESC
       LIMIT 50`;
 
     const rows = await db.all(query, params);
@@ -250,6 +254,7 @@ class Service {
        SET status = 'active',
            is_paid = $1,
            expires_at = $2,
+           reactivated_at = CURRENT_TIMESTAMP,
            archived_notified_at = NULL,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3`,

@@ -57,6 +57,10 @@ function getListingSelect() {
           COALESCE(review_stats.rating_count, 0) AS rating_count`;
 }
 
+function getListingSortExpression() {
+  return `COALESCE(listings.reactivated_at, listings.created_at)`;
+}
+
 class Listing {
   static async create(user_id, data) {
     const id = uuidv4();
@@ -91,7 +95,7 @@ class Listing {
        ${getLikeCountJoin()}
        ${getReviewStatsJoin()}
        WHERE listings.user_id = $1
-       ORDER BY listings.created_at DESC`,
+       ORDER BY ${getListingSortExpression()} DESC`,
       [user_id]
     );
 
@@ -121,7 +125,7 @@ class Listing {
         WHEN listings.is_premium = TRUE AND (listings.premium_expires_at IS NULL OR listings.premium_expires_at > CURRENT_TIMESTAMP) THEN 0
         ELSE 1
       END,
-      listings.created_at DESC
+      ${getListingSortExpression()} DESC
       LIMIT 50`;
 
     const rows = await db.all(query, params);
@@ -140,7 +144,7 @@ class Listing {
            WHEN listings.is_premium = TRUE AND (listings.premium_expires_at IS NULL OR listings.premium_expires_at > CURRENT_TIMESTAMP) THEN 0
            ELSE 1
          END,
-         listings.created_at DESC
+         ${getListingSortExpression()} DESC
        LIMIT $1`,
       [limit]
     );
@@ -245,6 +249,7 @@ class Listing {
       `UPDATE listings
        SET status = 'active',
            expires_at = $1,
+           reactivated_at = CURRENT_TIMESTAMP,
            archived_notified_at = NULL,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $2`,

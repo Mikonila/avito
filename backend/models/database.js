@@ -54,6 +54,7 @@ const SQLITE_SCHEMA = [
     premium_expires_at DATETIME,
     expires_at DATETIME,
     archived_notified_at DATETIME,
+    reactivated_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id),
@@ -80,6 +81,7 @@ const SQLITE_SCHEMA = [
     premium_expires_at DATETIME,
     expires_at DATETIME,
     archived_notified_at DATETIME,
+    reactivated_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id),
@@ -202,6 +204,7 @@ const POSTGRES_SCHEMA = [
     premium_expires_at TIMESTAMPTZ,
     expires_at TIMESTAMPTZ,
     archived_notified_at TIMESTAMPTZ,
+    reactivated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
@@ -225,6 +228,7 @@ const POSTGRES_SCHEMA = [
     premium_expires_at TIMESTAMPTZ,
     expires_at TIMESTAMPTZ,
     archived_notified_at TIMESTAMPTZ,
+    reactivated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
   )`,
@@ -434,8 +438,10 @@ async function applyMigrations() {
   await ensureColumn('services', 'premium_expires_at', 'TIMESTAMPTZ');
   await ensureColumn('listings', 'expires_at', 'TIMESTAMPTZ');
   await ensureColumn('listings', 'archived_notified_at', 'TIMESTAMPTZ');
+  await ensureColumn('listings', 'reactivated_at', 'TIMESTAMPTZ');
   await ensureColumn('services', 'expires_at', 'TIMESTAMPTZ');
   await ensureColumn('services', 'archived_notified_at', 'TIMESTAMPTZ');
+  await ensureColumn('services', 'reactivated_at', 'TIMESTAMPTZ');
   await ensureColumn('reviews', 'service_id', 'TEXT');
   await ensureColumn('reviews', 'rating', 'INTEGER DEFAULT 5');
   await ensureColumn('reviews', 'display_author_name', 'TEXT');
