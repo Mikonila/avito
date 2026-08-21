@@ -1,6 +1,6 @@
 @font-face {
-    font-family: "UnifrakturCook";
-    src: url("assets/UnifrakturCook-Bold.ttf") format("truetype");
+    font-family: "Cinzel Decorative";
+    src: url("assets/CinzelDecorative-Bold.ttf") format("truetype");
     font-style: normal;
     font-weight: 700;
     font-display: swap;
@@ -183,11 +183,11 @@ body {
 }
 
 .brand-title {
-    font-family: "UnifrakturCook", "Old English Text MT", fantasy;
-    font-size: 28px;
+    font-family: "Cinzel Decorative", Georgia, serif;
+    font-size: 22px;
     font-weight: 700;
-    line-height: 0.9;
-    letter-spacing: 0;
+    line-height: 1;
+    letter-spacing: 0.015em;
 }
 
 .brand-subtitle {
@@ -2970,7 +2970,7 @@ html[data-theme="dark"] .media-picker-button {
     }
 
     .brand-title {
-        font-size: 24px;
+        font-size: 20px;
     }
 
     .footer-tabs {
