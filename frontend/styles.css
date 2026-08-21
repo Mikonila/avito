@@ -1,8 +1,8 @@
 @font-face {
-    font-family: "Cinzel Decorative";
-    src: url("assets/CinzelDecorative-Bold.ttf") format("truetype");
+    font-family: "Marck Script";
+    src: url("assets/MarckScript-Regular.ttf") format("truetype");
     font-style: normal;
-    font-weight: 700;
+    font-weight: 400;
     font-display: swap;
 }
 
@@ -183,11 +183,12 @@ body {
 }
 
 .brand-title {
-    font-family: "Cinzel Decorative", Georgia, serif;
-    font-size: 22px;
-    font-weight: 700;
+    font-family: "Marck Script", "Segoe Script", cursive;
+    font-size: 29px;
+    font-weight: 400;
+    font-style: italic;
     line-height: 1;
-    letter-spacing: 0.015em;
+    letter-spacing: 0.01em;
 }
 
 .brand-subtitle {
@@ -2970,7 +2971,7 @@ html[data-theme="dark"] .media-picker-button {
     }
 
     .brand-title {
-        font-size: 20px;
+        font-size: 27px;
     }
 
     .footer-tabs {
