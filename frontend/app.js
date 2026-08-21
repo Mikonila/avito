@@ -87,10 +87,6 @@ let state = {
     promotionListingTitle: '',
     promotionTargetType: 'listing',
     servicePublicationRequired: false,
-    selectedPromotionPlans: {
-        product: '',
-        service: ''
-    },
     categoryAutoScrollRaf: null,
     categoryAutoScrollLastTime: 0,
     filters: {
@@ -105,6 +101,9 @@ let state = {
 };
 
 const API_BASE = '/api';
+let mediaPreviewItems = [];
+let mediaPreviewIndex = 0;
+let mediaPreviewTouchStartX = null;
 
 function getStoredTheme() {
     try {
@@ -906,8 +905,6 @@ function populateSelects() {
 
     populateSubcategorySelect('product');
     populateSubcategorySelect('service');
-    renderPromotionOptions('product');
-    renderPromotionOptions('service');
     renderCategoryShowcase();
     renderFilterCategoryChips();
     updateSearchTriggerLabel();
@@ -1416,26 +1413,6 @@ async function fetchPublicationDetails(item) {
     return normalizePublication(detailedItem, itemType);
 }
 
-function renderPromotionOptions(formType) {
-    const container = document.querySelector(`[data-promotion-options="${formType}"]`);
-
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = Object.entries(PROMOTION_PLANS).map(([planKey, plan]) => `
-        <button
-            type="button"
-            class="promotion-plan-card ${state.selectedPromotionPlans[formType] === planKey ? 'active' : ''}"
-            onclick="selectPromotionPlan('${formType}', '${planKey}')"
-        >
-            <strong>${plan.label}</strong>
-            <span>${plan.stars} ⭐</span>
-            <small>≈ ${plan.rub} ₽</small>
-        </button>
-    `).join('');
-}
-
 function syncReviewModalUi() {
     const screenshotGroup = document.getElementById('reviewScreenshotGroup');
     if (!screenshotGroup) {
@@ -1450,12 +1427,6 @@ function syncReviewModalUi() {
         renderImagePreview('reviewScreenshot');
     }
 }
-
-window.selectPromotionPlan = function(formType, planKey) {
-    state.selectedPromotionPlans[formType] = state.selectedPromotionPlans[formType] === planKey ? '' : planKey;
-    renderPromotionOptions(formType);
-    saveListingDrafts();
-};
 
 function renderPromotionModalPlans() {
     const container = document.getElementById('promotionModalPlans');
@@ -1697,7 +1668,6 @@ function readListingDraftForm(formType) {
         city_id: fields.city?.value || '',
         price: fields.price?.value || '',
         price_type: getPriceType(formType),
-        promotion_plan: state.selectedPromotionPlans[formType] || ''
     };
 }
 
@@ -1751,8 +1721,6 @@ function applyListingDraft(formType, draft) {
     if (fields.price) fields.price.value = draft.price || '';
     setPriceType(formType, draft.price_type || '');
 
-    state.selectedPromotionPlans[formType] = draft.promotion_plan || '';
-    renderPromotionOptions(formType);
 }
 
 function restoreListingDrafts() {
@@ -1926,22 +1894,6 @@ window.removeImage = function(type, index) {
     renderImagePreview(type);
 };
 
-function showPublishedPromotionPanel(listingId, title) {
-    state.promotionListingId = listingId;
-    state.promotionListingTitle = title;
-
-    const info = document.getElementById('postPublishPromotionInfo');
-    const panel = document.getElementById('postPublishPromotionPanel');
-
-    if (info) {
-        info.textContent = `Выберите срок продвижения для товара: ${title}`;
-    }
-
-    if (panel) {
-        panel.classList.remove('hidden');
-    }
-}
-
 async function handleListingSubmit(e, formIndex) {
     e.preventDefault();
     const form = e.target;
@@ -1955,7 +1907,6 @@ async function handleListingSubmit(e, formIndex) {
     const priceInput = form.querySelector('input[type="number"]');
     const price = priceInput ? priceInput.value : '';
     const formType = formIndex === 1 ? 'service' : 'product';
-    const selectedPromotionPlan = state.selectedPromotionPlans[formType];
 
     if (formIndex === 2) {
         alert('Реклама размещается платно. Свяжитесь с @helionstudio');
@@ -2010,7 +1961,6 @@ async function handleListingSubmit(e, formIndex) {
 
         const result = await response.json();
         if (result.success || result.listing_id || result.service_id) {
-            alert(result.payment_required ? 'Услуга создана. После оплаты она появится в ленте.' : 'Объявление опубликовано');
             const createdListingId = result.listing_id || result.service_id || null;
             const createdTitle = title;
             form.reset();
@@ -2022,9 +1972,7 @@ async function handleListingSubmit(e, formIndex) {
             renderImagePreview('adImages');
             populateSubcategorySelect('product');
             populateSubcategorySelect('service');
-            state.selectedPromotionPlans[formType] = '';
             setPriceType(formType, '');
-            renderPromotionOptions(formType);
             clearListingDraft(formType);
             await refreshServicePublicationRequirement();
             closeCreateListingModal();
@@ -2035,17 +1983,14 @@ async function handleListingSubmit(e, formIndex) {
             if (result.payment_required && result.invoice_link) {
                 openInvoiceLink(result.invoice_link, async (status) => {
                     if (status === 'paid') {
-                        alert('Публикация услуги оплачена');
                         await loadMyItems();
                         await loadRandomListings();
                         await refreshServicePublicationRequirement();
+                        openPromotionModal(createdListingId, createdTitle, itemType, true);
                     }
                 });
-            } else if (createdListingId && selectedPromotionPlan) {
-                openPromotionModal(createdListingId, createdTitle, itemType);
-                await startPromotionPayment(selectedPromotionPlan);
-            } else if (createdListingId && itemType === 'listing') {
-                showPublishedPromotionPanel(createdListingId, createdTitle);
+            } else if (createdListingId) {
+                openPromotionModal(createdListingId, createdTitle, itemType, true);
             }
         } else {
             alert(result.error || 'Ошибка при публикации');
@@ -2447,9 +2392,9 @@ async function showItemDetails(item) {
 
     const gallery = selectedItem.images && selectedItem.images.length > 0 ? `
         <div class="item-details-gallery">
-            ${selectedItem.images.map((media) => isMediaVideo(media)
+            ${selectedItem.images.map((media, index) => isMediaVideo(media)
                 ? `<video src="${media}" controls playsinline></video>`
-                : `<button type="button" class="item-details-media-button" data-fullscreen-media="${escapeHtml(media)}"><img src="${media}" alt="${escapeHtml(selectedItem.title)}"></button>`).join('')}
+                : `<button type="button" class="item-details-media-button" data-fullscreen-media="${escapeHtml(media)}" data-media-index="${index}"><img src="${media}" alt="${escapeHtml(selectedItem.title)}"></button>`).join('')}
         </div>
     ` : '';
     const ownerAction = isOwner && selectedItem.status !== 'archived'
@@ -2503,6 +2448,7 @@ async function showItemDetails(item) {
             <button class="btn btn-secondary btn-block item-details-review-btn" onclick="openReviewModal()">Оставить отзыв</button>
             ${adminAction}
         </div>
+        <button type="button" class="item-report-link" onclick="reportSelectedItem()">Пожаловаться</button>
         <div class="item-reviews-section">
             <div id="itemReviewsList" class="reviews-list">
                 <p class="info-text">Загрузка отзывов...</p>
@@ -2515,13 +2461,27 @@ async function showItemDetails(item) {
     content.querySelectorAll('[data-fullscreen-media]').forEach((button) => {
         button.addEventListener('click', (event) => {
             event.stopPropagation();
-            openMediaPreview(button.dataset.fullscreenMedia);
+            openMediaPreview(button.dataset.fullscreenMedia, Number(button.dataset.mediaIndex));
         });
     });
     loadItemReviews(selectedItem);
 }
 
-window.openMediaPreview = function(src) {
+function renderMediaPreview() {
+    const image = document.getElementById('mediaPreviewImage');
+    const counter = document.getElementById('mediaPreviewCounter');
+    const prev = document.getElementById('mediaPreviewPrev');
+    const next = document.getElementById('mediaPreviewNext');
+    const count = mediaPreviewItems.length;
+
+    if (!image || !count) return;
+    image.src = mediaPreviewItems[mediaPreviewIndex];
+    if (counter) counter.textContent = count > 1 ? `${mediaPreviewIndex + 1} / ${count}` : '';
+    prev?.classList.toggle('hidden', count < 2);
+    next?.classList.toggle('hidden', count < 2);
+}
+
+window.openMediaPreview = function(src, index = 0) {
     const modal = document.getElementById('mediaPreviewModal');
     const image = document.getElementById('mediaPreviewImage');
 
@@ -2529,9 +2489,19 @@ window.openMediaPreview = function(src) {
         return;
     }
 
-    image.src = src;
+    const listingImages = (state.selectedItem?.images || []).filter((media) => !isMediaVideo(media));
+    mediaPreviewItems = listingImages.includes(src) ? listingImages : [src];
+    mediaPreviewIndex = Math.max(0, mediaPreviewItems.indexOf(src));
+    renderMediaPreview();
     modal.classList.remove('hidden');
     document.body.classList.add('media-preview-open');
+};
+
+window.changeMediaPreview = function(direction, event) {
+    event?.stopPropagation();
+    if (mediaPreviewItems.length < 2) return;
+    mediaPreviewIndex = (mediaPreviewIndex + direction + mediaPreviewItems.length) % mediaPreviewItems.length;
+    renderMediaPreview();
 };
 
 window.closeMediaPreview = function(event) {
@@ -2548,10 +2518,50 @@ window.closeMediaPreview = function(event) {
 
     modal?.classList.add('hidden');
     document.body.classList.remove('media-preview-open');
+    mediaPreviewItems = [];
+    mediaPreviewIndex = 0;
 };
+
+document.getElementById('mediaPreviewModal')?.addEventListener('touchstart', (event) => {
+    mediaPreviewTouchStartX = event.touches[0]?.clientX ?? null;
+}, { passive: true });
+
+document.getElementById('mediaPreviewModal')?.addEventListener('touchend', (event) => {
+    if (mediaPreviewTouchStartX === null) return;
+    const endX = event.changedTouches[0]?.clientX ?? mediaPreviewTouchStartX;
+    const distance = endX - mediaPreviewTouchStartX;
+    mediaPreviewTouchStartX = null;
+    if (Math.abs(distance) >= 45) changeMediaPreview(distance < 0 ? 1 : -1, event);
+}, { passive: true });
 
 window.closeItemModal = function() {
     document.getElementById('itemModal').classList.add('hidden');
+};
+
+window.reportSelectedItem = async function() {
+    const item = state.selectedItem;
+    if (!item || !state.user?.id) return;
+
+    const reason = prompt('Кратко опишите причину жалобы:');
+    if (reason === null) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/reports`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                user_id: state.user.id,
+                item_id: item.id,
+                item_type: item.item_type || 'listing',
+                reason: reason.trim()
+            })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Не удалось отправить жалобу');
+        alert('Жалоба отправлена администратору. Спасибо.');
+    } catch (error) {
+        alert(error.message || 'Не удалось отправить жалобу');
+    }
 };
 
 window.showSellerProfile = async function() {
@@ -2881,13 +2891,24 @@ window.openReviewModal = function() {
     document.getElementById('reviewModal').classList.remove('hidden');
 };
 
-window.openPromotionModal = function(listingId, title = 'объявление', itemType = 'listing') {
+window.openPromotionModal = function(listingId, title = 'объявление', itemType = 'listing', afterPublish = false) {
     state.promotionListingId = listingId;
     state.promotionListingTitle = title;
     state.promotionTargetType = itemType;
-    document.getElementById('promotionTargetInfo').textContent = `Выберите срок продвижения для объявления: ${title}`;
+    const modal = document.getElementById('promotionModal');
+    const modalTitle = document.getElementById('promotionModalTitle');
+    const publishedMark = document.getElementById('promotionPublishedMark');
+    const skipButton = document.getElementById('promotionSkipButton');
+
+    modal.classList.toggle('promotion-modal-post-publish', afterPublish);
+    modalTitle.textContent = afterPublish ? 'Публикация готова' : 'Продвижение на первую линию';
+    document.getElementById('promotionTargetInfo').textContent = afterPublish
+        ? `Хотите ненадолго поднять «${title}» в первую линию? Это необязательно.`
+        : `Выберите срок продвижения для публикации: ${title}`;
+    publishedMark.classList.toggle('hidden', !afterPublish);
+    skipButton.classList.toggle('hidden', !afterPublish);
     renderPromotionModalPlans();
-    document.getElementById('promotionModal').classList.remove('hidden');
+    modal.classList.remove('hidden');
 };
 
 window.closePromotionModal = function() {

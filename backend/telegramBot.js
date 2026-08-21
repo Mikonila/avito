@@ -34,6 +34,7 @@ const SERVICE_PUBLICATION_PLANS = {
 };
 const HERO_AD_SETTING_KEY = 'hero_ad';
 const DEFAULT_CHANNEL_ID = '-1003793027909';
+const FORBIDDEN_WORDS_KEY = 'forbidden_publication_words';
 
 function getWebAppUrl() {
   const webAppUrl = process.env.WEBAPP_URL || 'https://your-domain.com';
@@ -196,6 +197,9 @@ async function sendHelp(bot, msg) {
   const adminHelp = isAdminMessage(msg)
     ? '\n\nКоманды администратора:\n' +
       '/unban <id> - разбанить пользователя по ID или Telegram ID\n' +
+      '/word_add <слово> - добавить запрещённое слово или фразу\n' +
+      '/word_remove <слово> - удалить слово или фразу из фильтра\n' +
+      '/words - показать запрещённые слова\n' +
       '/ad_create - создать рекламу в верхнем блоке\n' +
       '/ad_photo - заменить только фото в верхнем блоке\n' +
       '/ad_reset - вернуть стандартный верхний блок\n' +
@@ -211,6 +215,32 @@ async function sendHelp(bot, msg) {
       'Обычные сообщения в этот чат будут переданы администратору.' +
       adminHelp
   );
+}
+
+async function handleForbiddenWordsCommand(bot, msg, command, args) {
+  if (!isAdminMessage(msg)) {
+    await bot.sendMessage(msg.chat.id, 'Команда доступна только администратору.');
+    return;
+  }
+
+  const current = await AppSettings.get(FORBIDDEN_WORDS_KEY) || [];
+  const value = args.join(' ').trim().toLowerCase().replace(/ё/g, 'е');
+
+  if (command === '/words') {
+    await bot.sendMessage(msg.chat.id, current.length ? `Запрещённые слова и фразы:\n\n${current.map((word) => `• ${word}`).join('\n')}` : 'Фильтр запрещённых слов пока пуст.');
+    return;
+  }
+
+  if (!value) {
+    await bot.sendMessage(msg.chat.id, `Укажите слово или фразу после команды ${command}.`);
+    return;
+  }
+
+  const next = command === '/word_add'
+    ? [...new Set([...current, value])]
+    : current.filter((word) => word !== value);
+  await AppSettings.set(FORBIDDEN_WORDS_KEY, next);
+  await bot.sendMessage(msg.chat.id, command === '/word_add' ? `Добавлено в фильтр: «${value}».` : `Удалено из фильтра: «${value}».`);
 }
 
 async function downloadTelegramPhotoAsDataUrl(bot, fileId) {
@@ -617,6 +647,11 @@ function registerHandlers(bot) {
 
       if (command === '/unban' || command === '/разбан') {
         await handleUnbanCommand(bot, msg, commandArgs);
+        return;
+      }
+
+      if (['/words', '/word_add', '/word_remove'].includes(command)) {
+        await handleForbiddenWordsCommand(bot, msg, command, commandArgs);
         return;
       }
 

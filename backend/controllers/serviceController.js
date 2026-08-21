@@ -7,6 +7,8 @@ const { destroyImages, uploadImages } = require('../utils/cloudinary');
 const {
   BAN_REASON,
   ensureUserCanPublish,
+  findForbiddenWord,
+  notifyForbiddenPublication,
   notifyUserAboutBan,
   requireAdminUser
 } = require('../utils/moderation');
@@ -99,6 +101,12 @@ async function createService(req, res) {
     const author = await ensureUserCanPublish(user_id, res);
     if (!author) {
       return;
+    }
+
+    const forbiddenWord = await findForbiddenWord(title, description, subcategory);
+    if (forbiddenWord) {
+      await notifyForbiddenPublication(author, title, forbiddenWord, 'услуга');
+      return res.status(422).json({ error: `Публикация не размещена: нельзя использовать «${forbiddenWord}»` });
     }
 
     const imageValidation = validateImages(images, getMediaValidationOptions(req));
@@ -308,6 +316,15 @@ async function updateService(req, res) {
       const author = await ensureUserCanPublish(user_id, res);
       if (!author) {
         return;
+      }
+    }
+
+    if (!isAdminRequester) {
+      const forbiddenWord = await findForbiddenWord(title, description, subcategory);
+      if (forbiddenWord) {
+        const author = await User.findById(user_id);
+        await notifyForbiddenPublication(author, title, forbiddenWord, 'услуга при редактировании');
+        return res.status(422).json({ error: `Изменения не сохранены: нельзя использовать «${forbiddenWord}»` });
       }
     }
 

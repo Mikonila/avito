@@ -15,7 +15,7 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260618-archive-menu-1">
+    <link rel="stylesheet" href="styles.css?v=20260821-post-publish-promotion-1">
 </head>
 <body>
     <div id="app">
@@ -37,7 +37,7 @@
                             <span class="brand-dot brand-dot-purple"></span>
                         </div>
                         <div class="brand-copy">
-                            <span class="brand-title">Violet</span>
+                            <span class="brand-title" aria-label="Violet">𝔙𝔦𝔬𝔩𝔢𝔱</span>
                             <span class="brand-subtitle">Все нужное — в одном приложении</span>
                         </div>
                     </button>
@@ -196,11 +196,6 @@
                             <button type="submit" class="btn btn-primary btn-block">Опубликовать объявление</button>
                         </form>
                         </div>
-                        <div class="promotion-inline-panel promotion-standalone-panel" data-promotion-form="product">
-                            <h4>Продвижение на первую линию</h4>
-                            <p>Вы можете поднять публикацию в первую линию рекомендаций на выбранный срок.</p>
-                            <div class="promotion-plan-list promotion-plan-list-inline" data-promotion-options="product"></div>
-                        </div>
                     </div>
 
                     <div id="serviceForm" class="form-section hidden">
@@ -265,11 +260,6 @@
                                 </div>
                             </div>
                         </form>
-                        </div>
-                        <div class="promotion-inline-panel promotion-standalone-panel" data-promotion-form="service">
-                            <h4>Продвижение на первую линию</h4>
-                            <p>Вы можете поднять публикацию в первую линию рекомендаций на выбранный срок.</p>
-                            <div class="promotion-plan-list promotion-plan-list-inline" data-promotion-options="service"></div>
                         </div>
                     </div>
 
@@ -448,11 +438,13 @@
     </div>
 
     <div id="promotionModal" class="modal hidden">
-        <div class="modal-content">
+        <div class="modal-content promotion-modal-content">
             <button class="modal-close" onclick="closePromotionModal()">✕</button>
-            <h2>Продвижение на первую линию</h2>
+            <div id="promotionPublishedMark" class="promotion-published-mark hidden" aria-hidden="true">✓</div>
+            <h2 id="promotionModalTitle">Продвижение на первую линию</h2>
             <p id="promotionTargetInfo" class="info-text"></p>
             <div id="promotionModalPlans" class="promotion-plan-list"></div>
+            <button id="promotionSkipButton" type="button" class="promotion-skip-button hidden" onclick="closePromotionModal()">Не сейчас</button>
         </div>
     </div>
 
@@ -591,9 +583,12 @@
 
     <div id="mediaPreviewModal" class="media-preview-modal hidden" onclick="closeMediaPreview(event)">
         <button type="button" class="media-preview-close" onclick="closeMediaPreview()" aria-label="Закрыть">✕</button>
+        <button id="mediaPreviewPrev" type="button" class="media-preview-nav media-preview-prev" onclick="changeMediaPreview(-1, event)" aria-label="Предыдущее фото">‹</button>
         <img id="mediaPreviewImage" alt="Фото объявления">
+        <button id="mediaPreviewNext" type="button" class="media-preview-nav media-preview-next" onclick="changeMediaPreview(1, event)" aria-label="Следующее фото">›</button>
+        <div id="mediaPreviewCounter" class="media-preview-counter" aria-live="polite"></div>
     </div>
 
-    <script src="app.js?v=20260618-archive-menu-1"></script>
+    <script src="app.js?v=20260821-post-publish-promotion-1"></script>
 </body>
 </html>

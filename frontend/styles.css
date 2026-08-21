@@ -1,3 +1,11 @@
+@font-face {
+    font-family: "UnifrakturCook";
+    src: url("assets/UnifrakturCook-Bold.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
 :root {
     --app-height: 100dvh;
     --primary-color: #67c7ff;
@@ -175,9 +183,11 @@ body {
 }
 
 .brand-title {
-    font-size: 22px;
-    font-weight: 800;
-    line-height: 1;
+    font-family: "UnifrakturCook", "Old English Text MT", fantasy;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 0.9;
+    letter-spacing: 0;
 }
 
 .brand-subtitle {
@@ -2043,6 +2053,16 @@ html[data-theme="dark"] .media-picker-button {
     gap: 6px;
     margin-bottom: 20px;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    touch-action: pan-x pan-y;
+}
+
+.item-details-gallery::-webkit-scrollbar {
+    display: none;
 }
 
 .item-details-media-button {
@@ -2055,6 +2075,14 @@ html[data-theme="dark"] .media-picker-button {
     background: transparent;
     cursor: zoom-in;
     overflow: hidden;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+}
+
+.item-details-gallery > video {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
 }
 
 .item-details-gallery img,
@@ -2513,6 +2541,23 @@ html[data-theme="dark"] .media-picker-button {
     flex: 1;
 }
 
+.item-report-link {
+    display: block;
+    margin: 12px auto 2px;
+    padding: 4px 8px;
+    border: 0;
+    background: transparent;
+    color: #9ca3af;
+    font-size: 12px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.item-report-link:hover {
+    color: #6b7280;
+}
+
 .item-details-review-btn {
     background: #f4fbff !important;
     border-color: rgba(103, 199, 255, 0.28) !important;
@@ -2528,6 +2573,8 @@ html[data-theme="dark"] .media-picker-button {
     justify-content: center;
     padding: 18px;
     background: rgba(15, 23, 42, 0.86);
+    touch-action: pan-y;
+    user-select: none;
 }
 
 .media-preview-modal.hidden {
@@ -2557,6 +2604,51 @@ html[data-theme="dark"] .media-picker-button {
     font-weight: 900;
     cursor: pointer;
     box-shadow: 0 12px 26px rgba(0, 0, 0, 0.2);
+}
+
+.media-preview-nav {
+    position: fixed;
+    top: 50%;
+    z-index: 1001;
+    width: 48px;
+    height: 48px;
+    padding: 0 0 5px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: #1f2937;
+    font-size: 38px;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.media-preview-prev { left: 14px; }
+.media-preview-next { right: 14px; }
+
+.media-preview-nav.hidden {
+    display: none;
+}
+
+.media-preview-counter {
+    position: fixed;
+    left: 50%;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    z-index: 1001;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.72);
+    color: #fff;
+    font-size: 14px;
+    transform: translateX(-50%);
+}
+
+@media (max-width: 480px) {
+    .media-preview-nav {
+        width: 42px;
+        height: 42px;
+        background: rgba(255, 255, 255, 0.78);
+    }
 }
 
 .media-preview-open {
@@ -2638,6 +2730,51 @@ html[data-theme="dark"] .media-picker-button {
     grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
     gap: 12px;
     margin-top: 18px;
+}
+
+.promotion-modal-content {
+    width: min(92%, 420px);
+}
+
+.promotion-modal-post-publish {
+    align-items: flex-end;
+    background: rgba(15, 23, 42, 0.42);
+}
+
+.promotion-modal-post-publish .promotion-modal-content {
+    margin-bottom: calc(14px + env(safe-area-inset-bottom));
+    padding: 24px 20px 18px;
+    border-radius: 24px;
+    animation: promotion-sheet-in 180ms ease-out;
+}
+
+.promotion-published-mark {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    margin-bottom: 10px;
+    border-radius: 50%;
+    background: #dcfce7;
+    color: #15803d;
+    font-weight: 800;
+}
+
+.promotion-skip-button {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 9px;
+    border: 0;
+    background: transparent;
+    color: var(--muted-color);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+@keyframes promotion-sheet-in {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .promotion-plan-list-inline {
@@ -2833,7 +2970,7 @@ html[data-theme="dark"] .media-picker-button {
     }
 
     .brand-title {
-        font-size: 18px;
+        font-size: 24px;
     }
 
     .footer-tabs {

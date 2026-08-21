@@ -10,6 +10,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const referenceRoutes = require('./routes/referenceRoutes');
 const likeRoutes = require('./routes/likeRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 const { initializeData } = require('./models/Reference');
 const { healthCheck, initializeDatabase, close } = require('./models/database');
 const { getTelegramBotStatus, startTelegramBot, stopTelegramBot } = require('./telegramBot');
@@ -32,6 +33,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/reference', referenceRoutes);
 app.use('/api/likes', likeRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.get('/api/health', async (req, res) => {
   const database = await healthCheck();

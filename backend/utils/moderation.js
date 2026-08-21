@@ -1,8 +1,35 @@
 const User = require('../models/User');
 const { getRequesterTelegramId, isAdminTelegramId } = require('../middleware/auth');
 const { getTelegramBot } = require('../telegramBot');
+const AppSettings = require('../models/AppSettings');
+const { getAdminTelegramIds } = require('../middleware/auth');
 
 const BAN_REASON = 'Нарушение правил платформы';
+const FORBIDDEN_WORDS_KEY = 'forbidden_publication_words';
+
+function normalizeModerationText(value) {
+  return ` ${String(value || '').toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]+/gi, ' ').trim()} `;
+}
+
+async function findForbiddenWord(...values) {
+  const words = await AppSettings.get(FORBIDDEN_WORDS_KEY) || [];
+  const text = normalizeModerationText(values.join(' '));
+  return words.find((word) => text.includes(normalizeModerationText(word))) || null;
+}
+
+async function notifyForbiddenPublication(author, title, forbiddenWord, itemType = 'объявление') {
+  const bot = getTelegramBot();
+  if (!bot) return;
+
+  const userMessage = `Публикация «${title}» отклонена и не была размещена: в тексте найдено запрещённое слово или выражение «${forbiddenWord}». Измените текст и попробуйте снова.`;
+  const adminMessage = `⚠️ Фильтр публикаций\n\nОтклонено: ${itemType} «${title}»\nПричина: запрещённое слово «${forbiddenWord}»\nПользователь: ${author?.username ? `@${author.username}` : 'без username'}\nTelegram ID: ${author?.telegram_id || 'не указан'}\nID пользователя: ${author?.id || 'не указан'}`;
+
+  const recipients = [...new Set(getAdminTelegramIds())];
+  await Promise.allSettled([
+    author?.telegram_id ? bot.sendMessage(author.telegram_id, userMessage) : Promise.resolve(),
+    ...recipients.map((adminId) => bot.sendMessage(adminId, adminMessage))
+  ]);
+}
 
 function isUserBanned(user) {
   return user?.is_banned === true || user?.is_banned === 1 || user?.is_banned === '1';
@@ -65,7 +92,9 @@ async function notifyUserAboutBan(user, publicationTitle = '') {
 module.exports = {
   BAN_REASON,
   ensureUserCanPublish,
+  findForbiddenWord,
   isUserBanned,
+  notifyForbiddenPublication,
   notifyUserAboutBan,
   requireAdminUser
 };
