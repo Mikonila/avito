@@ -4,7 +4,7 @@
  * Утилиты валидации
  */
 
-const MAX_IMAGES_PER_ITEM = 5;
+const MAX_IMAGES_PER_ITEM = 10;
 const MAX_IMAGE_SIZE_MB = 2;
 const ADMIN_MAX_IMAGE_SIZE_MB = 4;
 const MAX_VIDEO_SIZE_MB = 15;
@@ -128,7 +128,7 @@ function validateImages(images, options = {}) {
     const maxTotalMediaSizeMb = options.maxTotalMediaSizeMb || MAX_TOTAL_MEDIA_SIZE_MB;
 
     if (normalizedImages.length > maxImages) {
-        errors.push(`Maximum ${maxImages} images are allowed`);
+        errors.push(`Можно добавить не более ${maxImages} фотографий или видео`);
     }
 
     let totalSizeInMb = 0;
@@ -142,7 +142,7 @@ function validateImages(images, options = {}) {
         const isVideo = isBase64Video(image);
 
         if (!isImage && !isVideo) {
-            errors.push(`Media ${index + 1} must be a valid image or video`);
+            errors.push(`Файл №${index + 1} должен быть фотографией или видео`);
             return;
         }
 
@@ -150,16 +150,16 @@ function validateImages(images, options = {}) {
         totalSizeInMb += sizeInMb;
 
         if (isImage && sizeInMb > maxImageSizeMb) {
-            errors.push(`Image ${index + 1} exceeds ${maxImageSizeMb} MB`);
+            errors.push(`Фотография №${index + 1} превышает ${maxImageSizeMb} МБ`);
         }
 
         if (isVideo && sizeInMb > maxVideoSizeMb) {
-            errors.push(`Video ${index + 1} exceeds ${maxVideoSizeMb} MB`);
+            errors.push(`Видео №${index + 1} превышает ${maxVideoSizeMb} МБ`);
         }
     });
 
     if (totalSizeInMb > maxTotalMediaSizeMb) {
-        errors.push(`Total media payload exceeds ${maxTotalMediaSizeMb} MB`);
+        errors.push(`Общий размер фотографий и видео превышает ${maxTotalMediaSizeMb} МБ`);
     }
 
     return {

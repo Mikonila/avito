@@ -17,7 +17,7 @@ function getMediaValidationOptions(req) {
   const isAdmin = isAdminTelegramId(getRequesterTelegramId(req));
 
   return {
-    maxImages: isAdmin ? 10 : 6,
+    maxImages: 10,
     maxImageSizeMb: isAdmin ? 4 : 2,
     maxVideoSizeMb: isAdmin ? 30 : 15,
     maxTotalMediaSizeMb: isAdmin ? 45 : 25
@@ -89,13 +89,13 @@ async function createService(req, res) {
     } = req.body;
 
     if (!user_id || !title || !category_id || !city_id) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Заполните название, категорию и город' });
     }
 
     const normalizedPriceType = normalizePriceType(price_type);
     const normalizedPrice = normalizePriceValue(price, normalizedPriceType);
     if (normalizedPrice === null) {
-      return res.status(400).json({ error: 'Invalid price' });
+      return res.status(400).json({ error: 'Укажите корректную цену' });
     }
 
     const author = await ensureUserCanPublish(user_id, res);
@@ -161,7 +161,7 @@ async function createService(req, res) {
     if (newlyUploadedImages.length) {
       await destroyImages(newlyUploadedImages);
     }
-    res.status(500).json({ error: 'Failed to create service' });
+    res.status(500).json({ error: 'Не удалось опубликовать услугу. Попробуйте ещё раз позже' });
   }
 }
 

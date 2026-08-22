@@ -1,6 +1,6 @@
 const tg = window.Telegram?.WebApp;
-const DEFAULT_MAX_IMAGE_COUNT = 5;
-const DEFAULT_LISTING_IMAGE_COUNT = 6;
+const DEFAULT_MAX_IMAGE_COUNT = 10;
+const DEFAULT_LISTING_IMAGE_COUNT = 10;
 const ADMIN_MAX_IMAGE_COUNT = 10;
 const DEFAULT_MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 const ADMIN_MAX_IMAGE_SIZE_BYTES = 4 * 1024 * 1024;
@@ -1896,6 +1896,7 @@ window.removeImage = function(type, index) {
 
 async function handleListingSubmit(e, formIndex) {
     e.preventDefault();
+    let publicationCreated = false;
     const form = e.target;
     const title = form.querySelector('input[type="text"]')?.value.trim() || '';
     const description = form.querySelector('textarea')?.value.trim() || '';
@@ -1959,8 +1960,17 @@ async function handleListingSubmit(e, formIndex) {
             body: JSON.stringify(body)
         });
 
-        const result = await response.json();
+        const responseText = await response.text();
+        let result = {};
+
+        try {
+            result = responseText ? JSON.parse(responseText) : {};
+        } catch (parseError) {
+            console.error('Invalid publication response:', parseError, responseText);
+        }
+
         if (result.success || result.listing_id || result.service_id) {
+            publicationCreated = true;
             const createdListingId = result.listing_id || result.service_id || null;
             const createdTitle = title;
             form.reset();
@@ -1993,12 +2003,43 @@ async function handleListingSubmit(e, formIndex) {
                 openPromotionModal(createdListingId, createdTitle, itemType, true);
             }
         } else {
-            alert(result.error || 'Ошибка при публикации');
+            throw new Error(getPublicationErrorMessage(result.error, response.status));
         }
     } catch (error) {
         console.error('Error submitting listing:', error);
-        alert('Ошибка при публикации объявления');
+        alert(publicationCreated
+            ? 'Публикация создана, но экран не удалось обновить. Закройте это окно и проверьте раздел «Мои объявления».'
+            : getPublicationErrorMessage(error.message));
     }
+}
+
+function getPublicationErrorMessage(message = '', status = 0) {
+    const text = String(message || '').trim();
+
+    if (/Missing required fields/i.test(text)) return 'Заполните все обязательные поля: название, категорию и город.';
+    if (/Invalid price/i.test(text)) return 'Укажите корректную цену: число не меньше нуля.';
+    if (/Maximum\s+(\d+)\s+images are allowed/i.test(text)) {
+        const limit = text.match(/Maximum\s+(\d+)/i)?.[1] || '10';
+        return `Можно добавить не более ${limit} фотографий или видео.`;
+    }
+    if (/Image\s+(\d+)\s+exceeds\s+(\d+)\s+MB/i.test(text)) {
+        const match = text.match(/Image\s+(\d+)\s+exceeds\s+(\d+)\s+MB/i);
+        return `Фотография №${match[1]} превышает допустимый размер ${match[2]} МБ.`;
+    }
+    if (/Video\s+(\d+)\s+exceeds\s+(\d+)\s+MB/i.test(text)) {
+        const match = text.match(/Video\s+(\d+)\s+exceeds\s+(\d+)\s+MB/i);
+        return `Видео №${match[1]} превышает допустимый размер ${match[2]} МБ.`;
+    }
+    if (/Total media payload exceeds\s+(\d+)\s+MB/i.test(text)) {
+        const limit = text.match(/exceeds\s+(\d+)\s+MB/i)?.[1];
+        return `Общий размер фотографий и видео превышает ${limit} МБ.`;
+    }
+    if (/Media\s+\d+\s+must be a valid image or video/i.test(text)) return 'Один из выбранных файлов имеет неподдерживаемый формат.';
+    if (/Failed to create (listing|service)/i.test(text) || status >= 500) return 'Сервер не смог создать публикацию. Попробуйте ещё раз через несколько минут.';
+    if (/Failed to fetch|NetworkError|Load failed|Network request failed/i.test(text)) return 'Нет соединения с сервером. Проверьте интернет и попробуйте ещё раз.';
+    if (status === 413) return 'Фотографии или видео имеют слишком большой общий размер.';
+    if (text) return text;
+    return 'Не удалось опубликовать объявление. Попробуйте ещё раз или обратитесь в поддержку.';
 }
 
 async function performSearch() {
